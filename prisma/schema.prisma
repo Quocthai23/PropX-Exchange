@@ -16,7 +16,8 @@ model User {
   username      String?   @unique
   role          Role      @default(INVESTOR)
   kycStatus     KycStatus @default(NONE)
-  nonce         String
+  nonce         String?                    // Nullable: cleared after signature verification
+  nonceExpiresAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -182,6 +183,7 @@ enum Role {
 enum KycStatus {
   NONE
   PENDING
+  APPROVING
   APPROVED
   REJECTED
 }
