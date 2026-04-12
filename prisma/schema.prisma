@@ -1,0 +1,229 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// --- 1. NGƯỜI DÙNG & XÁC THỰC ---
+model User {
+  id            String    @id @default(uuid())
+  walletAddress String    @unique
+  email         String?   @unique
+  username      String?   @unique
+  role          Role      @default(INVESTOR)
+  kycStatus     KycStatus @default(NONE)
+  nonce         String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  kycRecord     KycRecord?
+  balances      Balance[]
+  orders        Order[]
+  transactions  Transaction[]
+  tickets       SupportTicket[]
+  sentMessages  TicketMessage[] // Fix: Quan hệ đối ứng với TicketMessage
+  rewards       RewardHistory[]
+}
+
+model KycRecord {
+  id           String    @id @default(uuid())
+  user         User      @relation(fields: [userId], references: [id])
+  userId       String    @unique
+  fullName     String
+  dob          DateTime
+  idNumber     String    @unique
+  idFrontImg   String
+  idBackImg    String
+  selfieImg    String
+  status       KycStatus @default(PENDING)
+  rejectReason String?
+  createdAt    DateTime  @default(now())
+}
+
+// --- 2. TÀI SẢN (BẤT ĐỘNG SẢN) ---
+model Asset {
+  id              String      @id @default(uuid())
+  contractAddress String?     @unique
+  name            String
+  symbol          String
+  location        String
+  images          Json        // Lưu mảng string các URL ảnh
+  totalValuation  Decimal     @db.Decimal(20, 4)
+  totalSupply     Decimal     @db.Decimal(20, 4)
+  tokenPrice      Decimal     @db.Decimal(20, 4)
+  apy             Decimal     @db.Decimal(5, 2)
+  status          AssetStatus @default(LISTING)
+  createdAt       DateTime    @default(now())
+
+  balances        Balance[]
+  orders          Order[]
+  candlesticks    Candlestick[]
+  dividends       Dividend[]
+  trades          Trade[]     // Fix: Thêm quan hệ để truy xuất trade từ asset
+}
+
+// --- 3. VÍ & SỐ DƯ ---
+model Balance {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  asset     Asset?   @relation(fields: [assetId], references: [id])
+  assetId   String?  // null nếu là tiền cơ sở (USDT)
+  available Decimal  @default(0) @db.Decimal(20, 4)
+  locked    Decimal  @default(0) @db.Decimal(20, 4)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, assetId])
+}
+
+model Transaction {
+  id        String            @id @default(uuid())
+  user      User              @relation(fields: [userId], references: [id])
+  userId    String
+  type      TransactionType
+  amount    Decimal           @db.Decimal(20, 4)
+  txHash    String?           @unique
+  status    TransactionStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+}
+
+// --- 4. GIAO DỊCH & CHART ---
+model Order {
+  id             String      @id @default(uuid())
+  user           User        @relation(fields: [userId], references: [id])
+  userId         String
+  asset          Asset       @relation(fields: [assetId], references: [id])
+  assetId        String
+  side           OrderSide
+  price          Decimal     @db.Decimal(20, 4)
+  quantity       Decimal     @db.Decimal(20, 4)
+  filledQuantity Decimal     @default(0) @db.Decimal(20, 4)
+  status         OrderStatus @default(OPEN)
+  createdAt      DateTime    @default(now())
+}
+
+model Trade {
+  id        String   @id @default(uuid())
+  asset     Asset    @relation(fields: [assetId], references: [id]) // Fix: Thêm relation
+  assetId   String
+  price     Decimal  @db.Decimal(20, 4)
+  quantity  Decimal  @db.Decimal(20, 4)
+  timestamp DateTime @default(now())
+}
+
+model Candlestick {
+  id        Int      @id @default(autoincrement())
+  asset     Asset    @relation(fields: [assetId], references: [id])
+  assetId   String
+  timeframe String
+  open      Decimal  @db.Decimal(20, 4)
+  high      Decimal  @db.Decimal(20, 4)
+  low       Decimal  @db.Decimal(20, 4)
+  close     Decimal  @db.Decimal(20, 4)
+  timestamp DateTime
+}
+
+// --- 5. HỖ TRỢ & CHAT ---
+model SupportTicket {
+  id        String          @id @default(uuid())
+  user      User            @relation(fields: [userId], references: [id])
+  userId    String
+  subject   String
+  status    TicketStatus    @default(OPEN)
+  messages  TicketMessage[]
+  createdAt DateTime        @default(now())
+}
+
+model TicketMessage {
+  id        String        @id @default(uuid())
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id])
+  ticketId  String
+  sender    User          @relation(fields: [senderId], references: [id])
+  senderId  String
+  content   String        @db.Text
+  createdAt DateTime      @default(now())
+}
+
+// --- 6. TIN TỨC & PHẦN THƯỞNG ---
+model NewsArticle {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   @db.LongText
+  thumbnail   String?
+  publishedAt DateTime @default(now())
+}
+
+model RewardHistory {
+  id        String     @id @default(uuid())
+  user      User       @relation(fields: [userId], references: [id])
+  userId    String
+  type      RewardType
+  amount    Decimal    @db.Decimal(20, 4)
+  createdAt DateTime   @default(now())
+}
+
+model Dividend {
+  id          String   @id @default(uuid())
+  asset       Asset    @relation(fields: [assetId], references: [id])
+  assetId     String
+  totalAmount Decimal  @db.Decimal(20, 4)
+  createdAt   DateTime @default(now())
+}
+
+enum Role {
+  INVESTOR
+  ADMIN
+}
+
+enum KycStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AssetStatus {
+  LISTING
+  FUNDED
+  TRADING
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+  DIVIDEND
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum OrderStatus {
+  OPEN
+  PARTIAL
+  FILLED
+  CANCELED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum RewardType {
+  REFERRAL
+  EVENT_BONUS
+}
