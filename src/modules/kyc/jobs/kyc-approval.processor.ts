@@ -1,4 +1,4 @@
-﻿import {
+import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
@@ -6,7 +6,7 @@
 import { Process, Processor } from '@nestjs/bull';
 import type { Job } from 'bull';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { BlockchainService } from '../blockchain.service';
+import { BlockchainService } from '../services/blockchain.service';
 
 interface KycApprovalJobData {
   targetUserId: string;
@@ -118,3 +118,4 @@ export class KycApprovalProcessor {
     }
   }
 }
+

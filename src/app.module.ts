@@ -1,19 +1,21 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma/prisma.service';
-import { NewsModule } from './modules/news/news.module';
-import { UsersModule } from './modules/users/users.module';
-import { KycModule } from './modules/kyc/kyc.module';
-import { AssetsModule } from './modules/assets/assets.module';
-import { TransactionsModule } from './modules/assets/transactions.module';
-import { OrdersModule } from './modules/orders/orders.module';
-import { SupportModule } from './modules/support/support.module';
-import { AuthModule } from './modules/auth/auth.module';
+import { NewsModule } from './modules/news/modules/news.module';
+import { UsersModule } from './modules/users/modules/users.module';
+import { KycModule } from './modules/kyc/modules/kyc.module';
+import { AssetsModule } from './modules/assets/modules/assets.module';
+import { TransactionsModule } from './modules/assets/modules/transactions.module';
+import { OrdersModule } from './modules/orders/modules/orders.module';
+import { SupportModule } from './modules/support/modules/support.module';
+import { AuthModule } from './modules/auth/modules/auth.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     BullModule.forRoot({
       redis: {
         host: process.env.REDIS_HOST || 'localhost',
@@ -34,3 +36,4 @@ import { AuthModule } from './modules/auth/auth.module';
   providers: [AppService, PrismaService],
 })
 export class AppModule {}
+

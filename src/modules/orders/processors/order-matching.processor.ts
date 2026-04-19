@@ -1,47 +1,64 @@
-﻿import { Logger } from '@nestjs/common';
-import { Process, Processor } from '@nestjs/bull';
-import type { Job } from 'bull';
-import { OrderMatchingService } from '../services/order-matching.service';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Logger } from '@nestjs/common';
+import { Job } from 'bullmq';
+import { PrismaService } from '../../../prisma/prisma.service';
+import Decimal from 'decimal.js';
 
-type OrderSide = 'BUY' | 'SELL';
 
-interface OrderMatchingJobData {
-  orderId: string;
-  userId: string;
-  assetId: string;
-  side: OrderSide;
-  price: string;
-  quantity: string;
-}
-
-@Processor('order-matching')
-export class OrderMatchingProcessor {
+@Processor('order-matching', { concurrency: 1 })
+export class OrderMatchingProcessor extends WorkerHost {
   private readonly logger = new Logger(OrderMatchingProcessor.name);
 
-  constructor(private readonly orderMatchingService: OrderMatchingService) {}
+  constructor(private prisma: PrismaService) {
+    super();
+  }
 
-  @Process('match')
-  async handleOrderMatching(job: Job<OrderMatchingJobData>) {
+  async process(job: Job<{ orderId: string }>) {
+    this.logger.log(`Starting order matching for Order ID: ${job.data.orderId}`);
+    
     try {
-      this.logger.log(
-        `[Order Matching Job ${job.id}] Processing order ${job.data.orderId}`,
-      );
 
-      const result = await this.orderMatchingService.matchOrder(job.data);
+      await this.prisma.$transaction(async (tx) => {
+        const incomingOrder = await tx.order.findUnique({ where: { id: job.data.orderId } });
+        
+        if (!incomingOrder || incomingOrder.status !== 'OPEN') {
+          return;
+        }
 
-      this.logger.log(
-        `[Order Matching Job ${job.id}] Completed with ${result.matched} matches`,
-      );
 
-      return result;
+        const counterSide = incomingOrder.side === 'BUY' ? 'SELL' : 'BUY';
+        
+        const match = await tx.order.findFirst({
+          where: {
+            assetId: incomingOrder.assetId,
+            side: counterSide,
+            status: 'OPEN',
+
+            price: incomingOrder.price, 
+          },
+          orderBy: { createdAt: 'asc' },
+        });
+
+        if (match) {
+          this.logger.log(`Match found. Transaction between ${incomingOrder.id} and ${match.id}`);
+
+
+
+
+
+
+          await tx.order.updateMany({
+            where: { id: { in: [incomingOrder.id, match.id] } },
+            data: { status: 'FILLED' }
+          });
+        } else {
+          this.logger.log(`No counter-order found for ${incomingOrder.id}. Keeping it in the order book.`);
+        }
+      });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(
-        `[Order Matching Job ${job.id}] Failed: ${errorMessage}`,
-        error,
-      );
+      this.logger.error(`Error during order matching for ${job.data.orderId}:`, error);
       throw error;
     }
   }
 }
+

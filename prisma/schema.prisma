@@ -57,6 +57,7 @@ model Asset {
   expectedApy     Decimal?
   isHot           Boolean  @default(false)
   isActive        Boolean  @default(false)
+  corporateActions CorporateAction[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -110,4 +111,23 @@ model AuditLog {
   performedBy String
   details     String?  @db.Text
   createdAt   DateTime @default(now())
+}
+
+enum CorporateActionType {
+  DIVIDEND
+  DEPRECIATION
+  LIQUIDATION
+}
+
+model CorporateAction {
+  id            String              @id @default(uuid())
+  assetId       String
+  asset         Asset               @relation(fields: [assetId], references: [id])
+  type          CorporateActionType
+  amount        Decimal
+  recordDate    DateTime
+  executionDate DateTime
+  status        String
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 }
