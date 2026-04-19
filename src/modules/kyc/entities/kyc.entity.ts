@@ -1,1 +1,1 @@
-export class Kyc {}
+﻿export class Kyc {}

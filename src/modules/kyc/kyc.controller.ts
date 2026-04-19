@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   Controller,
   Body,
@@ -55,17 +55,27 @@ export class KycController {
   @Patch('admin/:userId/approve')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  approve(@Param('userId', ParseUUIDPipe) userId: string) {
-    return this.kycService.approveKyc(userId);
+  approve(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ) {
+    if (!user?.sub) {
+      throw new BadRequestException('Invalid authenticated user payload.');
+    }
+    return this.kycService.approveKyc(userId, user.sub);
   }
 
   @Patch('admin/:userId/reject')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   reject(
+    @CurrentUser() user: JwtPayload | undefined,
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() dto: RejectKycDto,
   ) {
-    return this.kycService.rejectKyc(userId, dto.reason);
+    if (!user?.sub) {
+      throw new BadRequestException('Invalid authenticated user payload.');
+    }
+    return this.kycService.rejectKyc(userId, dto.reason, user.sub);
   }
 }

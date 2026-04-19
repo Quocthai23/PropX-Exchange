@@ -1,13 +1,17 @@
-import { IsEnum, IsNumber, IsString, Min } from 'class-validator';
+﻿import { IsEnum, IsNotEmpty, IsNumber, IsString, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { OrderSide } from '@prisma/client';
 
 export class CreateOrderDto {
   @IsString()
   assetId: string;
 
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  idempotencyKey: string;
+
   @IsEnum(['BUY', 'SELL'])
-  side: OrderSide;
+  side: 'BUY' | 'SELL';
 
   @Type(() => Number)
   @IsNumber()

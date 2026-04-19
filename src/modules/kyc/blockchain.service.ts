@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -62,13 +62,13 @@ export class BlockchainService implements OnModuleInit {
       };
 
       this.logger.log(
-        '✅ BlockchainService initialized with KMS-managed private key',
+        'BlockchainService initialized with KMS-managed private key',
       );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(
-        `❌ BlockchainService initialization failed: ${errorMessage}`,
+        `BlockchainService initialization failed: ${errorMessage}`,
       );
       throw error;
     }

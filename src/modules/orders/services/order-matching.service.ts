@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import Decimal from 'decimal.js';
-import type { OrderSide, OrderStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
+
+type OrderSide = 'BUY' | 'SELL';
+type OrderStatus = 'OPEN' | 'PARTIAL' | 'FILLED' | 'CANCELLED';
 
 interface OrderMatchingJobData {
   orderId: string;
@@ -75,17 +77,9 @@ export class OrderMatchingService {
     const quantityDec = new Decimal(quantity);
 
     try {
-      // Fetch the order with user balance info
+      // Fetch the order
       const order = await this.prisma.order.findUnique({
         where: { id: orderId },
-        include: {
-          user: {
-            select: {
-              id: true,
-              walletAddress: true,
-            },
-          },
-        },
       });
 
       if (!order || order.status !== 'OPEN') {
@@ -110,14 +104,6 @@ export class OrderMatchingService {
         },
         orderBy: {
           createdAt: 'asc', // FIFO - match with oldest first
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              walletAddress: true,
-            },
-          },
         },
       });
 
@@ -173,13 +159,14 @@ export class OrderMatchingService {
             },
           }),
 
-          // Create trade record
-          this.prisma.trade.create({
+          // Persist a transaction record for this matched trade leg
+          this.prisma.transaction.create({
             data: {
-              assetId,
-              price: priceDec.toString(),
-              quantity: matchableQuantity.toString(),
-              timestamp: new Date(),
+              userId,
+              type: 'TRADE_MATCH',
+              amount: matchableQuantity.times(priceDec).toString(),
+              fee: '0',
+              status: 'COMPLETED',
             },
           }),
 

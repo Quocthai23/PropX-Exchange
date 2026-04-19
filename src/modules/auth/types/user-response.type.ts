@@ -1,4 +1,4 @@
-// User response types for API
+﻿// User response types for API
 export type UserResponse = {
   id: string;
   walletAddress: string;

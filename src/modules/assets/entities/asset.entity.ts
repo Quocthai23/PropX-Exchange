@@ -1,1 +1,1 @@
-export class Asset {}
+﻿export class Asset {}

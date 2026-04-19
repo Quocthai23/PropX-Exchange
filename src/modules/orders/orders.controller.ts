@@ -1,5 +1,6 @@
-import {
+﻿import {
   BadRequestException,
+  ConflictException,
   Controller,
   Get,
   Post,
@@ -14,41 +15,30 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import type { JwtPayload } from '../auth/types/jwt-payload.type';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
+
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
 @Controller('orders')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   create(
     @CurrentUser() user: JwtPayload | undefined,
     @Body() createOrderDto: CreateOrderDto,
   ) {
-    if (!user?.sub) {
+    if (!user?.sub || !createOrderDto.idempotencyKey) {
       throw new BadRequestException('Invalid authenticated user payload.');
     }
-    return this.ordersService.create(user.sub, createOrderDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.ordersService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(+id, updateOrderDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ordersService.remove(+id);
+    return this.ordersService.placeOrder(
+      user.sub,
+      createOrderDto.assetId,
+      createOrderDto.side,
+      createOrderDto.price,
+      createOrderDto.quantity,
+      createOrderDto.idempotencyKey,
+    );
   }
 }

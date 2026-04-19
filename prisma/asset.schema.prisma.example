@@ -1,0 +1,26 @@
+model Asset {
+  id              String   @id @default(uuid())
+  symbol          String   @unique
+  name            String
+  description     String?  @db.Text
+  logo            String?
+  categoryId      String
+  
+  // --- RWA (Real World Asset) data & valuation ---
+  totalSupply     Decimal  // Total issued token supply (used in smart contract)
+  tokenPrice      Decimal  // Price per token (USDT)
+  totalAssetValue Decimal? // Real-world valuation of the underlying asset
+  expectedApy     Decimal? // Expected annual yield (%)
+  
+  // --- On-chain data ---
+  contractAddress String?  // Smart contract address after successful tokenization
+  txHash          String?  // Transaction hash on blockchain
+  network         String?  @default("Ethereum")
+  
+  // --- Display configuration ---
+  isHot           Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

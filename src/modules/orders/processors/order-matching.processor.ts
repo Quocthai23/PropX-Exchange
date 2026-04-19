@@ -1,8 +1,9 @@
-import { Logger } from '@nestjs/common';
+﻿import { Logger } from '@nestjs/common';
 import { Process, Processor } from '@nestjs/bull';
 import type { Job } from 'bull';
-import type { OrderSide } from '@prisma/client';
 import { OrderMatchingService } from '../services/order-matching.service';
+
+type OrderSide = 'BUY' | 'SELL';
 
 interface OrderMatchingJobData {
   orderId: string;

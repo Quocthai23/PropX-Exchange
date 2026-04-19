@@ -1,15 +1,17 @@
-import { NestFactory } from '@nestjs/core';
+﻿import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
 
   const config = new DocumentBuilder()
     .setTitle('RWA Backend API')
-    .setDescription('Tài liệu API cho dự án tốt nghiệp RWA')
+    .setDescription('API documentation for the RWA graduation project')
     .setVersion('1.0')
-    .addBearerAuth() // Hỗ trợ test API cần Token
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);

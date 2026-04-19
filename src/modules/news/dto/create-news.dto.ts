@@ -1,1 +1,1 @@
-export class CreateNewsDto {}
+﻿export class CreateNewsDto {}

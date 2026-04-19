@@ -1,7 +1,8 @@
-import {
+﻿import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  OnModuleInit,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import Decimal from 'decimal.js';
@@ -16,6 +17,7 @@ import {
   formatUnits,
   parseUnits,
 } from 'ethers';
+import { KmsService } from '../../shared/services/kms.service';
 
 type TokenizeRequest = {
   name: string;
@@ -24,12 +26,12 @@ type TokenizeRequest = {
 };
 
 @Injectable()
-export class BlockchainService {
+export class BlockchainService implements OnModuleInit {
   private readonly logger = new Logger(BlockchainService.name);
   private readonly useMockChain: boolean;
 
-  private readonly provider?: JsonRpcProvider;
-  private readonly signer?: Wallet;
+  private provider?: JsonRpcProvider;
+  private signer?: Wallet;
 
   private readonly tokenFactoryAddress?: string;
   private readonly tokenFactoryAbi?: InterfaceAbi;
@@ -42,28 +44,9 @@ export class BlockchainService {
   private readonly depositReceiver?: string;
   private readonly requiredConfirmations: number;
 
-  constructor() {
+  constructor(private readonly kmsService: KmsService) {
     this.useMockChain = process.env.USE_MOCK_CHAIN === 'true';
     this.requiredConfirmations = Number(process.env.CHAIN_CONFIRMATIONS ?? '1');
-
-    if (this.useMockChain) {
-      this.logger.warn(
-        'USE_MOCK_CHAIN=true. Blockchain actions run in mock mode.',
-      );
-      return;
-    }
-
-    const rpcUrl = process.env.CHAIN_RPC_URL;
-    const adminKey = process.env.CHAIN_ADMIN_PRIVATE_KEY;
-
-    if (!rpcUrl || !adminKey) {
-      throw new Error(
-        'CHAIN_RPC_URL and CHAIN_ADMIN_PRIVATE_KEY are required.',
-      );
-    }
-
-    this.provider = new JsonRpcProvider(rpcUrl);
-    this.signer = new Wallet(adminKey, this.provider);
 
     this.tokenFactoryAddress = process.env.ASSET_TOKEN_FACTORY_ADDRESS;
     const rawFactoryAbi = process.env.ASSET_TOKEN_FACTORY_ABI_JSON;
@@ -73,6 +56,23 @@ export class BlockchainService {
 
     this.usdtTokenAddress = process.env.USDT_TOKEN_ADDRESS;
     this.depositReceiver = process.env.DEPOSIT_RECEIVER_ADDRESS?.toLowerCase();
+  }
+
+  async onModuleInit() {
+    if (this.useMockChain) {
+      this.logger.warn('USE_MOCK_CHAIN=true. Blockchain actions run in mock mode.');
+      return;
+    }
+
+    const rpcUrl = process.env.CHAIN_RPC_URL;
+    if (!rpcUrl) throw new Error('CHAIN_RPC_URL is required.');
+
+
+    const adminKey = await this.kmsService.getAdminPrivateKey();
+    
+    this.provider = new JsonRpcProvider(rpcUrl);
+    this.signer = new Wallet(adminKey, this.provider);
+    this.logger.log('Blockchain and signer wallet initialized successfully.');
   }
 
   private getProvider(): JsonRpcProvider {
@@ -228,5 +228,19 @@ export class BlockchainService {
         'Failed to execute withdrawal transaction on chain.',
       );
     }
+  }
+
+  async getTransactionConfirmations(txHash: string): Promise<number> {
+    if (this.useMockChain) return 15;
+
+    const provider = this.getProvider();
+    const receipt = await provider.getTransactionReceipt(txHash);
+    
+
+    if (!receipt) return 0;
+    
+
+    const currentBlock = await provider.getBlockNumber();
+    return currentBlock - receipt.blockNumber + 1;
   }
 }

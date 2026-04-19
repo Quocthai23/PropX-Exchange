@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class BlockchainService {
@@ -6,19 +6,19 @@ export class BlockchainService {
 
   addToWhitelist(walletAddress: string): boolean {
     this.logger.log(
-      `[Blockchain] Đang gọi Smart Contract để whitelist ví: ${walletAddress}`,
+      `[Blockchain] Calling smart contract to whitelist wallet: ${walletAddress}`,
     );
 
     try {
-      // TODO: Tích hợp Ethers.js hoặc Web3.js tại đây
+
       // await contract.addToWhitelist(walletAddress);
       return true;
     } catch (error) {
       this.logger.error(
-        `[Blockchain] Lỗi khi whitelist ví ${walletAddress}`,
+        `[Blockchain] Error while whitelisting wallet ${walletAddress}`,
         error,
       );
-      throw new Error('Không thể thêm ví vào Smart Contract Whitelist.');
+      throw new Error('Unable to add wallet to smart contract whitelist.');
     }
   }
 }

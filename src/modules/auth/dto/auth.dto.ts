@@ -1,21 +1,22 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEthereumAddress, IsNotEmpty, IsString } from 'class-validator';
+﻿import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
 
-export class GenerateNonceDto {
-  @ApiProperty({ description: 'User MetaMask wallet address' })
-  @IsEthereumAddress()
+export class RequestOtpDto {
+  @ApiProperty({ example: 'user@example.com', description: 'User email' })
+  @IsEmail()
   @IsNotEmpty()
-  walletAddress: string;
+  email: string;
 }
 
-export class VerifySignatureDto {
-  @ApiProperty({ description: 'User MetaMask wallet address' })
-  @IsEthereumAddress()
+export class VerifyOtpDto {
+  @ApiProperty({ example: 'user@example.com', description: 'User email' })
+  @IsEmail()
   @IsNotEmpty()
-  walletAddress: string;
+  email: string;
 
-  @ApiProperty({ description: 'Signature generated from MetaMask wallet' })
+  @ApiProperty({ example: '123456', description: '6-digit OTP code' })
   @IsString()
+  @Length(6, 6)
   @IsNotEmpty()
-  signature: string;
+  otpCode: string;
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { KMSClient, DecryptCommand } from '@aws-sdk/client-kms';
 
 @Injectable()
@@ -30,7 +30,7 @@ export class KmsService {
       this.logger.log('AWS KMS initialized for key decryption');
     } else {
       this.logger.warn(
-        '⚠️ USE_AWS_KMS is disabled. Using plaintext private key from .env (NOT PRODUCTION SAFE)',
+        'USE_AWS_KMS is disabled. Using plaintext private key from .env (NOT PRODUCTION SAFE)',
       );
     }
   }
@@ -84,13 +84,13 @@ export class KmsService {
 
       // Cache for this process (DO NOT store in file/DB)
       this.cachedDecryptedKey = decryptedKey;
-      this.logger.log('✅ Admin private key decrypted from KMS and cached');
+      this.logger.log('Admin private key decrypted from KMS and cached');
 
       return decryptedKey;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`❌ Failed to decrypt key from KMS: ${errorMessage}`);
+      this.logger.error(`Failed to decrypt key from KMS: ${errorMessage}`);
       throw error;
     }
   }

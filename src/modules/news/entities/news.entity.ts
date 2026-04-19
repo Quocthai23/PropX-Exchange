@@ -1,1 +1,1 @@
-export class News {}
+﻿export class News {}
