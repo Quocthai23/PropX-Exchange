@@ -10,6 +10,11 @@ import { CreateDistributionDto } from '../dto/create-distribution.dto';
 
 type DecimalValue = string | number | { toString(): string };
 
+const toDecimalValue = (value: DecimalValue): string | number =>
+  typeof value === 'string' || typeof value === 'number'
+    ? value
+    : value.toString();
+
 type DividendDistributionRecord = {
   id: string;
   assetId: string;
@@ -215,15 +220,20 @@ export class DividendsService {
           }
 
           const totalSupplyHeld = holdings.reduce(
-            (sum, holding) => sum.plus(holding.available).plus(holding.locked),
+            (sum, holding) =>
+              sum
+                .plus(toDecimalValue(holding.available))
+                .plus(toDecimalValue(holding.locked)),
             new Decimal(0),
           );
 
-          const totalDividendDec = new Decimal(dist.totalAmount);
+          const totalDividendDec = new Decimal(
+            toDecimalValue(dist.totalAmount),
+          );
           const claimsData = holdings.map((holding) => {
-            const userTotal = new Decimal(holding.available).plus(
-              holding.locked,
-            );
+            const userTotal = new Decimal(
+              toDecimalValue(holding.available),
+            ).plus(toDecimalValue(holding.locked));
             const userShareRatio = userTotal.div(totalSupplyHeld);
             const userPayout = totalDividendDec.times(userShareRatio);
 

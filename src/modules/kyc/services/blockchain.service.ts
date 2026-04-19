@@ -14,28 +14,38 @@ const DEFAULT_ABI = [
 @Injectable()
 export class BlockchainService implements OnModuleInit {
   private readonly logger = new Logger(BlockchainService.name);
-  private provider: ethers.JsonRpcProvider;
-  private signer: ethers.Wallet;
-  private contract: ethers.BaseContract & {
-    addToWhitelist: (
-      walletAddress: string,
-    ) => Promise<ethers.ContractTransactionResponse>;
-  };
+  private provider: ethers.JsonRpcProvider | null = null;
+  private signer: ethers.Wallet | null = null;
+  private contract:
+    | (ethers.BaseContract & {
+        addToWhitelist: (
+          walletAddress: string,
+        ) => Promise<ethers.ContractTransactionResponse>;
+      })
+    | null = null;
+  private readonly isEnabled: boolean;
 
   constructor(private readonly kmsService: KmsService) {
     const rpcUrl = process.env.CHAIN_RPC_URL;
     const contractAddress = process.env.IDENTITY_REGISTRY_ADDRESS;
 
-    if (!rpcUrl || !contractAddress) {
-      throw new Error(
-        'CHAIN_RPC_URL and IDENTITY_REGISTRY_ADDRESS are required.',
+    this.isEnabled = Boolean(rpcUrl && contractAddress);
+
+    if (!this.isEnabled) {
+      this.logger.warn(
+        'CHAIN_RPC_URL or IDENTITY_REGISTRY_ADDRESS is not set. KYC blockchain operations are disabled.',
       );
+      return;
     }
 
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
   }
 
   async onModuleInit(): Promise<void> {
+    if (!this.isEnabled || !this.provider) {
+      return;
+    }
+
     try {
       // Async initialization - get private key from KMS (or .env fallback)
       const privateKey = await this.kmsService.getAdminPrivateKey();
@@ -74,9 +84,23 @@ export class BlockchainService implements OnModuleInit {
     }
   }
 
+  private getContract(): ethers.BaseContract & {
+    addToWhitelist: (
+      walletAddress: string,
+    ) => Promise<ethers.ContractTransactionResponse>;
+  } {
+    if (!this.contract) {
+      throw new InternalServerErrorException(
+        'Blockchain service is not configured. Please set CHAIN_RPC_URL and IDENTITY_REGISTRY_ADDRESS.',
+      );
+    }
+
+    return this.contract;
+  }
+
   async addToWhitelist(walletAddress: string): Promise<{ txHash: string }> {
     try {
-      const tx = await this.contract.addToWhitelist(walletAddress);
+      const tx = await this.getContract().addToWhitelist(walletAddress);
       const receipt = await tx.wait(1);
 
       if (!receipt || receipt.status !== 1) {

@@ -2,6 +2,7 @@
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 
 type IpfsFileResult = {
@@ -11,14 +12,26 @@ type IpfsFileResult = {
 
 @Injectable()
 export class IpfsService {
-  private readonly jwt: string;
+  private readonly logger = new Logger(IpfsService.name);
+  private readonly jwt: string | undefined;
 
   constructor() {
-    const pinataJwt = process.env.PINATA_JWT;
-    if (!pinataJwt) {
-      throw new Error('PINATA_JWT is required for IPFS uploads.');
+    this.jwt = process.env.PINATA_JWT;
+    if (!this.jwt) {
+      this.logger.warn(
+        'PINATA_JWT is not set. IPFS upload features are disabled until configured.',
+      );
     }
-    this.jwt = pinataJwt;
+  }
+
+  private getJwt(): string {
+    if (!this.jwt) {
+      throw new InternalServerErrorException(
+        'PINATA_JWT is required for IPFS uploads.',
+      );
+    }
+
+    return this.jwt;
   }
 
   async uploadFile(
@@ -39,7 +52,7 @@ export class IpfsService {
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.jwt}`,
+          Authorization: `Bearer ${this.getJwt()}`,
         },
         body: formData,
       },
@@ -66,7 +79,7 @@ export class IpfsService {
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.jwt}`,
+          Authorization: `Bearer ${this.getJwt()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),

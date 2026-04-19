@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
+import { BullModule as BullMQModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -17,9 +18,15 @@ import { MarketDataModule } from './modules/market-data/market-data.module';
 import { MarketMakerModule } from './modules/market-maker/market-maker.module';
 import { SettlementModule } from './modules/settlement/settlement.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { RealtimeModule } from './modules/realtime/realtime.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     ThrottlerModule.forRoot([
       {
         name: 'default',
@@ -33,8 +40,16 @@ import { ThrottlerModule } from '@nestjs/throttler';
       },
     ]),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     BullModule.forRoot({
       redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD,
+      },
+    }),
+    BullMQModule.forRoot({
+      connection: {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
         password: process.env.REDIS_PASSWORD,
@@ -52,6 +67,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     MarketDataModule,
     MarketMakerModule,
     SettlementModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

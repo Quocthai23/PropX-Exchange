@@ -1,28 +1,82 @@
 ﻿import { Injectable } from '@nestjs/common';
-import { CreateNewsDto } from '../dto/create-news.dto';
-import { UpdateNewsDto } from '../dto/update-news.dto';
+import { PrismaService } from '../../../prisma/prisma.service';
+import {
+  ExternalNewsAggregationService,
+  ExternalProviderId,
+  NewsProviderCatalog,
+} from './external-news-aggregation.service';
+
+type NewsArticleRecord = {
+  id: string;
+  source: string;
+  externalId: string | null;
+  title: string;
+  summary: string | null;
+  content: string | null;
+  url: string;
+  imageUrl: string | null;
+  publishedAt: Date;
+  language: string | null;
+  country: string | null;
+  category: string | null;
+  keywords: string | null;
+  createdAt: Date;
+};
+
+type NewsPrisma = {
+  newsArticle: {
+    findMany(args: {
+      where?: {
+        source?: string;
+      };
+      orderBy: { publishedAt: 'asc' | 'desc' };
+      take: number;
+    }): Promise<NewsArticleRecord[]>;
+  };
+};
 
 @Injectable()
 export class NewsService {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  create(_createNewsDto: CreateNewsDto) {
-    return 'This action adds a new news';
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly externalAggregationService: ExternalNewsAggregationService,
+  ) {}
+
+  async syncNow(sources?: ExternalProviderId[]) {
+    return this.externalAggregationService.syncLatestNews({
+      trigger: 'manual',
+      providers: sources,
+    });
   }
 
-  findAll() {
-    return `This action returns all news`;
+  listSources(): NewsProviderCatalog[] {
+    return this.externalAggregationService.getSourceCatalog();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} news`;
-  }
+  async findAll(limit = 30, source?: string) {
+    const prisma = this.prisma as unknown as NewsPrisma;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  update(id: number, _updateNewsDto: UpdateNewsDto) {
-    return `This action updates a #${id} news`;
-  }
+    const rows = await prisma.newsArticle.findMany({
+      where: source ? { source } : undefined,
+      orderBy: { publishedAt: 'desc' },
+      take: Math.min(Math.max(limit, 1), 100),
+    });
 
-  remove(id: number) {
-    return `This action removes a #${id} news`;
+    return rows.map((row) => ({
+      id: row.id,
+      source: row.source,
+      externalId: row.externalId,
+      title: row.title,
+      summary: row.summary,
+      content: row.content,
+      url: row.url,
+      imageUrl: row.imageUrl,
+      publishedAt: row.publishedAt,
+      language: row.language,
+      country: row.country,
+      category: row.category,
+      keywords: row.keywords,
+      createdAt: row.createdAt,
+    }));
   }
 }

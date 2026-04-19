@@ -1,42 +1,24 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Query } from '@nestjs/common';
 import { NewsService } from '../services/news.service';
-import { CreateNewsDto } from '../dto/create-news.dto';
-import { UpdateNewsDto } from '../dto/update-news.dto';
+import { SyncNewsDto } from '../dto/sync-news.dto';
+import { NewsProviderCatalog } from '../services/external-news-aggregation.service';
 
 @Controller('news')
 export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
-  @Post()
-  create(@Body() createNewsDto: CreateNewsDto) {
-    return this.newsService.create(createNewsDto);
+  @Get('sources')
+  listSources(): NewsProviderCatalog[] {
+    return this.newsService.listSources();
   }
 
   @Get()
-  findAll() {
-    return this.newsService.findAll();
+  findAll(@Query('limit') limit?: string, @Query('source') source?: string) {
+    return this.newsService.findAll(Number(limit || 30), source);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.newsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateNewsDto: UpdateNewsDto) {
-    return this.newsService.update(+id, updateNewsDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.newsService.remove(+id);
+  @Post('sync')
+  sync(@Body() body: SyncNewsDto) {
+    return this.newsService.syncNow(body.sources);
   }
 }

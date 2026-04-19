@@ -6,6 +6,11 @@ import Decimal from 'decimal.js';
 
 type DecimalValue = string | number | { toString(): string };
 
+const toDecimalValue = (value: DecimalValue): string | number =>
+  typeof value === 'string' || typeof value === 'number'
+    ? value
+    : value.toString();
+
 type MarketAsset = {
   id: string;
   symbol: string;
@@ -77,8 +82,8 @@ export class MarketMakerService {
 
         // If no candle exists yet, use ICO price (tokenPrice) as baseline.
         const currentPrice = lastCandle
-          ? new Decimal(lastCandle.close)
-          : new Decimal(asset.tokenPrice);
+          ? new Decimal(toDecimalValue(lastCandle.close))
+          : new Decimal(toDecimalValue(asset.tokenPrice));
 
         // 2. Random walk algorithm (max 1% volatility every 30s).
         const maxVolatility = 0.01;
@@ -88,7 +93,7 @@ export class MarketMakerService {
 
         // Ensure price never falls to <= 0.
         if (newPrice.lte(0)) {
-          newPrice = new Decimal(asset.tokenPrice);
+          newPrice = new Decimal(toDecimalValue(asset.tokenPrice));
         }
 
         // 3. Generate random matched quantity (for example, 1 to 50 tokens).

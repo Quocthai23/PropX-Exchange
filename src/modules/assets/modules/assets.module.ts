@@ -7,6 +7,7 @@ import { BlockchainService } from '../services/blockchain.service';
 import { IpfsService } from '../services/ipfs.service';
 import { AdminCorporateActionsController } from '../controllers/admin-corporate-actions.controller';
 import { CorporateActionService } from '../services/corporate-actions.service';
+import { KmsService } from '../../../shared/services/kms.service';
 
 @Module({
   controllers: [AssetsController, AdminCorporateActionsController],
@@ -17,6 +18,8 @@ import { CorporateActionService } from '../services/corporate-actions.service';
     IpfsService,
     BlockchainService,
     CorporateActionService,
+    KmsService,
   ],
+  exports: [BlockchainService],
 })
 export class AssetsModule {}

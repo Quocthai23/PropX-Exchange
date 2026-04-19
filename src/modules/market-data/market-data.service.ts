@@ -4,6 +4,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 type DecimalValue = string | number | { toString(): string };
 
+const toDecimalValue = (value: DecimalValue): string | number =>
+  typeof value === 'string' || typeof value === 'number'
+    ? value
+    : value.toString();
+
 export type CandlePoint = {
   time: number;
   open: number;
@@ -111,9 +116,14 @@ export class MarketDataService {
       });
     }
 
-    const nextHigh = Decimal.max(current.high, price).toString();
-    const nextLow = Decimal.min(current.low, price).toString();
-    const nextVolume = new Decimal(current.volume).add(quantity).toString();
+    const nextHigh = Decimal.max(
+      toDecimalValue(current.high),
+      price,
+    ).toString();
+    const nextLow = Decimal.min(toDecimalValue(current.low), price).toString();
+    const nextVolume = new Decimal(toDecimalValue(current.volume))
+      .add(quantity)
+      .toString();
 
     return prisma.candlestick.update({
       where: {

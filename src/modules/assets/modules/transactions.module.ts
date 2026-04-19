@@ -6,6 +6,7 @@ import { BlockchainService } from '../services/blockchain.service';
 import { GasSpikeService } from '../services/gas-spike.service';
 import { RolesGuard } from '../../users/dto/roles.guard';
 import { TransactionsCron } from '../jobs/transactions.cron';
+import { KmsService } from '../../../shared/services/kms.service';
 
 @Module({
   controllers: [TransactionsController],
@@ -16,6 +17,7 @@ import { TransactionsCron } from '../jobs/transactions.cron';
     GasSpikeService,
     RolesGuard,
     TransactionsCron,
+    KmsService,
   ],
   exports: [TransactionsService, GasSpikeService],
 })

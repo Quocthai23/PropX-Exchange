@@ -1,13 +1,19 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import Decimal from 'decimal.js';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { OrderMatchedEvent, TRADING_EVENTS } from '../events/trading.events';
 
 @Processor('order-matching', { concurrency: 1 })
 export class OrderMatchingProcessor extends WorkerHost {
   private readonly logger = new Logger(OrderMatchingProcessor.name);
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {
     super();
   }
 
@@ -17,6 +23,8 @@ export class OrderMatchingProcessor extends WorkerHost {
     );
 
     try {
+      let matchedEvent: OrderMatchedEvent | null = null;
+
       await this.prisma.$transaction(async (tx) => {
         const incomingOrder = await tx.order.findUnique({
           where: { id: job.data.orderId },
@@ -44,16 +52,41 @@ export class OrderMatchingProcessor extends WorkerHost {
             `Match found. Transaction between ${incomingOrder.id} and ${match.id}`,
           );
 
+          const matchedAt = new Date();
+          const matchQuantity = Decimal.min(
+            new Decimal(incomingOrder.quantity),
+            new Decimal(match.quantity),
+          ).toString();
+
+          const isIncomingBuy = incomingOrder.side === 'BUY';
+          const buyOrder = isIncomingBuy ? incomingOrder : match;
+          const sellOrder = isIncomingBuy ? match : incomingOrder;
+
           await tx.order.updateMany({
             where: { id: { in: [incomingOrder.id, match.id] } },
             data: { status: 'FILLED' },
           });
+
+          matchedEvent = {
+            assetId: incomingOrder.assetId,
+            price: incomingOrder.price?.toString() ?? '0',
+            quantity: matchQuantity,
+            buyOrderId: buyOrder.id,
+            sellOrderId: sellOrder.id,
+            buyerUserId: buyOrder.userId,
+            sellerUserId: sellOrder.userId,
+            matchedAt,
+          };
         } else {
           this.logger.log(
             `No counter-order found for ${incomingOrder.id}. Keeping it in the order book.`,
           );
         }
       });
+
+      if (matchedEvent) {
+        this.eventEmitter.emit(TRADING_EVENTS.ORDER_MATCHED, matchedEvent);
+      }
     } catch (error) {
       this.logger.error(
         `Error during order matching for ${job.data.orderId}:`,

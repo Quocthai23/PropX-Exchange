@@ -90,6 +90,7 @@ model Asset {
   candlesticks    Candlestick[]
   dividendDistributions DividendDistribution[]
   corporateActions CorporateAction[]
+  valuationSnapshots AssetValuationSnapshot[]
   trades          Trade[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -253,4 +254,48 @@ model Trade {
   txHash           String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model NewsArticle {
+  id         String   @id @default(uuid())
+  source     String
+  externalId String?
+  dedupeKey  String   @unique
+  title      String
+  summary    String?  @db.Text
+  content    String?  @db.Text
+  url        String
+  imageUrl   String?
+  publishedAt DateTime
+  language   String?
+  country    String?
+  category   String?
+  keywords   String?  @db.Text
+  rawPayload Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([source, publishedAt(sort: Desc)])
+  @@index([publishedAt(sort: Desc)])
+}
+
+model AssetValuationSnapshot {
+  id          String   @id @default(uuid())
+  assetId     String?
+  asset       Asset?   @relation(fields: [assetId], references: [id])
+  areaCode    String?
+  source      String
+  title       String?
+  listingUrl  String?
+  price       Decimal
+  currency    String   @default("VND")
+  landArea    Decimal?
+  pricePerM2  Decimal?
+  capturedAt  DateTime
+  rawPayload  Json?
+  createdAt   DateTime @default(now())
+
+  @@index([assetId, capturedAt(sort: Desc)])
+  @@index([areaCode, capturedAt(sort: Desc)])
+  @@index([source, capturedAt(sort: Desc)])
 }
