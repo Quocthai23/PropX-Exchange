@@ -20,4 +20,3 @@ import { CorporateActionService } from '../services/corporate-actions.service';
   ],
 })
 export class AssetsModule {}
-

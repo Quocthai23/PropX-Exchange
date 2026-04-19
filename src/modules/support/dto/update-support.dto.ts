@@ -1,4 +1,7 @@
-﻿import { PartialType } from '@nestjs/swagger';
-import { CreateSupportDto } from './create-support.dto';
+﻿import { SupportTicketStatus } from '@prisma/client';
+import { IsEnum } from 'class-validator';
 
-export class UpdateSupportDto extends PartialType(CreateSupportDto) {}
+export class UpdateSupportDto {
+  @IsEnum(SupportTicketStatus)
+  status: SupportTicketStatus;
+}

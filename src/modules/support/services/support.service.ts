@@ -1,26 +1,130 @@
-﻿import { Injectable } from '@nestjs/common';
+﻿import {
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { SupportTicketStatus } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { CreateSupportDto } from '../dto/create-support.dto';
+import { UpdateSupportDto } from '../dto/update-support.dto';
+import type { JwtPayload } from '../../auth/types/jwt-payload.type';
+
+const UNRESOLVED_STATUSES: SupportTicketStatus[] = [
+  SupportTicketStatus.OPEN,
+  SupportTicketStatus.IN_PROGRESS,
+];
 
 @Injectable()
 export class SupportService {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  create(_createSupportDto: any) {
-    return 'This action adds a new support';
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(userId: string, createSupportDto: CreateSupportDto) {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const unresolvedCount = await this.prisma.supportTicket.count({
+      where: {
+        userId,
+        status: { in: UNRESOLVED_STATUSES },
+        createdAt: {
+          gte: oneHourAgo,
+        },
+      },
+    });
+
+    if (unresolvedCount >= 3) {
+      throw new HttpException(
+        'You can only create up to 3 unresolved support tickets per hour.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const ticket = await tx.supportTicket.create({
+        data: {
+          userId,
+          subject: createSupportDto.subject,
+        },
+      });
+
+      const message = await tx.ticketMessage.create({
+        data: {
+          ticketId: ticket.id,
+          senderId: userId,
+          content: createSupportDto.content,
+        },
+      });
+
+      return {
+        ...ticket,
+        messages: [message],
+      };
+    });
   }
 
-  findAll() {
-    return `This action returns all support`;
+  findAll(user: JwtPayload) {
+    const where =
+      user.role === 'ADMIN' || user.role === 'SUPPORT_STAFF'
+        ? undefined
+        : { userId: user.sub };
+
+    return this.prisma.supportTicket.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        _count: {
+          select: {
+            messages: true,
+          },
+        },
+      },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} support`;
+  async findOne(id: string, user: JwtPayload) {
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id },
+      include: {
+        messages: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Support ticket not found.');
+    }
+
+    if (ticket.userId !== user.sub) {
+      throw new ForbiddenException(
+        'You can only view your own support tickets.',
+      );
+    }
+
+    return ticket;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  update(id: number, _updateSupportDto: any) {
-    return `This action updates a #${id} support`;
-  }
+  async update(id: string, updateSupportDto: UpdateSupportDto) {
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id },
+      select: {
+        id: true,
+      },
+    });
 
-  remove(id: number) {
-    return `This action removes a #${id} support`;
+    if (!ticket) {
+      throw new NotFoundException('Support ticket not found.');
+    }
+
+    return this.prisma.supportTicket.update({
+      where: { id },
+      data: {
+        status: updateSupportDto.status,
+      },
+    });
   }
 }

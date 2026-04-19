@@ -10,4 +10,3 @@ export class UsersController {
     return this.usersService.healthCheck();
   }
 }
-

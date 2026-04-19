@@ -1,13 +1,8 @@
 import {
   BadRequestException,
-  ConflictException,
   Controller,
-  Get,
   Post,
   Body,
-  Patch,
-  Param,
-  Delete,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -42,4 +37,3 @@ export class OrdersController {
     );
   }
 }
-

@@ -4,7 +4,6 @@ import { AuthService } from '../services/auth.service';
 import { AuthController } from '../controllers/auth.controller';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EncryptionService } from '../services/encryption.service';
-import { ThrottlerModule } from '@nestjs/throttler';
 
 const jwtSecret = process.env.JWT_SECRET;
 
@@ -24,4 +23,3 @@ if (!jwtSecret) {
   providers: [AuthService, PrismaService, EncryptionService],
 })
 export class AuthModule {}
-

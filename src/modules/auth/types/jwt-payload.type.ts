@@ -1,5 +1,5 @@
 ﻿export type JwtPayload = {
   sub: string; // user id
   walletAddress: string;
-  role: 'ADMIN' | 'INVESTOR';
+  role: 'ADMIN' | 'INVESTOR' | 'SUPPORT_STAFF';
 };

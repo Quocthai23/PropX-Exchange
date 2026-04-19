@@ -1,9 +1,11 @@
 ﻿import { Injectable } from '@nestjs/common';
+import { CreateNewsDto } from '../dto/create-news.dto';
+import { UpdateNewsDto } from '../dto/update-news.dto';
 
 @Injectable()
 export class NewsService {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  create(_createNewsDto: any) {
+  create(_createNewsDto: CreateNewsDto) {
     return 'This action adds a new news';
   }
 
@@ -16,7 +18,7 @@ export class NewsService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  update(id: number, _updateNewsDto: any) {
+  update(id: number, _updateNewsDto: UpdateNewsDto) {
     return `This action updates a #${id} news`;
   }
 

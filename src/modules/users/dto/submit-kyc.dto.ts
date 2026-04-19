@@ -12,7 +12,6 @@ export class SubmitKycDto {
   @IsNotEmpty()
   identityNumber: string;
 
-
   @IsString() frontImageUrl: string;
   @IsString() backImageUrl: string;
   @IsString() selfieImageUrl: string;

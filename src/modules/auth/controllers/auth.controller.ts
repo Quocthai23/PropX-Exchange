@@ -18,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
 
-import { RequestOtpDto, VerifyOtpDto } from '../dto/auth.dto'; 
+import { RequestOtpDto, VerifyOtpDto } from '../dto/auth.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import type { JwtPayload } from '../types/jwt-payload.type';
@@ -54,33 +54,51 @@ export class AuthController {
 
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify OTP and get JWT Token (Auto-generates wallet for new users)' })
+  @ApiOperation({
+    summary:
+      'Verify OTP and get JWT Token (Auto-generates wallet for new users)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Login successful, return JWT Token',
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
-  async verifyOtp(@Body() dto: VerifyOtpDto, @Res({ passthrough: true }) res: Response) {
+  async verifyOtp(
+    @Body() dto: VerifyOtpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.verifyOtp(dto.email, dto.otpCode);
-    
 
-    res.cookie('refresh_token', result.refreshToken, this.getRefreshCookieConfig());
+    res.cookie(
+      'refresh_token',
+      result.refreshToken,
+      this.getRefreshCookieConfig(),
+    );
 
     return { accessToken: result.accessToken, user: result.user };
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get a new access token from the refresh token in cookie' })
-  async refreshTokens(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies?.['refresh_token'];
+  @ApiOperation({
+    summary: 'Get a new access token from the refresh token in cookie',
+  })
+  async refreshTokens(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies?.['refresh_token'] as string | undefined;
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token found');
     }
 
     try {
       const tokens = await this.authService.refreshAccessToken(refreshToken);
-      res.cookie('refresh_token', tokens.refreshToken, this.getRefreshCookieConfig());
+      res.cookie(
+        'refresh_token',
+        tokens.refreshToken,
+        this.getRefreshCookieConfig(),
+      );
       return { accessToken: tokens.accessToken };
     } catch {
       res.clearCookie('refresh_token');
@@ -92,7 +110,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout and revoke refresh token' })
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies?.['refresh_token'];
+    const refreshToken = req.cookies?.['refresh_token'] as string | undefined;
 
     if (refreshToken) {
       await this.authService.revokeRefreshTokenByToken(refreshToken);
@@ -115,4 +133,3 @@ export class AuthController {
     return { message: 'Authentication successful!', user };
   }
 }
-

@@ -8,11 +8,9 @@ import { PrismaService } from '../../../prisma/prisma.service';
   imports: [
     BullModule.registerQueue({
       name: 'order-matching',
-
     }),
   ],
   providers: [OrdersService, OrderMatchingProcessor, PrismaService],
   exports: [OrdersService],
 })
 export class OrdersModule {}
-

@@ -25,4 +25,3 @@ import { KmsService } from '../../../shared/services/kms.service';
   ],
 })
 export class KycModule {}
-

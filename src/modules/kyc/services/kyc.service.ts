@@ -102,7 +102,8 @@ export class KycService {
     });
 
     return {
-      message: 'KYC approval request has been queued for blockchain processing.',
+      message:
+        'KYC approval request has been queued for blockchain processing.',
       approvalInProgress: true,
     };
   }
@@ -142,4 +143,3 @@ export class KycService {
     };
   }
 }
-

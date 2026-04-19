@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { ethers } from 'ethers';
 import * as nodemailer from 'nodemailer';
 import { createHash } from 'crypto';
@@ -35,7 +35,7 @@ export class AuthService {
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false, 
+      secure: false,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -62,14 +62,19 @@ export class AuthService {
       role: user.role as JwtPayload['role'],
     };
 
-    const refreshPayload = { sub: user.id, type: 'refresh' as const };
+    const refreshPayload: { sub: string; type: 'refresh' } = {
+      sub: user.id,
+      type: 'refresh',
+    };
+
+    const refreshTokenOptions: JwtSignOptions = {
+      secret: this.refreshTokenSecret,
+      expiresIn: this.refreshTokenExpiresIn as JwtSignOptions['expiresIn'],
+    };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(accessPayload),
-      this.jwtService.signAsync(refreshPayload, {
-        secret: this.refreshTokenSecret,
-        expiresIn: this.refreshTokenExpiresIn as any,
-      }),
+      this.jwtService.signAsync(refreshPayload, refreshTokenOptions),
     ]);
 
     await this.prisma.user.update({
@@ -84,7 +89,6 @@ export class AuthService {
   }
 
   async requestOtp(email: string): Promise<{ message: string }> {
-
     const existingOtp = await this.prisma.otp.findUnique({ where: { email } });
     if (existingOtp && existingOtp.expiresAt > new Date()) {
       throw new HttpException(
@@ -93,10 +97,8 @@ export class AuthService {
       );
     }
 
-
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-
 
     await this.prisma.otp.upsert({
       where: { email },
@@ -137,25 +139,24 @@ export class AuthService {
       throw new UnauthorizedException('OTP code has expired.');
     }
 
-
     await this.prisma.otp.delete({ where: { email } });
 
-    let user = await this.prisma.user.findUnique({ 
+    let user = await this.prisma.user.findUnique({
       where: { email },
       select: {
         id: true,
         email: true,
         walletAddress: true,
         role: true,
-      }
+      },
     });
 
     if (!user) {
-
       const wallet = ethers.Wallet.createRandom();
-      
 
-      const encryptedPrivateKey = this.encryptionService.encrypt(wallet.privateKey);
+      const encryptedPrivateKey = this.encryptionService.encrypt(
+        wallet.privateKey,
+      );
 
       user = await this.prisma.user.create({
         data: {
@@ -168,16 +169,20 @@ export class AuthService {
           email: true,
           walletAddress: true,
           role: true,
-        }
+        },
       });
     }
 
     const { accessToken, refreshToken } = await this.issueTokenPair(user);
-    
-    return { 
-      accessToken, 
+
+    return {
+      accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, walletAddress: user.walletAddress } 
+      user: {
+        id: user.id,
+        email: user.email,
+        walletAddress: user.walletAddress,
+      },
     };
   }
 
@@ -241,10 +246,10 @@ export class AuthService {
 
   async revokeRefreshTokenByToken(token: string): Promise<void> {
     try {
-      const payload = await this.jwtService.verifyAsync<{ sub: string; type?: string }>(
-        token,
-        { secret: this.refreshTokenSecret },
-      );
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        type?: string;
+      }>(token, { secret: this.refreshTokenSecret });
 
       if (payload.type === 'refresh') {
         await this.revokeRefreshToken(payload.sub);
@@ -254,4 +259,3 @@ export class AuthService {
     }
   }
 }
-

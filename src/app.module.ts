@@ -12,9 +12,26 @@ import { TransactionsModule } from './modules/assets/modules/transactions.module
 import { OrdersModule } from './modules/orders/modules/orders.module';
 import { SupportModule } from './modules/support/modules/support.module';
 import { AuthModule } from './modules/auth/modules/auth.module';
+import { DividendsModule } from './modules/dividends/modules/dividends.module';
+import { MarketDataModule } from './modules/market-data/market-data.module';
+import { MarketMakerModule } from './modules/market-maker/market-maker.module';
+import { SettlementModule } from './modules/settlement/settlement.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: 60,
+      },
+      {
+        name: 'short',
+        ttl: 300000,
+        limit: 3,
+      },
+    ]),
     ScheduleModule.forRoot(),
     BullModule.forRoot({
       redis: {
@@ -31,9 +48,12 @@ import { AuthModule } from './modules/auth/modules/auth.module';
     OrdersModule,
     SupportModule,
     AuthModule,
+    DividendsModule,
+    MarketDataModule,
+    MarketMakerModule,
+    SettlementModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
 })
 export class AppModule {}
-

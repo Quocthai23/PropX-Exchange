@@ -9,7 +9,7 @@ import { WithdrawDto } from '../withdraw.dto';
 export class TransactionsService {
   constructor(
     private prisma: PrismaService,
-    private blockchainService: BlockchainService
+    private blockchainService: BlockchainService,
   ) {}
 
   private async ensureCashBalance(
@@ -39,7 +39,9 @@ export class TransactionsService {
     );
 
     if (!validOnChain) {
-      throw new BadRequestException('Unable to verify deposit transaction on blockchain.');
+      throw new BadRequestException(
+        'Unable to verify deposit transaction on blockchain.',
+      );
     }
 
     const duplicated = await this.prisma.transaction.findUnique({
@@ -47,7 +49,9 @@ export class TransactionsService {
     });
 
     if (duplicated) {
-      throw new BadRequestException('This transaction hash has already been used.');
+      throw new BadRequestException(
+        'This transaction hash has already been used.',
+      );
     }
 
     return this.prisma.$transaction(async (prismaTx) => {
@@ -75,8 +79,13 @@ export class TransactionsService {
         where: { userId, assetId: null },
       });
 
-      if (!balance || new Decimal(balance.available.toString()).lessThan(amount)) {
-        throw new BadRequestException('Insufficient available balance for withdrawal.');
+      if (
+        !balance ||
+        new Decimal(balance.available.toString()).lessThan(amount)
+      ) {
+        throw new BadRequestException(
+          'Insufficient available balance for withdrawal.',
+        );
       }
 
       await prismaTx.balance.update({
@@ -99,43 +108,66 @@ export class TransactionsService {
   }
 
   async approveWithdraw(adminId: string, transactionId: string) {
-    const tx = await this.prisma.transaction.findUnique({ where: { id: transactionId } });
+    const tx = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+    });
     if (!tx || tx.type !== 'WITHDRAW' || tx.status !== 'PENDING') {
-      throw new BadRequestException('Withdrawal transaction does not exist or has already been processed.');
+      throw new BadRequestException(
+        'Withdrawal transaction does not exist or has already been processed.',
+      );
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: tx.userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: tx.userId },
+    });
     if (!user) {
-      throw new BadRequestException('User not found for this withdrawal transaction.');
+      throw new BadRequestException(
+        'User not found for this withdrawal transaction.',
+      );
     }
+
+    // Get current gas price before executing withdrawal
+    const gasPrice = await this.blockchainService.getCurrentGasPrice();
 
     const txHash = await this.blockchainService.executeWithdrawal(
       user.walletAddress,
       new Decimal(tx.amount.toString()),
     );
 
-
     await this.prisma.$transaction(async (prismaTx) => {
       await prismaTx.transaction.update({
         where: { id: tx.id },
-        data: { txHash },
+        data: {
+          txHash,
+          gasPrice, // Store initial gas price
+        },
       });
 
       // WRITE AUDIT LOG
       await prismaTx.auditLog.create({
         data: {
-          entity: 'WITHDRAWAL', entityId: tx.id, action: 'APPROVED', performedBy: adminId,
-          details: `Admin approved withdrawal of ${tx.amount} USDT. TxHash: ${txHash}`,
+          entity: 'WITHDRAWAL',
+          entityId: tx.id,
+          action: 'APPROVED',
+          performedBy: adminId,
+          details: `Admin approved withdrawal of ${tx.amount.toString()} USDT. TxHash: ${txHash}. Gas Price: ${gasPrice.toString()} wei`,
         },
       });
     });
-    return { message: 'Withdrawal approved. The system is waiting for blockchain confirmation.' };
+    return {
+      message:
+        'Withdrawal approved. The system is waiting for blockchain confirmation.',
+    };
   }
-  
+
   async rejectWithdraw(adminId: string, transactionId: string) {
-    const tx = await this.prisma.transaction.findUnique({ where: { id: transactionId } });
+    const tx = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+    });
     if (!tx || tx.type !== 'WITHDRAW' || tx.status !== 'PENDING') {
-      throw new BadRequestException('Withdrawal transaction does not exist or has already been processed.');
+      throw new BadRequestException(
+        'Withdrawal transaction does not exist or has already been processed.',
+      );
     }
 
     await this.prisma.$transaction(async (prismaTx) => {
@@ -158,7 +190,7 @@ export class TransactionsService {
           entityId: tx.id,
           action: 'REJECTED',
           performedBy: adminId,
-          details: `Admin rejected withdrawal of ${tx.amount} USDT.`,
+          details: `Admin rejected withdrawal of ${tx.amount.toString()} USDT.`,
         },
       });
     });
@@ -166,4 +198,3 @@ export class TransactionsService {
     return { message: 'Withdrawal request rejected.' };
   }
 }
-

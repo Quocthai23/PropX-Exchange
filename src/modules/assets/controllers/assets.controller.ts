@@ -1,5 +1,5 @@
 import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AssetsService } from '../services/assets.service';
 import { CreateAssetDto } from '../dto/create-asset.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -12,15 +12,18 @@ export class AssetsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin: Create a new asset and tokenize it on blockchain' })
+  @ApiOperation({
+    summary: 'Admin: Create a new asset and tokenize it on blockchain',
+  })
   create(@Body() createAssetDto: CreateAssetDto) {
     return this.assetsService.create(createAssetDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get the list of RWA assets currently available for sale' })
+  @ApiOperation({
+    summary: 'Get the list of RWA assets currently available for sale',
+  })
   findAll() {
     return this.assetsService.findAll();
   }
 }
-

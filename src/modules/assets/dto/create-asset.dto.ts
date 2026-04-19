@@ -1,5 +1,12 @@
 ﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  Min,
+} from 'class-validator';
 
 export class CreateAssetDto {
   @ApiProperty({ description: 'On-chain token symbol (e.g., RWA-EST-01)' })
@@ -7,7 +14,9 @@ export class CreateAssetDto {
   @IsNotEmpty()
   symbol: string;
 
-  @ApiProperty({ description: 'Asset name (e.g., Vinhome Landmark 81 Apartment)' })
+  @ApiProperty({
+    description: 'Asset name (e.g., Vinhome Landmark 81 Apartment)',
+  })
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -27,7 +36,10 @@ export class CreateAssetDto {
   @IsNotEmpty()
   categoryId: string;
 
-  @ApiProperty({ description: 'Total supply of this asset token', example: 10000 })
+  @ApiProperty({
+    description: 'Total supply of this asset token',
+    example: 10000,
+  })
   @IsNumber()
   @Min(1)
   totalSupply: number;
@@ -37,12 +49,17 @@ export class CreateAssetDto {
   @Min(0)
   tokenPrice: number;
 
-  @ApiPropertyOptional({ description: 'Expected annual yield (APY %)', example: 8.5 })
+  @ApiPropertyOptional({
+    description: 'Expected annual yield (APY %)',
+    example: 8.5,
+  })
   @IsOptional()
   @IsNumber()
   expectedApy?: number;
 
-  @ApiPropertyOptional({ description: 'Whether this asset is highlighted as hot' })
+  @ApiPropertyOptional({
+    description: 'Whether this asset is highlighted as hot',
+  })
   @IsOptional()
   @IsBoolean()
   isHot?: boolean;

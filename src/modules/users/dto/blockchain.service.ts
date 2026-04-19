@@ -10,7 +10,6 @@ export class BlockchainService {
     );
 
     try {
-
       // await contract.addToWhitelist(walletAddress);
       return true;
     } catch (error) {

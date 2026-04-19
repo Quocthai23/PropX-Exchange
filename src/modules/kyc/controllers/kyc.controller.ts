@@ -79,4 +79,3 @@ export class KycController {
     return this.kycService.rejectKyc(userId, dto.reason, user.sub);
   }
 }
-

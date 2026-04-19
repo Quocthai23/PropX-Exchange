@@ -16,9 +16,39 @@ model User {
   kycStatus           String   @default("NONE")
   refreshTokenHash    String?  @db.Text
   refreshTokenExpiresAt DateTime?
+  supportTickets      SupportTicket[] @relation("SupportTicketOwner")
+  sentTicketMessages  TicketMessage[] @relation("TicketMessageSender")
+  buyerTrades         Trade[]         @relation("BuyerTrades")
+  sellerTrades        Trade[]         @relation("SellerTrades")
+  dividendClaims      DividendClaim[]
   
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+model SupportTicket {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation("SupportTicketOwner", fields: [userId], references: [id])
+  subject   String
+  status    SupportTicketStatus @default(OPEN)
+  messages  TicketMessage[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([userId, status, createdAt])
+}
+
+model TicketMessage {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id])
+  senderId  String
+  sender    User      @relation("TicketMessageSender", fields: [senderId], references: [id])
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
 }
 
 model Otp {
@@ -57,7 +87,10 @@ model Asset {
   expectedApy     Decimal?
   isHot           Boolean  @default(false)
   isActive        Boolean  @default(false)
+  candlesticks    Candlestick[]
+  dividendDistributions DividendDistribution[]
   corporateActions CorporateAction[]
+  trades          Trade[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -90,17 +123,41 @@ model Order {
 }
 
 model Transaction {
-  id             String   @id @default(uuid())
-  userId         String
-  type           String
-  amount         Decimal
-  fee            Decimal  @default(0)
-  status         String
-  txHash         String?  @unique
-  confirmations  Int      @default(0)
-  idempotencyKey String?  @unique
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                    String                   @id @default(uuid())
+  userId                String
+  type                  String
+  amount                Decimal
+  fee                   Decimal                  @default(0)
+  status                String
+  txHash                String?                  @unique
+  confirmations         Int                      @default(0)
+  idempotencyKey        String?                  @unique
+  
+  // Gas spike handling fields
+  gasPrice              Decimal?                 // Initial gas price in wei
+  lastGasPrice          Decimal?                 // Latest gas price from speed-up
+  speedUpAttempts       Int                      @default(0)
+  stuckSince            DateTime?                // When transaction got stuck (no confirmations after 1 hour)
+  refundStatus          String                   @default("NONE")  // NONE, PENDING, COMPLETED
+  refundTxHash          String?                  // Hash of refund transaction if processed
+  speedUpAttempts_      GasSpeedUpAttempt[]
+  
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+}
+
+model GasSpeedUpAttempt {
+  id              String      @id @default(uuid())
+  transactionId   String
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  previousTxHash  String
+  newTxHash       String
+  oldGasPrice     Decimal     // Previous gas price
+  newGasPrice     Decimal     // New gas price
+  gasFeePaid      Decimal     // Extra gas fee paid for speed-up
+  status          String      @default("PENDING")  // PENDING, COMPLETED, FAILED
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 }
 
 model AuditLog {
@@ -119,6 +176,13 @@ enum CorporateActionType {
   LIQUIDATION
 }
 
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 model CorporateAction {
   id            String              @id @default(uuid())
   assetId       String
@@ -130,4 +194,63 @@ model CorporateAction {
   status        String
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+}
+model DividendDistribution {
+  id           String   @id @default(uuid())
+  assetId      String
+  asset        Asset    @relation(fields: [assetId], references: [id])
+  totalAmount  Decimal
+  snapshotDate DateTime
+  status       String   @default("PENDING") // PENDING, READY_FOR_CLAIM, COMPLETED
+  claims       DividendClaim[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model DividendClaim {
+  id             String               @id @default(uuid())
+  distributionId String
+  distribution   DividendDistribution @relation(fields: [distributionId], references: [id])
+  userId         String
+  user           User                 @relation(fields: [userId], references: [id])
+  amount         Decimal
+  status         String               @default("PENDING") // PENDING, CLAIMED
+  claimedAt      DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([distributionId, userId])
+}
+
+model Candlestick {
+  id         String   @id @default(uuid())
+  assetId    String
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  resolution String   // VD: "1m", "5m", "15m", "30m", "1h", "1d"
+  openTime   DateTime
+  open       Decimal
+  high       Decimal
+  low        Decimal
+  close      Decimal
+  volume     Decimal
+  createdAt  DateTime @default(now())
+
+  @@unique([assetId, resolution, openTime])
+  @@index([assetId, resolution, openTime(sort: Desc)])
+}
+
+model Trade {
+  id               String   @id @default(uuid())
+  assetId          String
+  asset            Asset    @relation(fields: [assetId], references: [id])
+  buyerId          String
+  buyer            User     @relation("BuyerTrades", fields: [buyerId], references: [id])
+  sellerId         String
+  seller           User     @relation("SellerTrades", fields: [sellerId], references: [id])
+  price            Decimal
+  quantity         Decimal
+  settlementStatus String   @default("PENDING") // PENDING, PROCESSING, SETTLED, FAILED
+  txHash           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

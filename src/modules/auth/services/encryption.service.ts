@@ -23,7 +23,11 @@ export class EncryptionService {
 
   decrypt(encryptedText: string): string {
     const [ivHex, authTagHex, encryptedHex] = encryptedText.split(':');
-    const decipher = crypto.createDecipheriv(this.algorithm, this.secretKey, Buffer.from(ivHex, 'hex'));
+    const decipher = crypto.createDecipheriv(
+      this.algorithm,
+      this.secretKey,
+      Buffer.from(ivHex, 'hex'),
+    );
     decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
     let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
     decrypted += decipher.final('utf8');

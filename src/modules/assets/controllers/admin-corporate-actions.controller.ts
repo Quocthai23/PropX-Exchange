@@ -5,14 +5,19 @@ import { CorporateActionService } from '../services/corporate-actions.service';
 @Controller('admin/assets/:id/corporate-actions')
 // @UseGuards(AdminGuard)
 export class AdminCorporateActionsController {
-  constructor(private readonly corporateActionService: CorporateActionService) {}
+  constructor(
+    private readonly corporateActionService: CorporateActionService,
+  ) {}
 
   @Post('dividend')
   async distributeDividend(
     @Param('id') assetId: string,
     @Body('totalAmount') totalAmount: string,
   ) {
-    const usersPaid = await this.corporateActionService.distributeYield(assetId, totalAmount);
+    const usersPaid = await this.corporateActionService.distributeYield(
+      assetId,
+      totalAmount,
+    );
     return {
       success: true,
       message: `Dividend distributed to ${usersPaid} users.`,

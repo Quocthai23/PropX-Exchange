@@ -4,7 +4,6 @@ import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 
 export const winstonConfig = {
   transports: [
-
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.timestamp(),
@@ -23,8 +22,10 @@ export const winstonConfig = {
       maxSize: '20m',
       maxFiles: '14d',
       level: 'error',
-      format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json(),
+      ),
     }),
-
   ],
 };

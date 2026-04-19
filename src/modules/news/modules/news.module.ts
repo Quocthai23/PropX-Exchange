@@ -7,4 +7,3 @@ import { NewsController } from '../controllers/news.controller';
   providers: [NewsService],
 })
 export class NewsModule {}
-

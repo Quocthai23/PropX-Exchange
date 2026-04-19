@@ -1,6 +1,24 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../../prisma/prisma.service';
+
+type CorporateActionCreateData = {
+  assetId: string;
+  type: 'DIVIDEND' | 'LIQUIDATION' | 'DEPRECIATION';
+  amount: string;
+  recordDate: Date;
+  executionDate: Date;
+  status: string;
+};
+
+type CorporateActionDelegate = {
+  create(args: { data: CorporateActionCreateData }): Promise<unknown>;
+};
 
 @Injectable()
 export class CorporateActionService {
@@ -14,15 +32,11 @@ export class CorporateActionService {
     amount: string;
     status: string;
   }) {
-    const corporateActionClient = (this.prisma as any).corporateAction;
-    if (!corporateActionClient?.create) {
-      this.logger.warn(
-        'Prisma client has not been regenerated for CorporateAction model. Skipping action record.',
-      );
-      return;
-    }
+    const prisma = this.prisma as PrismaService & {
+      corporateAction: CorporateActionDelegate;
+    };
 
-    await corporateActionClient.create({
+    await prisma.corporateAction.create({
       data: {
         assetId: data.assetId,
         type: data.type,
@@ -39,7 +53,10 @@ export class CorporateActionService {
    * @param assetId ID of the RWA asset
    * @param totalDividend Total amount (e.g., USDT) to distribute
    */
-  async distributeYield(assetId: string, totalDividend: string): Promise<number> {
+  async distributeYield(
+    assetId: string,
+    totalDividend: string,
+  ): Promise<number> {
     const totalDividendDec = new Decimal(totalDividend);
     if (totalDividendDec.lte(0)) {
       throw new BadRequestException('Total dividend must be greater than 0.');
@@ -75,7 +92,9 @@ export class CorporateActionService {
 
     // 3. Distribute funds proportionally to each user
     for (const holding of holdings) {
-      const userShareRatio = new Decimal(holding.available).div(totalSupplyHeld);
+      const userShareRatio = new Decimal(holding.available).div(
+        totalSupplyHeld,
+      );
       const userPayoutAmount = totalDividendDec.times(userShareRatio);
 
       if (userPayoutAmount.lte(0)) continue;
@@ -127,7 +146,9 @@ export class CorporateActionService {
       status: 'COMPLETED',
     });
 
-    this.logger.log(`Distributed ${totalDividend} yield for asset ${assetId} to ${payoutCount} users.`);
+    this.logger.log(
+      `Distributed ${totalDividend} yield for asset ${assetId} to ${payoutCount} users.`,
+    );
     return payoutCount;
   }
 
@@ -136,10 +157,15 @@ export class CorporateActionService {
    * @param assetId ID of the RWA asset
    * @param liquidationPrice Liquidation price per 1 asset unit
    */
-  async liquidateAsset(assetId: string, liquidationPrice: string): Promise<void> {
+  async liquidateAsset(
+    assetId: string,
+    liquidationPrice: string,
+  ): Promise<void> {
     const liquidationPriceDec = new Decimal(liquidationPrice);
     if (liquidationPriceDec.lte(0)) {
-      throw new BadRequestException('Liquidation price must be greater than 0.');
+      throw new BadRequestException(
+        'Liquidation price must be greater than 0.',
+      );
     }
 
     const asset = await this.prisma.asset.findUnique({
@@ -150,7 +176,9 @@ export class CorporateActionService {
       throw new NotFoundException('Asset not found.');
     }
 
-    this.logger.log(`Starting liquidation for asset ${assetId} at price ${liquidationPrice}`);
+    this.logger.log(
+      `Starting liquidation for asset ${assetId} at price ${liquidationPrice}`,
+    );
 
     const holdings = await this.prisma.balance.findMany({
       where: {

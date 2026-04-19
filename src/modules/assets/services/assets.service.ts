@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { BlockchainService } from './blockchain.service';
@@ -14,7 +18,6 @@ export class AssetsService {
   ) {}
 
   async create(dto: CreateAssetDto) {
-
     const asset = await this.prisma.asset.create({
       data: {
         symbol: dto.symbol,
@@ -41,7 +44,8 @@ export class AssetsService {
         data: { txHash },
       });
 
-      const contractAddress = await this.blockchainService.waitForTokenizeReceipt(txHash);
+      const contractAddress =
+        await this.blockchainService.waitForTokenizeReceipt(txHash);
 
       return await this.prisma.asset.update({
         where: { id: asset.id },
@@ -51,15 +55,24 @@ export class AssetsService {
       this.logger.error(`Failed to tokenize asset ${asset.symbol}`, error);
 
       try {
-        const currentAsset = await this.prisma.asset.findUnique({ where: { id: asset.id } });
+        const currentAsset = await this.prisma.asset.findUnique({
+          where: { id: asset.id },
+        });
         if (!currentAsset?.txHash) {
           await this.prisma.asset.delete({ where: { id: asset.id } });
         }
       } catch (dbError) {
-        this.logger.error(`Failed to clean up asset ${asset.id} after error`, dbError);
+        this.logger.error(
+          `Failed to clean up asset ${asset.id} after error`,
+          dbError,
+        );
       }
 
-      throw new InternalServerErrorException('Error while tokenizing asset on blockchain: ' + error.message);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new InternalServerErrorException(
+        'Error while tokenizing asset on blockchain: ' + errorMessage,
+      );
     }
   }
 
@@ -81,18 +94,24 @@ export class AssetsService {
 
     for (const asset of pendingAssets) {
       try {
-        this.logger.log(`Reconciling pending asset: ${asset.symbol} with txHash: ${asset.txHash}`);
-        const contractAddress = await this.blockchainService.waitForTokenizeReceipt(asset.txHash!);
-        
+        this.logger.log(
+          `Reconciling pending asset: ${asset.symbol} with txHash: ${asset.txHash}`,
+        );
+        const contractAddress =
+          await this.blockchainService.waitForTokenizeReceipt(asset.txHash!);
+
         await this.prisma.asset.update({
           where: { id: asset.id },
           data: { contractAddress, isActive: true },
         });
         this.logger.log(`Successfully reconciled asset: ${asset.symbol}`);
       } catch (error) {
-        this.logger.error(`Failed to reconcile asset ${asset.symbol}: ${error.message}`);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        this.logger.error(
+          `Failed to reconcile asset ${asset.symbol}: ${errorMessage}`,
+        );
       }
     }
   }
 }
-
