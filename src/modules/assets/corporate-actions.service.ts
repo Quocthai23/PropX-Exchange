@@ -13,7 +13,10 @@ export class CorporateActionService {
    * @param assetId ID of the RWA asset
    * @param totalDividend Total amount (e.g., USDT) to distribute
    */
-  async distributeYield(assetId: string, totalDividend: string): Promise<number> {
+  async distributeYield(
+    assetId: string,
+    totalDividend: string,
+  ): Promise<number> {
     const totalDividendDec = new Decimal(totalDividend);
 
     // 1. Get all users currently holding this asset
@@ -38,7 +41,9 @@ export class CorporateActionService {
 
     // 3. Distribute funds proportionally to each user
     for (const holding of holdings) {
-      const userShareRatio = new Decimal(holding.available).div(totalSupplyHeld);
+      const userShareRatio = new Decimal(holding.available).div(
+        totalSupplyHeld,
+      );
       const userPayoutAmount = totalDividendDec.times(userShareRatio);
 
       if (userPayoutAmount.lte(0)) continue;
@@ -77,7 +82,9 @@ export class CorporateActionService {
       payoutCount++;
     }
 
-    this.logger.log(`Distributed ${totalDividend} yield for asset ${assetId} to ${payoutCount} users.`);
+    this.logger.log(
+      `Distributed ${totalDividend} yield for asset ${assetId} to ${payoutCount} users.`,
+    );
     return payoutCount;
   }
 
@@ -86,20 +93,25 @@ export class CorporateActionService {
    * @param assetId ID of the RWA asset
    * @param liquidationPrice Liquidation price per 1 asset unit
    */
-  async liquidateAsset(assetId: string, liquidationPrice: string): Promise<void> {
+  async liquidateAsset(
+    assetId: string,
+    liquidationPrice: string,
+  ): Promise<void> {
     // Liquidation logic is similar to dividend distribution, but:
     // 1. Distribute USDT to users based on: Holding Amount * liquidationPrice
     // 2. Remove/Set the asset balance to 0 for all users
     // 3. Change Asset status to "LIQUIDATED" / "INACTIVE"
     // 4. Cancel all open Orders (BUY/SELL) for this Asset
-    
-    this.logger.log(`Starting liquidation for asset ${assetId} at price ${liquidationPrice}`);
-    
+
+    this.logger.log(
+      `Starting liquidation for asset ${assetId} at price ${liquidationPrice}`,
+    );
+
     // TODO: Implement transaction blocks for liquidation
-    
+
     await this.prisma.asset.update({
-        where: { id: assetId },
-        data: { isActive: false }
+      where: { id: assetId },
+      data: { isActive: false },
     });
   }
 }

@@ -8,6 +8,8 @@ import { IpfsService } from '../services/ipfs.service';
 import { AdminCorporateActionsController } from '../controllers/admin-corporate-actions.controller';
 import { CorporateActionService } from '../services/corporate-actions.service';
 import { KmsService } from '../../../shared/services/kms.service';
+import { RedeemService } from '../services/redeem.service';
+import { DailyPriceCron } from '../jobs/daily-price.cron';
 
 @Module({
   controllers: [AssetsController, AdminCorporateActionsController],
@@ -19,6 +21,8 @@ import { KmsService } from '../../../shared/services/kms.service';
     BlockchainService,
     CorporateActionService,
     KmsService,
+    RedeemService,
+    DailyPriceCron,
   ],
   exports: [BlockchainService],
 })

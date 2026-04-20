@@ -27,8 +27,15 @@ export class TransactionsCron {
 
     for (const tx of pendingTxs) {
       try {
+        if (!tx.txHash) {
+          this.logger.warn(
+            `Skipping transaction ${tx.id} because txHash is missing.`,
+          );
+          continue;
+        }
+
         const confirmations =
-          await this.blockchainService.getTransactionConfirmations(tx.txHash!);
+          await this.blockchainService.getTransactionConfirmations(tx.txHash);
 
         await this.prisma.transaction.update({
           where: { id: tx.id },

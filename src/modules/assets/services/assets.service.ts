@@ -94,11 +94,18 @@ export class AssetsService {
 
     for (const asset of pendingAssets) {
       try {
+        if (!asset.txHash) {
+          this.logger.warn(
+            `Skipping asset ${asset.symbol} (${asset.id}) because txHash is missing.`,
+          );
+          continue;
+        }
+
         this.logger.log(
           `Reconciling pending asset: ${asset.symbol} with txHash: ${asset.txHash}`,
         );
         const contractAddress =
-          await this.blockchainService.waitForTokenizeReceipt(asset.txHash!);
+          await this.blockchainService.waitForTokenizeReceipt(asset.txHash);
 
         await this.prisma.asset.update({
           where: { id: asset.id },

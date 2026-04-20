@@ -248,10 +248,16 @@ export class GasSpikeService {
       );
     }
 
+    if (!tx.txHash) {
+      throw new BadRequestException(
+        'Transaction has no on-chain hash and cannot be refunded on blockchain.',
+      );
+    }
+
     try {
       // Process refund on chain (cancel original transaction + refund to user)
       const refundTxHash = await this.blockchainService.processRefund(
-        tx.txHash!,
+        tx.txHash,
       );
 
       // Update user balance

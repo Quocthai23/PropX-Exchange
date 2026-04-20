@@ -35,6 +35,41 @@ export class OrdersService {
     const totalCost = orderAmount.mul(orderPrice);
 
     return this.prisma.$transaction(async (tx) => {
+      const asset = await tx.asset.findUnique({
+        where: { id: assetId },
+        select: {
+          id: true,
+          symbol: true,
+          isActive: true,
+          tradingStatus: true,
+          referencePrice: true,
+          priceBandPercentage: true,
+        },
+      });
+
+      if (!asset) {
+        throw new BadRequestException('Asset not found.');
+      }
+
+      if (!asset.isActive || asset.tradingStatus !== 'OPEN') {
+        throw new BadRequestException(
+          `Trading for asset ${asset.symbol} is currently halted.`,
+        );
+      }
+
+      if (asset.referencePrice && asset.priceBandPercentage) {
+        const referencePriceDec = new Decimal(asset.referencePrice);
+        const bandDec = new Decimal(asset.priceBandPercentage);
+        const ceilingPrice = referencePriceDec.mul(new Decimal(1).add(bandDec));
+        const floorPrice = referencePriceDec.mul(new Decimal(1).sub(bandDec));
+
+        if (orderPrice.gt(ceilingPrice) || orderPrice.lt(floorPrice)) {
+          throw new BadRequestException(
+            `Order price is outside today's allowed band. Valid range: [${floorPrice.toFixed(6)} - ${ceilingPrice.toFixed(6)}].`,
+          );
+        }
+      }
+
       if (side === 'BUY') {
         const usdtBalance = await tx.balance.findFirst({
           where: { userId, assetId: null },

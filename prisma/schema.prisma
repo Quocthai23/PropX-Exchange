@@ -84,6 +84,9 @@ model Asset {
   categoryId      String
   totalSupply     Decimal
   tokenPrice      Decimal
+  referencePrice  Decimal?
+  priceBandPercentage Decimal @default(0.07)
+  tradingStatus   String  @default("OPEN")
   expectedApy     Decimal?
   isHot           Boolean  @default(false)
   isActive        Boolean  @default(false)
