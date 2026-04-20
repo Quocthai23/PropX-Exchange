@@ -2359,6 +2359,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@prisma/adapter-mariadb@npm:^7.7.0":
+  version: 7.7.0
+  resolution: "@prisma/adapter-mariadb@npm:7.7.0"
+  dependencies:
+    "@prisma/driver-adapter-utils": "npm:7.7.0"
+    mariadb: "npm:3.4.5"
+  checksum: 10c0/1809d2171bb340dfe887918d4b32f6b95d808c90e481d197d8015f085edb2ccdabb0eec5659d3b8f9579a1f63e4063c0ddffd7b8aa2c076103b781ca0bff6103
+  languageName: node
+  linkType: hard
+
 "@prisma/client-runtime-utils@npm:7.7.0":
   version: 7.7.0
   resolution: "@prisma/client-runtime-utils@npm:7.7.0"
@@ -2431,6 +2441,15 @@ __metadata:
     valibot: "npm:1.2.0"
     zeptomatch: "npm:2.1.0"
   checksum: 10c0/9494f86f02ce820ea959cb20ada0d462940ef212aa32c9e68556fa47271ecca14b71c3cb26a7dc477c1ae8f618156ec16dd5ab42b9d46c627240e152e0076d66
+  languageName: node
+  linkType: hard
+
+"@prisma/driver-adapter-utils@npm:7.7.0":
+  version: 7.7.0
+  resolution: "@prisma/driver-adapter-utils@npm:7.7.0"
+  dependencies:
+    "@prisma/debug": "npm:7.7.0"
+  checksum: 10c0/7b68ae78422427b3e858ff5ffcf44e4dbfb66dcb5e69c637f9fb46ad3b6b367f36c540b754791a906c5a2bf9aa41fbb39fb9819fb4a555223532755b585130e4
   languageName: node
   linkType: hard
 
@@ -3409,6 +3428,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/geojson@npm:^7946.0.16":
+  version: 7946.0.16
+  resolution: "@types/geojson@npm:7946.0.16"
+  checksum: 10c0/1ff24a288bd5860b766b073ead337d31d73bdc715e5b50a2cee5cb0af57a1ed02cc04ef295f5fa68dc40fe3e4f104dd31282b2b818a5ba3231bc1001ba084e3c
+  languageName: node
+  linkType: hard
+
 "@types/http-errors@npm:*":
   version: 2.0.5
   resolution: "@types/http-errors@npm:2.0.5"
@@ -3489,7 +3515,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=10.0.0":
+"@types/node@npm:*, @types/node@npm:>=10.0.0, @types/node@npm:>=18":
   version: 25.6.0
   resolution: "@types/node@npm:25.6.0"
   dependencies:
@@ -3507,7 +3533,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^24.0.0":
+"@types/node@npm:^24.0.0, @types/node@npm:^24.0.13":
   version: 24.12.2
   resolution: "@types/node@npm:24.12.2"
   dependencies:
@@ -6551,6 +6577,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"iconv-lite@npm:^0.6.3":
+  version: 0.6.3
+  resolution: "iconv-lite@npm:0.6.3"
+  dependencies:
+    safer-buffer: "npm:>= 2.1.2 < 3.0.0"
+  checksum: 10c0/98102bc66b33fcf5ac044099d1257ba0b7ad5e3ccd3221f34dd508ab4070edff183276221684e1e0555b145fce0850c9f7d2b60a9fcac50fbb4ea0d6e845a3b1
+  languageName: node
+  linkType: hard
+
 "iconv-lite@npm:^0.7.0, iconv-lite@npm:^0.7.2, iconv-lite@npm:~0.7.0":
   version: 0.7.2
   resolution: "iconv-lite@npm:0.7.2"
@@ -7616,7 +7651,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lru-cache@npm:^10.2.0":
+"lru-cache@npm:^10.2.0, lru-cache@npm:^10.4.3":
   version: 10.4.3
   resolution: "lru-cache@npm:10.4.3"
   checksum: 10c0/ebd04fbca961e6c1d6c0af3799adcc966a1babe798f685bb84e6599266599cd95d94630b10262f5424539bc4640107e8a33aa28585374abf561d30d16f4b39fb
@@ -7704,6 +7739,32 @@ __metadata:
   dependencies:
     tmpl: "npm:1.0.5"
   checksum: 10c0/b0e6e599780ce6bab49cc413eba822f7d1f0dfebd1c103eaa3785c59e43e22c59018323cf9e1708f0ef5329e94a745d163fcbb6bff8e4c6742f9be9e86f3500c
+  languageName: node
+  linkType: hard
+
+"mariadb@npm:3.4.5":
+  version: 3.4.5
+  resolution: "mariadb@npm:3.4.5"
+  dependencies:
+    "@types/geojson": "npm:^7946.0.16"
+    "@types/node": "npm:^24.0.13"
+    denque: "npm:^2.1.0"
+    iconv-lite: "npm:^0.6.3"
+    lru-cache: "npm:^10.4.3"
+  checksum: 10c0/2b007083f992c1543e73ec9c4113528deeb418502dfee791bb2902c7c2e228d9e46c3ed7415c27f7d03850e34189ee4a8b5c54ef7d262abcfd5eb1848e8ca76e
+  languageName: node
+  linkType: hard
+
+"mariadb@npm:^3.5.2":
+  version: 3.5.2
+  resolution: "mariadb@npm:3.5.2"
+  dependencies:
+    "@types/geojson": "npm:^7946.0.16"
+    "@types/node": "npm:>=18"
+    denque: "npm:^2.1.0"
+    iconv-lite: "npm:^0.7.2"
+    lru-cache: "npm:^10.4.3"
+  checksum: 10c0/3fe61ede40e38eddf7b32d975fe55a67d342620909deb282c87fa03c943206739adbf31e3767ebd20211d73b66f6d424c0e09166ba35dfa6079b04c084d5c69d
   languageName: node
   linkType: hard
 
@@ -8831,6 +8892,7 @@ __metadata:
     "@nestjs/testing": "npm:^11.0.1"
     "@nestjs/throttler": "npm:^6.5.0"
     "@nestjs/websockets": "npm:^11.1.18"
+    "@prisma/adapter-mariadb": "npm:^7.7.0"
     "@prisma/client": "npm:^7.7.0"
     "@prisma/config": "npm:^7.7.0"
     "@types/cookie-parser": "npm:^1.4.10"
@@ -8853,6 +8915,7 @@ __metadata:
     glob: "npm:^13.0.6"
     globals: "npm:^17.0.0"
     jest: "npm:^30.0.0"
+    mariadb: "npm:^3.5.2"
     nest-winston: "npm:^1.10.2"
     nodemailer: "npm:^8.0.5"
     prettier: "npm:^3.4.2"

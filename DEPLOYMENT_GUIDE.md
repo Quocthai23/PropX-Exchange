@@ -232,7 +232,52 @@ redis-cli
 
 ---
 
-## 4. Environment Variables Checklist
+## 4. Real-time & WebSockets Flow
+
+### Why this flow matters
+In trading systems, users must see state changes instantly without manual refresh.
+
+### Implemented architecture
+- Domain event is emitted when a match is completed: `trading.order.matched`
+- `TradingEventsListener` listens to this event via `@OnEvent(...)`
+- `RealtimeGateway` (Socket.io namespace: `trading`) broadcasts updates to rooms
+
+### Rooms strategy
+- Market room: `asset:{assetId}`
+  - All clients viewing an instrument join this room
+- User room: `user:{userId}`
+  - Each logged-in user joins their personal room
+
+### Events emitted to frontend
+- `price_update`
+  - Emitted to `asset:{assetId}` after each match
+  - Intended for chart streaming (`series.update(...)`)
+- `order_book_update`
+  - Emitted to `asset:{assetId}` so clients refresh/rebuild local order book view
+- `trade_matched`
+  - Emitted to `asset:{assetId}` with trade detail for tape/recent trades UI
+- `my_order_matched`
+  - Emitted to `user:{userId}` for buyer and seller notifications
+
+### Client subscribe examples
+```javascript
+socket.emit('subscribe_market', { assetId: 'asset-123' });
+socket.emit('subscribe_user', { userId: 'user-abc' });
+```
+
+### Event chain example
+1. User places BUY order via REST (`POST /orders`)
+2. Order is queued to `order-matching`
+3. Processor finds matching SELL order and commits DB transaction
+4. Processor emits `trading.order.matched`
+5. Listener forwards payload to Socket gateway
+6. Gateway pushes:
+   - `price_update`, `order_book_update`, `trade_matched` to market watchers
+   - `my_order_matched` to buyer and seller
+
+---
+
+## 5. Environment Variables Checklist
 
 ### Development (.env)
 ```bash
@@ -281,7 +326,7 @@ KYC_PII_ENCRYPTION_KEY=...  # rotated regularly
 
 ---
 
-## 5. Deployment Checklist
+## 6. Deployment Checklist
 
 - [ ] Redis running and accessible
   ```bash
@@ -324,7 +369,7 @@ KYC_PII_ENCRYPTION_KEY=...  # rotated regularly
 
 ---
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 ### KYC Approval Still Slow?
 ```bash
@@ -361,7 +406,7 @@ aws logs tail /aws/kms --follow
 
 ---
 
-## 7. References
+## 8. References
 
 - **Bull Queue Docs**: https://docs.bullmq.io/
 - **AWS KMS**: https://docs.aws.amazon.com/kms/
