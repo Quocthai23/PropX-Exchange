@@ -1,0 +1,47 @@
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-3001}:${PORT:-3001}"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=mysql://${DB_USER:-propx}:${DB_PASSWORD:-propx}@mariadb:3306/${DB_NAME:-propx}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-propx}
+      MYSQL_USER: ${DB_USER:-propx}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-propx}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-propx_root}
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mariadb_data:
+  redis_data:

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { BlockchainService } from '../services/blockchain.service';
+import { BlockchainService } from '../../assets/services/blockchain.service';
 import { GasSpikeService } from '../services/gas-spike.service';
 
 @Injectable()

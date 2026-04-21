@@ -8,10 +8,11 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { TransactionsService } from '../services/transactions.service';
+import { PaymentService } from '../services/payment.service';
 import { GasSpikeService } from '../services/gas-spike.service';
-import { DepositDto } from '../deposit.dto';
-import { WithdrawDto } from '../withdraw.dto';
+import { DepositDto } from '../dto/deposit.dto';
+import { WithdrawDto } from '../dto/withdraw.dto';
+import { TransferDto } from '../dto/transfer.dto';
 import { GasSpeedUpDto, GasRefundDto } from '../dto/gas-spike.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../users/dto/roles.guard';
@@ -23,13 +24,13 @@ import type { JwtPayload } from '../../auth/types/jwt-payload.type';
 @UseGuards(JwtAuthGuard)
 export class TransactionsController {
   constructor(
-    private readonly transactionsService: TransactionsService,
+    private readonly paymentService: PaymentService,
     private readonly gasSpikeService: GasSpikeService,
   ) {}
 
   @Post('deposit')
   async deposit(@CurrentUser() user: JwtPayload, @Body() dto: DepositDto) {
-    return this.transactionsService.deposit(user.sub, dto);
+    return this.paymentService.deposit(user.sub, dto);
   }
 
   @Post('withdraw')
@@ -37,7 +38,15 @@ export class TransactionsController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: WithdrawDto,
   ) {
-    return this.transactionsService.requestWithdraw(user.sub, dto);
+    return this.paymentService.requestWithdraw(user.sub, dto);
+  }
+
+  @Post('transfer/email')
+  async transferByEmail(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: TransferDto,
+  ) {
+    return this.paymentService.transferByEmail(user.sub, dto);
   }
 
   @Patch('admin/withdraw/:id/approve')
@@ -47,7 +56,7 @@ export class TransactionsController {
     @CurrentUser() admin: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.transactionsService.approveWithdraw(admin.sub, id);
+    return this.paymentService.approveWithdraw(admin.sub, id);
   }
 
   @Patch('admin/withdraw/:id/reject')
@@ -57,7 +66,7 @@ export class TransactionsController {
     @CurrentUser() admin: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.transactionsService.rejectWithdraw(admin.sub, id);
+    return this.paymentService.rejectWithdraw(admin.sub, id);
   }
 
   /**

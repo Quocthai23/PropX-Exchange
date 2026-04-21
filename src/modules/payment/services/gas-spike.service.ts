@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { BlockchainService } from './blockchain.service';
+import { BlockchainService } from '../../assets/services/blockchain.service';
 
 export interface GasSpeedUpRequest {
   transactionId: string;

@@ -9,7 +9,7 @@ import { NewsModule } from './modules/news/modules/news.module';
 import { UsersModule } from './modules/users/modules/users.module';
 import { KycModule } from './modules/kyc/modules/kyc.module';
 import { AssetsModule } from './modules/assets/modules/assets.module';
-import { TransactionsModule } from './modules/assets/modules/transactions.module';
+import { PaymentModule } from './modules/payment/modules/payment.module';
 import { OrdersModule } from './modules/orders/modules/orders.module';
 import { SupportModule } from './modules/support/modules/support.module';
 import { AuthModule } from './modules/auth/modules/auth.module';
@@ -59,7 +59,7 @@ import { ConfigModule } from '@nestjs/config';
     UsersModule,
     KycModule,
     AssetsModule,
-    TransactionsModule,
+    PaymentModule,
     OrdersModule,
     SupportModule,
     AuthModule,
