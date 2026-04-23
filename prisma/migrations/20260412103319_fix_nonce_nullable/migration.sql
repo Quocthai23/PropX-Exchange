@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `user` MODIFY `nonce` VARCHAR(191) NULL;
+ALTER TABLE `User` MODIFY `nonce` VARCHAR(191) NULL;

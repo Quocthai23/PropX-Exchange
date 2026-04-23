@@ -44,58 +44,58 @@
 
 */
 -- DropForeignKey
-ALTER TABLE `balance` DROP FOREIGN KEY `Balance_assetId_fkey`;
+ALTER TABLE `Balance` DROP FOREIGN KEY `Balance_assetId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `balance` DROP FOREIGN KEY `Balance_userId_fkey`;
+ALTER TABLE `Balance` DROP FOREIGN KEY `Balance_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `candlestick` DROP FOREIGN KEY `Candlestick_assetId_fkey`;
+ALTER TABLE `Candlestick` DROP FOREIGN KEY `Candlestick_assetId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `dividend` DROP FOREIGN KEY `Dividend_assetId_fkey`;
+ALTER TABLE `Dividend` DROP FOREIGN KEY `Dividend_assetId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `kycrecord` DROP FOREIGN KEY `KycRecord_userId_fkey`;
+ALTER TABLE `KycRecord` DROP FOREIGN KEY `KycRecord_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `order` DROP FOREIGN KEY `Order_assetId_fkey`;
+ALTER TABLE `Order` DROP FOREIGN KEY `Order_assetId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `order` DROP FOREIGN KEY `Order_userId_fkey`;
+ALTER TABLE `Order` DROP FOREIGN KEY `Order_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `rewardhistory` DROP FOREIGN KEY `RewardHistory_userId_fkey`;
+ALTER TABLE `RewardHistory` DROP FOREIGN KEY `RewardHistory_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `supportticket` DROP FOREIGN KEY `SupportTicket_userId_fkey`;
+ALTER TABLE `SupportTicket` DROP FOREIGN KEY `SupportTicket_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `ticketmessage` DROP FOREIGN KEY `TicketMessage_senderId_fkey`;
+ALTER TABLE `TicketMessage` DROP FOREIGN KEY `TicketMessage_senderId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `ticketmessage` DROP FOREIGN KEY `TicketMessage_ticketId_fkey`;
+ALTER TABLE `TicketMessage` DROP FOREIGN KEY `TicketMessage_ticketId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `trade` DROP FOREIGN KEY `Trade_assetId_fkey`;
+ALTER TABLE `Trade` DROP FOREIGN KEY `Trade_assetId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `transaction` DROP FOREIGN KEY `Transaction_userId_fkey`;
+ALTER TABLE `Transaction` DROP FOREIGN KEY `Transaction_userId_fkey`;
 
 -- DropIndex
-DROP INDEX `Balance_assetId_fkey` ON `balance`;
+DROP INDEX `Balance_assetId_fkey` ON `Balance`;
 
 -- DropIndex
-DROP INDEX `Order_assetId_fkey` ON `order`;
+DROP INDEX `Order_assetId_fkey` ON `Order`;
 
 -- DropIndex
-DROP INDEX `Order_userId_fkey` ON `order`;
+DROP INDEX `Order_userId_fkey` ON `Order`;
 
 -- DropIndex
-DROP INDEX `Transaction_userId_fkey` ON `transaction`;
+DROP INDEX `Transaction_userId_fkey` ON `Transaction`;
 
 -- AlterTable
-ALTER TABLE `asset` DROP COLUMN `apy`,
+ALTER TABLE `Asset` DROP COLUMN `apy`,
     DROP COLUMN `images`,
     DROP COLUMN `location`,
     DROP COLUMN `status`,
@@ -112,15 +112,15 @@ ALTER TABLE `asset` DROP COLUMN `apy`,
     MODIFY `tokenPrice` DECIMAL(65, 30) NOT NULL;
 
 -- AlterTable
-ALTER TABLE `balance` ADD COLUMN `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ALTER TABLE `Balance` ADD COLUMN `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     MODIFY `available` DECIMAL(65, 30) NOT NULL DEFAULT 0,
     MODIFY `locked` DECIMAL(65, 30) NOT NULL DEFAULT 0;
 
 -- AlterTable
-ALTER TABLE `kycrecord` MODIFY `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING';
+ALTER TABLE `KycRecord` MODIFY `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING';
 
 -- AlterTable
-ALTER TABLE `order` ADD COLUMN `idempotencyKey` VARCHAR(191) NULL,
+ALTER TABLE `Order` ADD COLUMN `idempotencyKey` VARCHAR(191) NULL,
     ADD COLUMN `type` VARCHAR(191) NOT NULL,
     ADD COLUMN `updatedAt` DATETIME(3) NOT NULL,
     MODIFY `side` VARCHAR(191) NOT NULL,
@@ -130,7 +130,7 @@ ALTER TABLE `order` ADD COLUMN `idempotencyKey` VARCHAR(191) NULL,
     MODIFY `status` VARCHAR(191) NOT NULL;
 
 -- AlterTable
-ALTER TABLE `transaction` ADD COLUMN `confirmations` INTEGER NOT NULL DEFAULT 0,
+ALTER TABLE `Transaction` ADD COLUMN `confirmations` INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN `fee` DECIMAL(65, 30) NOT NULL DEFAULT 0,
     ADD COLUMN `gasPrice` DECIMAL(65, 30) NULL,
     ADD COLUMN `idempotencyKey` VARCHAR(191) NULL,
@@ -145,7 +145,7 @@ ALTER TABLE `transaction` ADD COLUMN `confirmations` INTEGER NOT NULL DEFAULT 0,
     MODIFY `status` VARCHAR(191) NOT NULL;
 
 -- AlterTable
-ALTER TABLE `user` DROP COLUMN `nonce`,
+ALTER TABLE `User` DROP COLUMN `nonce`,
     DROP COLUMN `nonceExpiresAt`,
     ADD COLUMN `encryptedPrivateKey` TEXT NOT NULL,
     MODIFY `email` VARCHAR(191) NOT NULL,
@@ -153,25 +153,25 @@ ALTER TABLE `user` DROP COLUMN `nonce`,
     MODIFY `kycStatus` VARCHAR(191) NOT NULL DEFAULT 'NONE';
 
 -- DropTable
-DROP TABLE `candlestick`;
+DROP TABLE `Candlestick`;
 
 -- DropTable
-DROP TABLE `dividend`;
+DROP TABLE `Dividend`;
 
 -- DropTable
-DROP TABLE `newsarticle`;
+DROP TABLE `NewsArticle`;
 
 -- DropTable
-DROP TABLE `rewardhistory`;
+DROP TABLE `RewardHistory`;
 
 -- DropTable
-DROP TABLE `supportticket`;
+DROP TABLE `SupportTicket`;
 
 -- DropTable
-DROP TABLE `ticketmessage`;
+DROP TABLE `TicketMessage`;
 
 -- DropTable
-DROP TABLE `trade`;
+DROP TABLE `Trade`;
 
 -- CreateTable
 CREATE TABLE `Otp` (
