@@ -6,14 +6,14 @@ WORKDIR /app
 RUN corepack enable
 
 # Copy package manager files and install dependencies
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile || (echo "Retrying yarn install..." && yarn cache clean && yarn install --frozen-lockfile)
+COPY package.json yarn.lock .yarnrc.yml ./
+RUN yarn install --immutable || (echo "Retrying yarn install..." && yarn cache clean && yarn install --immutable)
 # Copy the rest of the source code
 COPY . .
-# Generate Prisma client
+# Generate Prisma client once before TypeScript compile.
 RUN yarn prisma generate
 # Build the application
-RUN yarn run build
+RUN yarn nest build
 
 # Stage 2: Production - This stage creates a lean image for running the app
 FROM node:22-alpine
@@ -22,15 +22,13 @@ WORKDIR /app
 # Enable corepack to use yarn
 RUN corepack enable
 
-COPY package.json yarn.lock ./
-# Install only production dependencies. `prisma` must be a production dependency for migrations.
-RUN yarn install --production --frozen-lockfile || (echo "Retrying yarn install..." && yarn cache clean && yarn install --production --frozen-lockfile)
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built application and prisma schema from the builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
-RUN yarn prisma generate
 
 ENV NODE_ENV production
 # Expose the application port
