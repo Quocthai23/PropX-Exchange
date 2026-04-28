@@ -10,8 +10,8 @@ import { UsersModule } from './modules/users/modules/users.module';
 import { KycModule } from './modules/kyc/modules/kyc.module';
 import { AssetsModule } from './modules/assets/modules/assets.module';
 import { PaymentModule } from './modules/payment/payment.module';
-import { OrdersModule } from './modules/orders/modules/orders.module';
-import { SupportModule } from './modules/support/modules/support.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { SupportModule } from './modules/support/support.module';
 import { AuthModule } from './modules/auth/modules/auth.module';
 import { DividendsModule } from './modules/dividends/modules/dividends.module';
 import { MarketDataModule } from './modules/market-data/market-data.module';
@@ -22,6 +22,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { ConfigModule } from '@nestjs/config';
 import { PostsModule } from './modules/posts/posts.module';
+import { AccountsModule } from './modules/accounts/accounts.module';
+import { PositionsModule } from './modules/positions/positions.module';
 
 @Module({
   imports: [
@@ -70,6 +72,8 @@ import { PostsModule } from './modules/posts/posts.module';
     SettlementModule,
     RealtimeModule,
     PostsModule,
+    AccountsModule,
+    PositionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

@@ -1,39 +1,69 @@
 import {
-  BadRequestException,
   Controller,
+  Get,
   Post,
+  Patch,
   Body,
-  UseGuards,
+  Param,
+  Query,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import type { JwtPayload } from '../../auth/types/jwt-payload.type';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from '../services/orders.service';
-import { CreateOrderDto } from '../dto/create-order.dto';
+import {
+  BulkCancelOrdersDto,
+  UpdateOrderDto,
+  GetOrdersQueryDto,
+  CreateOrderDto,
+} from '../dto/orders.dto';
+// TODO: Import JwtAuthGuard và CurrentUser từ auth module
 
-import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
-
+@ApiTags('Orders')
 @Controller('orders')
-@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@ApiBearerAuth('accessToken')
+// @UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Post()
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
-  create(
-    @CurrentUser() user: JwtPayload | undefined,
-    @Body() createOrderDto: CreateOrderDto,
+  @Post('bulk-cancel')
+  @ApiOperation({
+    summary: 'Bulk cancel orders',
+    description: 'Cancel multiple open orders at once.',
+  })
+  async bulkCancel(@Body() dto: BulkCancelOrdersDto) {
+    const userId = 'mock-user-id'; // Lấy từ @CurrentUser
+    return this.ordersService.bulkCancelOrders(userId, dto);
+  }
+
+  @Patch(':orderId')
+  @ApiOperation({
+    summary: 'Update or cancel order',
+    description: 'Update mutable fields or cancel by setting cancel=true',
+  })
+  async updateOrder(
+    @Param('orderId') orderId: string,
+    @Body() dto: UpdateOrderDto,
   ) {
-    if (!user?.sub || !createOrderDto.idempotencyKey) {
-      throw new BadRequestException('Invalid authenticated user payload.');
-    }
-    return this.ordersService.placeOrder(
-      user.sub,
-      createOrderDto.assetId,
-      createOrderDto.side,
-      createOrderDto.price,
-      createOrderDto.quantity,
-      createOrderDto.idempotencyKey,
-    );
+    const userId = 'mock-user-id';
+    return this.ordersService.updateOrder(userId, orderId, dto);
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: 'List orders',
+    description: 'List orders with filters and sorting',
+  })
+  async getOrders(@Query() query: GetOrdersQueryDto) {
+    const userId = 'mock-user-id';
+    return this.ordersService.getOrders(userId, query);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: 'Create order',
+    description: 'Create a new trading order (MARKET vs PENDING)',
+  })
+  async createOrder(@Body() dto: CreateOrderDto) {
+    const userId = 'mock-user-id';
+    return this.ordersService.createOrder(userId, dto);
   }
 }

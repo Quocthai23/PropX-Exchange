@@ -1543,16 +1543,17 @@
         ]
       }
     },
-    "/support": {
+    "/orders/bulk-cancel": {
       "post": {
-        "operationId": "SupportController_create",
+        "description": "Cancel multiple open orders at once.",
+        "operationId": "OrdersController_bulkCancel",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSupportDto"
+                "$ref": "#/components/schemas/BulkCancelOrdersDto"
               }
             }
           }
@@ -1580,105 +1581,24 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
-        "tags": [
-          "Support"
-        ]
-      },
-      "get": {
-        "operationId": "SupportController_findAll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "tags": [
-          "Support"
-        ]
-      }
-    },
-    "/support/{id}": {
-      "get": {
-        "operationId": "SupportController_findOne",
-        "parameters": [
+        "security": [
           {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "accessToken": []
           }
         ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
+        "summary": "Bulk cancel orders",
         "tags": [
-          "Support"
+          "Orders"
         ]
       }
     },
-    "/support/{id}/status": {
+    "/orders/{orderId}": {
       "patch": {
-        "operationId": "SupportController_updateStatus",
+        "description": "Update mutable fields or cancel by setting cancel=true",
+        "operationId": "OrdersController_updateOrder",
         "parameters": [
           {
-            "name": "id",
+            "name": "orderId",
             "required": true,
             "in": "path",
             "schema": {
@@ -1691,7 +1611,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateSupportDto"
+                "$ref": "#/components/schemas/UpdateOrderDto"
               }
             }
           }
@@ -1719,8 +1639,823 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Update or cancel order",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/orders": {
+      "get": {
+        "description": "List orders with filters and sorting",
+        "operationId": "OrdersController_getOrders",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Cursor for pagination (position ID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "accountId",
+            "required": true,
+            "in": "query",
+            "description": "Trading account ID",
+            "schema": {
+              "pattern": "^(real|demo)_[0-9]{8}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "symbol",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "side",
+            "required": false,
+            "in": "query",
+            "description": "Order side: 0 for long, 1 for short",
+            "schema": {
+              "type": "number",
+              "enum": [
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "name": "orderType",
+            "required": false,
+            "in": "query",
+            "description": "Order type: 0 for market, 1 for limit, 2 for stop",
+            "schema": {
+              "type": "number",
+              "enum": [
+                0,
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Array of order statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "createdAt",
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "quantity",
+                "orderType",
+                "symbol",
+                "side"
+              ]
+            }
+          },
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "fromDate",
+            "required": false,
+            "in": "query",
+            "description": "Start date (YYYY-MM-DD)",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toDate",
+            "required": false,
+            "in": "query",
+            "description": "End date (YYYY-MM-DD)",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List orders",
+        "tags": [
+          "Orders"
+        ]
+      },
+      "post": {
+        "description": "Create a new trading order (MARKET vs PENDING)",
+        "operationId": "OrdersController_createOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Create order",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/support-tickets": {
+      "post": {
+        "operationId": "SupportController_createTicket",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSupportTicketDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Create support ticket",
         "tags": [
           "Support"
+        ]
+      },
+      "get": {
+        "operationId": "SupportController_getMyTickets",
+        "parameters": [
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "name": "priority",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "createdAt",
+              "type": "string",
+              "enum": [
+                "createdAt"
+              ]
+            }
+          },
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List my support tickets",
+        "tags": [
+          "Support"
+        ]
+      }
+    },
+    "/support-tickets/{id}": {
+      "get": {
+        "operationId": "SupportController_getTicketDetail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get ticket detail",
+        "tags": [
+          "Support"
+        ]
+      },
+      "patch": {
+        "operationId": "SupportController_updateTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSupportTicketDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Update support ticket",
+        "tags": [
+          "Support"
+        ]
+      }
+    },
+    "/support-tickets/{id}/messages": {
+      "get": {
+        "operationId": "SupportController_getMessages",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Cursor for cursor-based pagination",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Load ticket messages",
+        "tags": [
+          "Support"
+        ]
+      },
+      "post": {
+        "operationId": "SupportController_sendMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Send message",
+        "tags": [
+          "Support"
+        ]
+      }
+    },
+    "/admin/support": {
+      "get": {
+        "operationId": "AdminSupportController_adminGetTickets",
+        "parameters": [
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "name": "priority",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "createdAt",
+              "type": "string",
+              "enum": [
+                "createdAt"
+              ]
+            }
+          },
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Admin list tickets",
+        "tags": [
+          "Admin - Support"
+        ]
+      }
+    },
+    "/admin/support/{id}/join": {
+      "post": {
+        "operationId": "AdminSupportController_adminJoinTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Admin join ticket",
+        "tags": [
+          "Admin - Support"
+        ]
+      }
+    },
+    "/admin/support/{id}": {
+      "patch": {
+        "operationId": "AdminSupportController_adminUpdateTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSupportTicketDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Admin update ticket",
+        "tags": [
+          "Admin - Support"
         ]
       }
     },
@@ -3395,6 +4130,773 @@
           "Posts"
         ]
       }
+    },
+    "/accounts/types": {
+      "get": {
+        "description": "Get list of active account types (public endpoint)",
+        "operationId": "AccountsController_getTypes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List account types",
+        "tags": [
+          "Accounts"
+        ]
+      }
+    },
+    "/accounts/balance": {
+      "get": {
+        "operationId": "AccountsController_getBalance",
+        "parameters": [
+          {
+            "name": "accountId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get account balance details",
+        "tags": [
+          "Accounts"
+        ]
+      }
+    },
+    "/accounts": {
+      "get": {
+        "description": "Get all trading accounts of current user",
+        "operationId": "AccountsController_getAccounts",
+        "parameters": [
+          {
+            "name": "accountTypeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List user accounts",
+        "tags": [
+          "Accounts"
+        ]
+      }
+    },
+    "/accounts/{id}": {
+      "patch": {
+        "operationId": "AccountsController_updateAccount",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Update account name, avatar, leverage, and status",
+        "tags": [
+          "Accounts"
+        ]
+      }
+    },
+    "/admin/accounts/{id}/info": {
+      "get": {
+        "description": "Get detailed account info for an account (DB & Redis)",
+        "operationId": "AdminAccountsController_getInfo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get account info",
+        "tags": [
+          "Admin - User"
+        ]
+      }
+    },
+    "/positions/stats": {
+      "get": {
+        "operationId": "PositionsController_getStats",
+        "parameters": [
+          {
+            "name": "accountId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get statistics about positions and orders of the account",
+        "tags": [
+          "Positions"
+        ]
+      }
+    },
+    "/positions/bulk-close": {
+      "post": {
+        "operationId": "PositionsController_bulkClose",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkClosePositionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Bulk close positions",
+        "tags": [
+          "Positions"
+        ]
+      }
+    },
+    "/positions/{positionId}/close": {
+      "post": {
+        "operationId": "PositionsController_closePosition",
+        "parameters": [
+          {
+            "name": "positionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClosePositionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Close position",
+        "tags": [
+          "Positions"
+        ]
+      }
+    },
+    "/positions": {
+      "get": {
+        "operationId": "PositionsController_getPositions",
+        "parameters": [
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "symbol",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "side",
+            "required": false,
+            "in": "query",
+            "description": "Order side: 0 for buy, 1 for sell",
+            "schema": {
+              "type": "number",
+              "enum": [
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "openedAt",
+              "type": "string",
+              "enum": [
+                "openedAt",
+                "closedAt",
+                "quantity",
+                "symbol",
+                "side",
+                "realizedPnl"
+              ]
+            }
+          },
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Array of position statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "name": "fromDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "accountId",
+            "required": true,
+            "in": "query",
+            "description": "Trading account ID",
+            "schema": {
+              "pattern": "^(real|demo)_[0-9]{8}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List positions",
+        "tags": [
+          "Positions"
+        ]
+      }
+    },
+    "/positions/{positionId}": {
+      "put": {
+        "operationId": "PositionsController_updatePosition",
+        "parameters": [
+          {
+            "name": "positionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePositionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Update position",
+        "tags": [
+          "Positions"
+        ]
+      }
+    },
+    "/admin/positions": {
+      "get": {
+        "description": "Get list of positions for an account with filters and pagination",
+        "operationId": "AdminPositionsController_getAdminPositions",
+        "parameters": [
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "symbol",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "side",
+            "required": false,
+            "in": "query",
+            "description": "Order side: 0 for buy, 1 for sell",
+            "schema": {
+              "type": "number",
+              "enum": [
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "openedAt",
+              "type": "string",
+              "enum": [
+                "openedAt",
+                "closedAt",
+                "quantity",
+                "symbol",
+                "side",
+                "realizedPnl"
+              ]
+            }
+          },
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Array of position statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "name": "fromDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "accountId",
+            "required": false,
+            "in": "query",
+            "description": "Optional trading account ID",
+            "schema": {
+              "pattern": "^(real|demo)_[0-9]{8}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get positions",
+        "tags": [
+          "Admin - User"
+        ]
+      }
     }
   },
   "info": {
@@ -3824,45 +5326,200 @@
           "privateKey"
         ]
       },
-      "CreateSupportDto": {
+      "BulkCancelOrdersDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "pattern": "^(real|demo)_[0-9]{8}$",
+            "description": "Trading account ID"
+          },
+          "orderIds": {
+            "minItems": 1,
+            "description": "Array of order IDs to cancel",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "accountId",
+          "orderIds"
+        ]
+      },
+      "UpdateOrderDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "pattern": "^(real|demo)_[0-9]{8}$",
+            "description": "Trading account ID"
+          },
+          "cancel": {
+            "type": "boolean",
+            "description": "Set to true to cancel the order. If true, other fields are ignored"
+          },
+          "price": {
+            "type": "object",
+            "description": "New limit/stop price. Only applicable for non-MARKET orders"
+          },
+          "stopLossPrice": {
+            "type": "object",
+            "description": "New stop loss price. Optional, set to null to remove"
+          },
+          "takeProfitPrice": {
+            "type": "object",
+            "description": "New take profit price. Optional, set to null to remove"
+          }
+        },
+        "required": [
+          "accountId"
+        ]
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Trading symbol, e.g. \"XAUUSD\""
+          },
+          "side": {
+            "type": "number",
+            "description": "Order side: 0 for long, 1 for short"
+          },
+          "stopLossPrice": {
+            "type": "object",
+            "description": "Stop loss price. Optional"
+          },
+          "takeProfitPrice": {
+            "type": "object",
+            "description": "Take profit price. Optional"
+          },
+          "quantity": {
+            "type": "object",
+            "description": "Order quantity. Must be within asset min/max trade size"
+          },
+          "accountId": {
+            "type": "string",
+            "pattern": "^(real|demo)_[0-9]{8}$",
+            "description": "Trading account ID"
+          },
+          "orderType": {
+            "type": "number",
+            "description": "Order type: 0 for market, 1 for limit, 2 for stop"
+          },
+          "price": {
+            "type": "object",
+            "description": "Limit/Stop price (required for LIMIT/STOP orders, ignored for MARKET)"
+          }
+        },
+        "required": [
+          "symbol",
+          "side",
+          "quantity",
+          "accountId",
+          "orderType"
+        ]
+      },
+      "CreateSupportTicketDto": {
         "type": "object",
         "properties": {
           "subject": {
             "type": "string",
-            "minLength": 3,
-            "maxLength": 191,
-            "description": "Support ticket subject",
-            "example": "Unable to complete withdrawal"
+            "description": "Ticket subject",
+            "enum": [
+              "Account Issue",
+              "Deposit",
+              "Withdrawal",
+              "Trading Issue",
+              "Technical Issue",
+              "Verification",
+              "Billing",
+              "Other"
+            ]
           },
-          "content": {
+          "message": {
             "type": "string",
-            "minLength": 10,
-            "description": "Detailed support request content",
-            "example": "Withdrawal request is still pending after 2 hours."
+            "minLength": 1,
+            "maxLength": 5000,
+            "description": "Initial message content"
+          },
+          "messageType": {
+            "type": "number",
+            "default": 0,
+            "description": "Message type. 0 = TEXT, 1 = IMAGE",
+            "enum": [
+              0,
+              1
+            ]
           }
         },
         "required": [
           "subject",
-          "content"
+          "message"
         ]
       },
-      "UpdateSupportDto": {
+      "UpdateSupportTicketDto": {
         "type": "object",
         "properties": {
-          "status": {
+          "subject": {
             "type": "string",
-            "description": "New status of the support ticket",
+            "description": "Ticket subject",
             "enum": [
-              "OPEN",
-              "IN_PROGRESS",
-              "RESOLVED",
-              "CLOSED"
-            ],
-            "example": "IN_PROGRESS"
+              "Account Issue",
+              "Deposit",
+              "Withdrawal",
+              "Trading Issue",
+              "Technical Issue",
+              "Verification",
+              "Billing",
+              "Other"
+            ]
+          },
+          "status": {
+            "type": "number",
+            "description": "Ticket status. 0 = OPEN, 1 = IN_PROGRESS, 2 = RESOLVED, 3 = CLOSED",
+            "enum": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "priority": {
+            "type": "number",
+            "description": "Ticket priority. 0 = LOW, 1 = MEDIUM, 2 = HIGH, 3 = URGENT",
+            "enum": [
+              0,
+              1,
+              2,
+              3
+            ]
+          }
+        }
+      },
+      "SupportMessageDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "description": "Message content"
+          },
+          "messageType": {
+            "type": "number",
+            "default": 0,
+            "description": "Message type. 0 = TEXT, 1 = IMAGE",
+            "enum": [
+              0,
+              1
+            ]
           }
         },
         "required": [
-          "status"
+          "content"
         ]
       },
       "SendOtpDto": {
@@ -4197,6 +5854,98 @@
         },
         "required": [
           "content"
+        ]
+      },
+      "UpdateAccountDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[a-zA-Z0-9\\s_-]+$"
+          },
+          "avatar": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to user avatar image"
+          },
+          "leverage": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Account leverage"
+          },
+          "status": {
+            "type": "number",
+            "description": "Account status, 0 = INACTIVE, 1 = ACTIVE, 2 = BANNED",
+            "enum": [
+              0,
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "BulkClosePositionsDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "pattern": "^(real|demo)_[0-9]{8}$",
+            "description": "Trading account ID"
+          },
+          "positionIds": {
+            "minItems": 1,
+            "description": "Array of position IDs to close",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "accountId",
+          "positionIds"
+        ]
+      },
+      "ClosePositionDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "pattern": "^(real|demo)_[0-9]{8}$",
+            "description": "Trading account ID"
+          },
+          "quantity": {
+            "type": "object",
+            "description": "Close quantity (partial/full)"
+          }
+        },
+        "required": [
+          "accountId",
+          "quantity"
+        ]
+      },
+      "UpdatePositionDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "pattern": "^(real|demo)_[0-9]{8}$",
+            "description": "Trading account ID"
+          },
+          "stopLossPrice": {
+            "type": "object",
+            "description": "New stop loss price. Optional, set to null to remove"
+          },
+          "takeProfitPrice": {
+            "type": "object",
+            "description": "New take profit price. Optional, set to null to remove"
+          }
+        },
+        "required": [
+          "accountId"
         ]
       },
       "ValidationErrorItem": {

@@ -38,10 +38,19 @@ import {
 @Controller('posts')
 // @UseGuards(JwtAuthGuard) // Kích hoạt Guard này khi ghép code thực tế
 @ApiBearerAuth('accessToken')
-@ApiBadRequestResponse({ description: 'Malformed request payload or failed domain validation.' })
-@ApiUnauthorizedResponse({ description: 'Authentication is missing, invalid, revoked, or expired.' })
-@ApiForbiddenResponse({ description: 'Authenticated but not allowed to access or mutate this resource.' })
-@ApiInternalServerErrorResponse({ description: 'Unexpected server error or upstream dependency failure.' })
+@ApiBadRequestResponse({
+  description: 'Malformed request payload or failed domain validation.',
+})
+@ApiUnauthorizedResponse({
+  description: 'Authentication is missing, invalid, revoked, or expired.',
+})
+@ApiForbiddenResponse({
+  description:
+    'Authenticated but not allowed to access or mutate this resource.',
+})
+@ApiInternalServerErrorResponse({
+  description: 'Unexpected server error or upstream dependency failure.',
+})
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
@@ -65,7 +74,10 @@ export class PostsController {
   // CHÚ Ý: Route /me/bookmarks phải đặt TRƯỚC route /:postId để tránh bị bắt nhầm
   @Get('me/bookmarks')
   @ApiOperation({ summary: 'List bookmarked posts' })
-  @ApiResponse({ status: 200, description: 'Return paginated list of bookmarked posts' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return paginated list of bookmarked posts',
+  })
   async getBookmarkedPosts(
     @Query() query: PaginationQueryDto /*, @CurrentUser() user: JwtPayload */,
   ) {
@@ -134,7 +146,10 @@ export class PostsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Toggle post like' })
   @ApiParam({ name: 'postId', type: 'string', description: 'Post identifier' })
-  @ApiResponse({ status: 200, description: 'Returns boolean indicating like status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns boolean indicating like status',
+  })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async togglePostLike(
     @Param('postId') postId: string /*, @CurrentUser() user: JwtPayload */,
@@ -147,7 +162,10 @@ export class PostsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Toggle post bookmark' })
   @ApiParam({ name: 'postId', type: 'string', description: 'Post identifier' })
-  @ApiResponse({ status: 200, description: 'Returns boolean indicating bookmark status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns boolean indicating bookmark status',
+  })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async togglePostBookmark(
     @Param('postId') postId: string /*, @CurrentUser() user: JwtPayload */,
@@ -163,7 +181,10 @@ export class PostsController {
   @Get(':postId/comments')
   @ApiOperation({ summary: 'List post comments' })
   @ApiParam({ name: 'postId', type: 'string', description: 'Post identifier' })
-  @ApiResponse({ status: 200, description: 'Return paginated list of comments' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return paginated list of comments',
+  })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async getComments(
     @Param('postId') postId: string,
@@ -216,7 +237,10 @@ export class PostsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Toggle comment like' })
   @ApiParam({ name: 'id', type: 'string', description: 'Comment identifier' })
-  @ApiResponse({ status: 200, description: 'Returns boolean indicating like status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns boolean indicating like status',
+  })
   @ApiNotFoundResponse({ description: 'Requested comment was not found.' })
   async toggleCommentLike(
     @Param('id') commentId: string /*, @CurrentUser() user: JwtPayload */,

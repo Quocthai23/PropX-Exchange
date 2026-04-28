@@ -1,70 +1,75 @@
 import {
-  BadRequestException,
   Controller,
   Get,
   Post,
-  Body,
   Patch,
+  Body,
   Param,
-  ParseUUIDPipe,
-  UseGuards,
+  Query,
 } from '@nestjs/common';
-import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SupportService } from '../services/support.service';
-import { CreateSupportDto } from '../dto/create-support.dto';
-import { UpdateSupportDto } from '../dto/update-support.dto';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import type { JwtPayload } from '../../auth/types/jwt-payload.type';
-import { Roles } from '../../users/dto/roles.decorator';
-import { RolesGuard } from '../../users/dto/roles.guard';
+import {
+  CreateSupportTicketDto,
+  UpdateSupportTicketDto,
+  SupportMessageDto,
+  GetSupportTicketsQueryDto,
+  GetMessagesQueryDto,
+} from '../dto/support.dto';
+// TODO: Import JwtAuthGuard và CurrentUser từ auth module
 
-@Controller('support')
-@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@ApiTags('Support')
+@Controller('support-tickets')
+@ApiBearerAuth('accessToken')
+// @UseGuards(JwtAuthGuard)
 export class SupportController {
   constructor(private readonly supportService: SupportService) {}
 
   @Post()
-  @Throttle({ default: { limit: 3, ttl: 60 * 60 * 1000 } })
-  create(
-    @CurrentUser() user: JwtPayload | undefined,
-    @Body() createSupportDto: CreateSupportDto,
-  ) {
-    if (!user?.sub) {
-      throw new BadRequestException('Invalid authenticated user payload.');
-    }
-
-    return this.supportService.create(user.sub, createSupportDto);
+  @ApiOperation({ summary: 'Create support ticket' })
+  async createTicket(@Body() dto: CreateSupportTicketDto) {
+    const userId = 'mock-user-id';
+    return this.supportService.createTicket(userId, dto);
   }
 
   @Get()
-  findAll(@CurrentUser() user: JwtPayload | undefined) {
-    if (!user?.sub) {
-      throw new BadRequestException('Invalid authenticated user payload.');
-    }
-
-    return this.supportService.findAll(user);
+  @ApiOperation({ summary: 'List my support tickets' })
+  async getMyTickets(@Query() query: GetSupportTicketsQueryDto) {
+    const userId = 'mock-user-id';
+    return this.supportService.getMyTickets(userId, query);
   }
 
   @Get(':id')
-  findOne(
-    @CurrentUser() user: JwtPayload | undefined,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    if (!user?.sub) {
-      throw new BadRequestException('Invalid authenticated user payload.');
-    }
-
-    return this.supportService.findOne(id, user);
+  @ApiOperation({ summary: 'Get ticket detail' })
+  async getTicketDetail(@Param('id') id: string) {
+    const userId = 'mock-user-id';
+    return this.supportService.getTicketDetail(userId, id);
   }
 
-  @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN', 'SUPPORT_STAFF')
-  updateStatus(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateSupportDto: UpdateSupportDto,
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update support ticket' })
+  async updateTicket(
+    @Param('id') id: string,
+    @Body() dto: UpdateSupportTicketDto,
   ) {
-    return this.supportService.update(id, updateSupportDto);
+    const userId = 'mock-user-id';
+    return this.supportService.updateTicket(userId, id, dto);
+  }
+
+  @Get(':id/messages')
+  @ApiOperation({ summary: 'Load ticket messages' })
+  async getMessages(
+    @Param('id') id: string,
+    @Query() query: GetMessagesQueryDto,
+  ) {
+    const userId = 'mock-user-id';
+    return this.supportService.getTicketMessages(userId, id, query);
+  }
+
+  @Post(':id/messages')
+  @ApiOperation({ summary: 'Send message' })
+  async sendMessage(@Param('id') id: string, @Body() dto: SupportMessageDto) {
+    const userId = 'mock-user-id';
+    return this.supportService.sendMessage(userId, id, dto);
   }
 }
