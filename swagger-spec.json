@@ -173,7 +173,7 @@
         ]
       }
     },
-    "/users/health": {
+    "/user/health": {
       "get": {
         "operationId": "UsersController_healthCheck",
         "parameters": [],
@@ -200,12 +200,481 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "summary": "Health check for Users module",
         "tags": [
           "Users"
         ]
       }
     },
-    "/users/portfolio/overview": {
+    "/user/profile/{id}": {
+      "get": {
+        "operationId": "UsersController_getProfileById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get public user profile",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/user": {
+      "post": {
+        "operationId": "UsersController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update profile",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/user/me": {
+      "get": {
+        "operationId": "UsersController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response for status 200"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get profile",
+        "tags": [
+          "Users"
+        ]
+      },
+      "delete": {
+        "operationId": "UsersController_deleteMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response for status 200"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete account",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/user/suggestions": {
+      "get": {
+        "operationId": "UsersController_getSuggestions",
+        "parameters": [
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to take (max 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to skip",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Suggest users",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/user/{userId}/relations": {
+      "get": {
+        "operationId": "UsersController_getRelations",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to take (max 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to skip",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "relation",
+            "required": true,
+            "in": "query",
+            "description": "Relation type to list",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "block",
+                "followings",
+                "follower"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get user relation list",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/user/favorites/assets": {
+      "post": {
+        "operationId": "UsersController_toggleFavoriteAsset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFavoriteAssetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Toggle favorite asset",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/user/{id}/relation": {
+      "put": {
+        "operationId": "UsersController_upsertRelation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertRelationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upsert user relation",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/user/referral": {
+      "patch": {
+        "operationId": "UsersController_updateReferral",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReferralDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update referral reference code",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/user/portfolio/overview": {
       "get": {
         "operationId": "UsersController_getPortfolioOverview",
         "parameters": [],
@@ -232,6 +701,12 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get portfolio overview",
         "tags": [
           "Users"
         ]
@@ -442,55 +917,9 @@
         ]
       }
     },
-    "/assets": {
-      "post": {
-        "operationId": "AssetsController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAssetDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Admin: Create a new asset and tokenize it on blockchain",
-        "tags": [
-          "2. Assets (RWA)"
-        ]
-      },
+    "/asset-categories": {
       "get": {
-        "operationId": "AssetsController_findAll",
+        "operationId": "AssetsController_getCategories",
         "parameters": [],
         "responses": {
           "200": {
@@ -515,27 +944,19 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
-        "summary": "Get the list of RWA assets currently available for sale",
+        "summary": "List all asset categories",
         "tags": [
-          "2. Assets (RWA)"
+          "Assets",
+          "Assets"
         ]
       }
     },
-    "/assets/{id}/redeem": {
-      "post": {
-        "operationId": "AssetsController_requestRedeem",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+    "/assets": {
+      "get": {
+        "operationId": "AssetsController_getAssets",
+        "parameters": [],
         "responses": {
-          "201": {
+          "200": {
             "description": ""
           },
           "400": {
@@ -562,9 +983,10 @@
             "bearer": []
           }
         ],
-        "summary": "Request full redeem for an asset (requires full ownership).",
+        "summary": "List all assets (public trading list)",
         "tags": [
-          "2. Assets (RWA)"
+          "Assets",
+          "Assets"
         ]
       }
     },
@@ -650,145 +1072,20 @@
         ]
       }
     },
-    "/transactions/deposit": {
+    "/payment/deposit-demo": {
       "post": {
-        "operationId": "TransactionsController_deposit",
+        "operationId": "PaymentController_depositDemo",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DepositDto"
+                "$ref": "#/components/schemas/DepositDemoDto"
               }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "tags": [
-          "Transactions"
-        ]
-      }
-    },
-    "/transactions/withdraw": {
-      "post": {
-        "operationId": "TransactionsController_requestWithdraw",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WithdrawDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "tags": [
-          "Transactions"
-        ]
-      }
-    },
-    "/transactions/transfer/email": {
-      "post": {
-        "operationId": "TransactionsController_transferByEmail",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransferDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "tags": [
-          "Transactions"
-        ]
-      }
-    },
-    "/transactions/admin/withdraw/{id}/approve": {
-      "patch": {
-        "operationId": "TransactionsController_approveWithdraw",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": ""
@@ -812,24 +1109,31 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Deposit (demo account)",
         "tags": [
-          "Transactions"
+          "Payment"
         ]
       }
     },
-    "/transactions/admin/withdraw/{id}/reject": {
-      "patch": {
-        "operationId": "TransactionsController_rejectWithdraw",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
+    "/payment/create-wallet": {
+      "post": {
+        "operationId": "PaymentController_createWallet",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWalletDto"
+              }
             }
           }
-        ],
+        },
         "responses": {
           "200": {
             "description": ""
@@ -853,27 +1157,33 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create or Get User Wallet",
         "tags": [
-          "Transactions"
+          "Payment"
         ]
       }
     },
-    "/transactions/gas/speed-up": {
+    "/payment/v2/withdraw": {
       "post": {
-        "operationId": "TransactionsController_speedUpTransaction",
+        "operationId": "PaymentController_withdrawV2",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GasSpeedUpDto"
+                "$ref": "#/components/schemas/WithdrawV2Dto"
               }
             }
           }
         },
         "responses": {
-          "201": {
+          "200": {
             "description": ""
           },
           "400": {
@@ -895,27 +1205,33 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create Withdrawal Request V2",
         "tags": [
-          "Transactions"
+          "Payment"
         ]
       }
     },
-    "/transactions/gas/refund": {
+    "/payment/v2/transfer": {
       "post": {
-        "operationId": "TransactionsController_requestRefund",
+        "operationId": "PaymentController_transferV2",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GasRefundDto"
+                "$ref": "#/components/schemas/TransferV2Dto"
               }
             }
           }
         },
         "responses": {
-          "201": {
+          "200": {
             "description": ""
           },
           "400": {
@@ -937,19 +1253,65 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transfer Funds V2",
         "tags": [
-          "Transactions"
+          "Payment"
         ]
       }
     },
-    "/transactions/gas/status/{id}": {
+    "/payment/history": {
       "get": {
-        "operationId": "TransactionsController_getGasStatus",
+        "operationId": "PaymentController_getHistory",
         "parameters": [
           {
-            "name": "id",
-            "required": true,
-            "in": "path",
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "accountId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^(real|demo)_[0-9]{8}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO format)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO format)",
             "schema": {
               "type": "string"
             }
@@ -978,27 +1340,72 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get Transaction Histories",
         "tags": [
-          "Transactions"
+          "Payment"
         ]
       }
     },
-    "/payments/deposit": {
-      "post": {
-        "operationId": "PaymentController_deposit",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DepositDto"
-              }
+    "/admin/transaction": {
+      "get": {
+        "operationId": "AdminPaymentController_getTransactions",
+        "parameters": [
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "accountId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^(real|demo)_[0-9]{8}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO format)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO format)",
+            "schema": {
+              "type": "string"
             }
           }
-        },
+        ],
         "responses": {
-          "201": {
+          "200": {
             "description": ""
           },
           "400": {
@@ -1020,101 +1427,23 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Admin Get Transaction Histories",
         "tags": [
-          "Payment"
+          "Admin - Payment"
         ]
       }
     },
-    "/payments/withdraw": {
-      "post": {
-        "operationId": "PaymentController_requestWithdraw",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WithdrawDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "tags": [
-          "Payment"
-        ]
-      }
-    },
-    "/payments/transfer/email": {
-      "post": {
-        "operationId": "PaymentController_transferByEmail",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransferDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "tags": [
-          "Payment"
-        ]
-      }
-    },
-    "/payments/admin/withdraw/{id}/approve": {
+    "/admin/withdraw/{transactionId}/status": {
       "patch": {
-        "operationId": "PaymentController_approveWithdraw",
+        "operationId": "AdminPaymentController_updateWithdrawStatus",
         "parameters": [
           {
-            "name": "id",
+            "name": "transactionId",
             "required": true,
             "in": "path",
             "schema": {
@@ -1122,6 +1451,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUpdateWithdrawStatusDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -1145,24 +1484,31 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Admin Update Withdraw Transaction Status",
         "tags": [
-          "Payment"
+          "Admin - Payment"
         ]
       }
     },
-    "/payments/admin/withdraw/{id}/reject": {
-      "patch": {
-        "operationId": "PaymentController_rejectWithdraw",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
+    "/admin/sweep-funds": {
+      "post": {
+        "operationId": "AdminPaymentController_sweepFunds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSweepFundsDto"
+              }
             }
           }
-        ],
+        },
         "responses": {
           "200": {
             "description": ""
@@ -1186,8 +1532,14 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sweep Funds (Gom quỹ từ ví người dùng về ví tổng)",
         "tags": [
-          "Payment"
+          "Admin - Payment"
         ]
       }
     },
@@ -1372,23 +1724,23 @@
         ]
       }
     },
-    "/auth/request-otp": {
+    "/auth/send-otp": {
       "post": {
-        "operationId": "AuthController_requestOtp",
+        "operationId": "AuthController_sendOtp",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RequestOtpDto"
+                "$ref": "#/components/schemas/SendOtpDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "OTP sent to email"
+            "description": "OTP sent successfully."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -1409,14 +1761,20 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
-        "summary": "Request OTP for login/register via Email",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send OTP",
         "tags": [
-          "1. Auth - Email & Wallet Generation"
+          "Auth"
         ]
       }
     },
     "/auth/verify-otp": {
       "post": {
+        "description": "Verify OTP to get a special-purpose token for subsequent actions like registration or password reset.",
         "operationId": "AuthController_verifyOtp",
         "parameters": [],
         "requestBody": {
@@ -1431,13 +1789,13 @@
         },
         "responses": {
           "200": {
-            "description": "Login successful, return JWT Token"
+            "description": "Returns a special-purpose token upon successful verification."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
           },
           "401": {
-            "description": "Invalid or expired OTP"
+            "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
@@ -1452,9 +1810,368 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
-        "summary": "Verify OTP and get JWT Token (Auto-generates wallet for new users)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify OTP",
         "tags": [
-          "1. Auth - Email & Wallet Generation"
+          "Auth"
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns Tokens or ChallengeRequiredResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Register a new user and auto-login",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/login-with-social": {
+      "post": {
+        "operationId": "AuthController_loginWithSocial",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginWithSocialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Login with social",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns Tokens or ChallengeRequiredResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Login with email and password",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "operationId": "AuthController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Reset password",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/check-email": {
+      "post": {
+        "operationId": "AuthController_checkEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Check email exists",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/check-reference-code": {
+      "post": {
+        "operationId": "AuthController_checkReferenceCode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckReferenceCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Check reference code",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/challenge": {
+      "post": {
+        "operationId": "AuthController_createChallenge",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthChallengeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create an auth challenge for sensitive purposes",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/challenge/verify": {
+      "post": {
+        "operationId": "AuthController_verifyChallenge",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyChallengeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify Challenge",
+        "tags": [
+          "Auth"
         ]
       }
     },
@@ -1485,9 +2202,57 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
-        "summary": "Get a new access token from the refresh token in cookie",
+        "summary": "Refresh token",
         "tags": [
-          "1. Auth - Email & Wallet Generation"
+          "Auth"
+        ]
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "operationId": "AuthController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change Password",
+        "tags": [
+          "Auth"
         ]
       }
     },
@@ -1518,9 +2283,14 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
-        "summary": "Logout and revoke refresh token",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logout",
         "tags": [
-          "1. Auth - Email & Wallet Generation"
+          "Auth"
         ]
       }
     },
@@ -1558,7 +2328,7 @@
         ],
         "summary": "Get user profile (Requires JWT Token)",
         "tags": [
-          "1. Auth - Email & Wallet Generation"
+          "Auth"
         ]
       }
     },
@@ -1720,7 +2490,7 @@
             "name": "assetId",
             "required": true,
             "in": "query",
-            "description": "Asset ID",
+            "description": "Unique identifier of the Asset",
             "schema": {
               "type": "string"
             }
@@ -1729,17 +2499,17 @@
             "name": "resolution",
             "required": true,
             "in": "query",
-            "description": "Candle time resolution",
+            "description": "Candlestick resolution/timeframe",
             "schema": {
-              "example": "15m",
               "type": "string",
               "enum": [
                 "1m",
                 "5m",
                 "15m",
-                "30m",
                 "1h",
-                "1d"
+                "4h",
+                "1d",
+                "1w"
               ]
             }
           },
@@ -1747,9 +2517,9 @@
             "name": "from",
             "required": true,
             "in": "query",
-            "description": "Start date (ISO String)",
+            "description": "Start time in ISO8601 format",
             "schema": {
-              "example": "2023-01-01T00:00:00Z",
+              "format": "date-time",
               "type": "string"
             }
           },
@@ -1757,26 +2527,16 @@
             "name": "to",
             "required": true,
             "in": "query",
-            "description": "End date (ISO String)",
+            "description": "End time in ISO8601 format",
             "schema": {
-              "example": "2023-12-31T23:59:59Z",
+              "format": "date-time",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
+            "description": "Returns array of OHLCV candles wrapped in data property"
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -1809,9 +2569,9 @@
         "parameters": [
           {
             "name": "assetId",
-            "required": false,
+            "required": true,
             "in": "query",
-            "description": "Optional asset ID filter",
+            "description": "Unique identifier of the Asset",
             "schema": {
               "type": "string"
             }
@@ -1820,7 +2580,7 @@
             "name": "areaCode",
             "required": false,
             "in": "query",
-            "description": "Optional area code filter",
+            "description": "Area code for specific regional valuation",
             "schema": {
               "type": "string"
             }
@@ -1829,10 +2589,10 @@
             "name": "limit",
             "required": false,
             "in": "query",
-            "description": "Maximum snapshots returned",
+            "description": "Number of items to take (max 100)",
             "schema": {
               "minimum": 1,
-              "maximum": 365,
+              "maximum": 100,
               "default": 30,
               "type": "number"
             }
@@ -1840,7 +2600,7 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Returns valuation history data"
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -1864,6 +2624,775 @@
         "summary": "Get external valuation snapshots from crawl providers",
         "tags": [
           "3. Market Data (Charts)"
+        ]
+      }
+    },
+    "/posts": {
+      "get": {
+        "description": "List social posts with filtering and sorting",
+        "operationId": "PostsController_getPosts",
+        "parameters": [
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "description": "Filter posts by author id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetId",
+            "required": false,
+            "in": "query",
+            "description": "Filter posts tagged with an asset id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "followingOnly",
+            "required": true,
+            "in": "query",
+            "description": "Only return posts from followed authors",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search by content",
+            "schema": {
+              "maxLength": 255,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "createdAt",
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "viewCount",
+                "likeCount",
+                "commentCount"
+              ]
+            }
+          },
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return paginated list of posts"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List posts",
+        "tags": [
+          "Posts"
+        ]
+      },
+      "post": {
+        "description": "Create a new social post. \n\n**Business Workflow:** Requires user to be fully authenticated. Supports Text, Images, and Video linking.",
+        "operationId": "PostsController_createPost",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePostDto"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePostDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post created successfully"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Create post",
+        "tags": [
+          "Posts"
+        ]
+      }
+    },
+    "/posts/me/bookmarks": {
+      "get": {
+        "operationId": "PostsController_getBookmarkedPosts",
+        "parameters": [
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return paginated list of bookmarked posts"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List bookmarked posts",
+        "tags": [
+          "Posts"
+        ]
+      }
+    },
+    "/posts/{postId}": {
+      "get": {
+        "operationId": "PostsController_getPost",
+        "parameters": [
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "description": "Post identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return a single post detail"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested post was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get post detail",
+        "tags": [
+          "Posts"
+        ]
+      },
+      "patch": {
+        "operationId": "PostsController_updatePost",
+        "parameters": [
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "description": "Post identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post updated successfully"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested post was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Update post",
+        "tags": [
+          "Posts"
+        ]
+      },
+      "delete": {
+        "operationId": "PostsController_deletePost",
+        "parameters": [
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "description": "Post identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post deleted successfully"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested post was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Delete post",
+        "tags": [
+          "Posts"
+        ]
+      }
+    },
+    "/posts/{postId}/like": {
+      "post": {
+        "operationId": "PostsController_togglePostLike",
+        "parameters": [
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "description": "Post identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns boolean indicating like status"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested post was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Toggle post like",
+        "tags": [
+          "Posts"
+        ]
+      }
+    },
+    "/posts/{postId}/bookmark": {
+      "post": {
+        "operationId": "PostsController_togglePostBookmark",
+        "parameters": [
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "description": "Post identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns boolean indicating bookmark status"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested post was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Toggle post bookmark",
+        "tags": [
+          "Posts"
+        ]
+      }
+    },
+    "/posts/{postId}/comments": {
+      "get": {
+        "operationId": "PostsController_getComments",
+        "parameters": [
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "description": "Post identifier",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return paginated list of comments"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested post was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List post comments",
+        "tags": [
+          "Posts"
+        ]
+      },
+      "post": {
+        "operationId": "PostsController_createComment",
+        "parameters": [
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "description": "Post identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment created successfully"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested post was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Create post comment",
+        "tags": [
+          "Posts"
+        ]
+      }
+    },
+    "/posts/comments/{id}": {
+      "patch": {
+        "operationId": "PostsController_updateComment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Comment identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment updated successfully"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested comment was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Update comment",
+        "tags": [
+          "Posts"
+        ]
+      },
+      "delete": {
+        "operationId": "PostsController_deleteComment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Comment identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment deleted successfully"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested comment was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Delete comment",
+        "tags": [
+          "Posts"
+        ]
+      }
+    },
+    "/posts/comments/{id}/like": {
+      "post": {
+        "operationId": "PostsController_toggleCommentLike",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Comment identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns boolean indicating like status"
+          },
+          "400": {
+            "description": "Malformed request payload or failed domain validation."
+          },
+          "401": {
+            "description": "Authentication is missing, invalid, revoked, or expired."
+          },
+          "403": {
+            "description": "Authenticated but not allowed to access or mutate this resource."
+          },
+          "404": {
+            "description": "Requested comment was not found."
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error or upstream dependency failure."
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Toggle comment like",
+        "tags": [
+          "Posts"
         ]
       }
     }
@@ -1967,6 +3496,91 @@
           }
         }
       },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "avatar": {
+            "type": "string",
+            "format": "uri",
+            "description": "New avatar URL"
+          },
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "pattern": "^[A-Za-z0-9_]+$",
+            "description": "New username"
+          },
+          "gender": {
+            "enum": [
+              "MALE",
+              "FEMALE",
+              "OTHER"
+            ],
+            "type": "string",
+            "description": "New gender"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "New bio",
+            "minLength": 0
+          },
+          "coverAvatar": {
+            "type": "string",
+            "format": "uri",
+            "description": "New cover avatar URL"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "New display name"
+          }
+        }
+      },
+      "ToggleFavoriteAssetDto": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "description": "Asset identifier to toggle favorite"
+          }
+        },
+        "required": [
+          "assetId"
+        ]
+      },
+      "UpsertRelationDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "enum": [
+              "follow",
+              "unfollow",
+              "block",
+              "unblock"
+            ],
+            "type": "string",
+            "description": "Relation action to apply to the target user"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "UpdateReferralDto": {
+        "type": "object",
+        "properties": {
+          "referenceCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Reference code to set for the user"
+          }
+        },
+        "required": [
+          "referenceCode"
+        ]
+      },
       "CreateKycDto": {
         "type": "object",
         "properties": {
@@ -2023,156 +3637,191 @@
           "reason"
         ]
       },
-      "CreateAssetDto": {
+      "DepositDemoDto": {
         "type": "object",
         "properties": {
-          "symbol": {
+          "accountId": {
             "type": "string",
-            "description": "On-chain token symbol (e.g., RWA-EST-01)"
-          },
-          "name": {
-            "type": "string",
-            "description": "Asset name (e.g., Vinhome Landmark 81 Apartment)"
-          },
-          "description": {
-            "type": "string",
-            "description": "Detailed asset description"
-          },
-          "logo": {
-            "type": "string",
-            "description": "Logo or asset image URL"
-          },
-          "categoryId": {
-            "type": "string",
-            "description": "Asset category ID"
-          },
-          "totalSupply": {
-            "type": "number",
-            "minimum": 1,
-            "description": "Total supply of this asset token",
-            "example": 10000
-          },
-          "tokenPrice": {
-            "type": "number",
-            "minimum": 0,
-            "description": "Price per token (USDT)",
-            "example": 50
-          },
-          "expectedApy": {
-            "type": "number",
-            "description": "Expected annual yield (APY %)",
-            "example": 8.5
-          },
-          "isHot": {
-            "type": "boolean",
-            "description": "Whether this asset is highlighted as hot"
+            "description": "Account ID",
+            "pattern": "^(real|demo)_[0-9]{8}$"
           }
         },
         "required": [
-          "symbol",
-          "name",
-          "categoryId",
-          "totalSupply",
-          "tokenPrice"
+          "accountId"
         ]
       },
-      "DepositDto": {
+      "CreateWalletDto": {
         "type": "object",
         "properties": {
-          "amount": {
-            "type": "number",
-            "minimum": 0.01,
-            "description": "Deposit amount in USDT",
-            "example": 1000
-          },
-          "txHash": {
+          "accountId": {
             "type": "string",
-            "pattern": "^0x([A-Fa-f0-9]{64})$",
-            "description": "Blockchain transaction hash (0x + 64 hex chars)",
-            "example": "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+            "description": "Account ID",
+            "pattern": "^(real|demo)_[0-9]{8}$"
           },
-          "walletAddress": {
+          "type": {
             "type": "string",
-            "description": "Sender wallet address",
-            "example": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+            "enum": [
+              "EVM",
+              "SOL"
+            ],
+            "description": "Wallet type"
+          },
+          "chainId": {
+            "type": "string",
+            "enum": [
+              "1",
+              "56",
+              "97",
+              "11155111"
+            ],
+            "description": "Chain ID"
           }
         },
         "required": [
+          "accountId",
+          "type",
+          "chainId"
+        ]
+      },
+      "WithdrawV2Dto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Account ID",
+            "pattern": "^(real|demo)_[0-9]{8}$"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Withdrawal amount"
+          },
+          "address": {
+            "type": "string",
+            "description": "Blockchain wallet address"
+          },
+          "chainId": {
+            "type": "string",
+            "enum": [
+              "1",
+              "56",
+              "97",
+              "11155111"
+            ],
+            "description": "Chain ID"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client-generated UUID to prevent duplicate submissions"
+          },
+          "challengeId": {
+            "type": "string",
+            "description": "Verified challengeId from /auth/challenge/verify",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "accountId",
           "amount",
-          "txHash",
-          "walletAddress"
+          "address",
+          "chainId",
+          "idempotencyKey",
+          "challengeId"
         ]
       },
-      "WithdrawDto": {
+      "TransferV2Dto": {
         "type": "object",
         "properties": {
+          "fromAccountId": {
+            "type": "string",
+            "description": "Sender Account ID",
+            "pattern": "^(real|demo)_[0-9]{8}$"
+          },
           "amount": {
-            "type": "number",
-            "minimum": 0.01,
-            "description": "Withdrawal amount in USDT",
-            "example": 150.5
-          }
-        },
-        "required": [
-          "amount"
-        ]
-      },
-      "TransferDto": {
-        "type": "object",
-        "properties": {
-          "recipientEmail": {
+            "type": "string",
+            "description": "Amount to transfer as a string"
+          },
+          "toUserEmail": {
             "type": "string",
             "format": "email",
-            "description": "Recipient email address",
-            "example": "investor@example.com"
+            "description": "Recipient user email, used for validation only",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\\.)+[A-Za-z]{2,}$"
           },
-          "amount": {
-            "type": "number",
-            "minimum": 0.01,
-            "description": "Transfer amount in USDT",
-            "example": 250
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client-generated UUID to prevent duplicate submissions"
+          },
+          "challengeId": {
+            "type": "string",
+            "description": "Verified challengeId from /auth/challenge/verify",
+            "minLength": 1
           }
         },
         "required": [
-          "recipientEmail",
-          "amount"
+          "fromAccountId",
+          "amount",
+          "toUserEmail",
+          "idempotencyKey",
+          "challengeId"
         ]
       },
-      "GasSpeedUpDto": {
+      "AdminUpdateWithdrawStatusDto": {
         "type": "object",
         "properties": {
-          "transactionId": {
-            "type": "string",
-            "description": "Transaction ID that needs gas speed-up",
-            "example": "txn_01J2X7P6TQ8Y3M9ABCD1234"
-          },
-          "multiplier": {
+          "status": {
             "type": "number",
-            "description": "Gas price multiplier (e.g., 1.5 means 50% increase)",
-            "example": 1.5
+            "description": "New status (3 = COMPLETED, 5 = REJECTED)",
+            "enum": [
+              3,
+              5
+            ]
+          },
+          "transactionHash": {
+            "type": "string",
+            "description": "Required if status is 3 (COMPLETED)"
+          },
+          "rejectedReason": {
+            "type": "string",
+            "description": "Required if status is 5 (REJECTED)"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Idempotency key to prevent double execution"
           }
         },
         "required": [
-          "transactionId",
-          "multiplier"
+          "status",
+          "idempotencyKey"
         ]
       },
-      "GasRefundDto": {
+      "AdminSweepFundsDto": {
         "type": "object",
         "properties": {
-          "transactionId": {
+          "chainId": {
             "type": "string",
-            "description": "Transaction ID for gas refund request",
-            "example": "txn_01J2X7P6TQ8Y3M9ABCD1234"
+            "enum": [
+              "1",
+              "56",
+              "97",
+              "11155111"
+            ],
+            "description": "Chain ID"
           },
-          "reason": {
+          "destinationWallet": {
             "type": "string",
-            "description": "Optional reason for refund request",
-            "example": "Gas fee exceeded configured threshold"
+            "description": "Destination wallet address to sweep funds to"
+          },
+          "privateKey": {
+            "type": "string",
+            "description": "Private key of the admin wallet used for sweeping"
           }
         },
         "required": [
-          "transactionId"
+          "chainId",
+          "destinationWallet",
+          "privateKey"
         ]
       },
       "CreateSupportDto": {
@@ -2216,18 +3865,28 @@
           "status"
         ]
       },
-      "RequestOtpDto": {
+      "SendOtpDto": {
         "type": "object",
         "properties": {
           "email": {
             "type": "string",
             "format": "email",
-            "example": "user@example.com",
-            "description": "User email"
+            "description": "User email address. Required when register or reset password"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "register",
+              "reset_password",
+              "withdrawal",
+              "transfer"
+            ],
+            "description": "Purpose of sending OTP"
           }
         },
         "required": [
-          "email"
+          "email",
+          "purpose"
         ]
       },
       "VerifyOtpDto": {
@@ -2236,20 +3895,216 @@
           "email": {
             "type": "string",
             "format": "email",
-            "example": "user@example.com",
-            "description": "User email"
+            "description": "User email address. Required when register or reset password"
           },
-          "otpCode": {
+          "otp": {
             "type": "string",
             "minLength": 6,
             "maxLength": 6,
-            "example": "123456",
-            "description": "6-digit OTP code"
+            "pattern": "^\\d+$",
+            "description": "6-digit numeric OTP"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "register",
+              "reset_password",
+              "withdrawal",
+              "transfer"
+            ]
           }
         },
         "required": [
           "email",
-          "otpCode"
+          "otp",
+          "purpose"
+        ]
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "registerToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "description": "Username (3-100 characters)"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "description": "Register password (min 8 chars, mixed case, number, special char)",
+            "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$"
+          },
+          "referenceCode": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Referral code"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "URL to user avatar image"
+          }
+        },
+        "required": [
+          "registerToken",
+          "password"
+        ]
+      },
+      "LoginWithSocialDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "google",
+              "apple"
+            ],
+            "description": "Social provider: google or apple"
+          },
+          "idToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ID token from social provider (React Native app)"
+          }
+        },
+        "required": [
+          "provider",
+          "idToken"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "User email address",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "resetPasswordToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "description": "New password (min 8 chars, mixed case, number, special char)",
+            "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$"
+          }
+        },
+        "required": [
+          "resetPasswordToken",
+          "newPassword"
+        ]
+      },
+      "CheckEmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\\.)+[A-Za-z]{2,}$"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "CheckReferenceCodeDto": {
+        "type": "object",
+        "properties": {
+          "referenceCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Referral code"
+          }
+        },
+        "required": [
+          "referenceCode"
+        ]
+      },
+      "AuthChallengeDto": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "LOGIN",
+              "SETUP_MFA",
+              "DISABLE_MFA",
+              "WITHDRAW",
+              "TRANSFER"
+            ]
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "purpose"
+        ]
+      },
+      "VerifyChallengeDto": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "factor": {
+            "type": "string",
+            "enum": [
+              "TOTP",
+              "EMAIL_OTP"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "challengeId",
+          "factor",
+          "code"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "oldPassword": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "description": "New password (min 8 chars, mixed case, number, special char)",
+            "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$"
+          }
+        },
+        "required": [
+          "oldPassword",
+          "newPassword"
         ]
       },
       "CreateDistributionDto": {
@@ -2272,6 +4127,76 @@
         "required": [
           "assetId",
           "totalAmount"
+        ]
+      },
+      "MediaLinkDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ],
+            "description": "Media type attached to the post"
+          },
+          "link": {
+            "type": "string",
+            "format": "uri",
+            "description": "Public URL of the media resource"
+          }
+        },
+        "required": [
+          "type",
+          "link"
+        ]
+      },
+      "CreatePostDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Post content"
+          },
+          "linksUrl": {
+            "maxItems": 10,
+            "description": "Optional list of images/videos attached to the post",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaLinkDto"
+            }
+          },
+          "assetIds": {
+            "maxItems": 20,
+            "description": "Optional list of tagged CFD asset identifiers",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "repostId": {
+            "type": "string",
+            "description": "Optional post identifier to repost"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "CommentDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "description": "Comment content"
+          }
+        },
+        "required": [
+          "content"
         ]
       },
       "ValidationErrorItem": {

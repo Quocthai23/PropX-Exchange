@@ -9,7 +9,7 @@ import { NewsModule } from './modules/news/modules/news.module';
 import { UsersModule } from './modules/users/modules/users.module';
 import { KycModule } from './modules/kyc/modules/kyc.module';
 import { AssetsModule } from './modules/assets/modules/assets.module';
-import { PaymentModule } from './modules/payment/modules/payment.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { OrdersModule } from './modules/orders/modules/orders.module';
 import { SupportModule } from './modules/support/modules/support.module';
 import { AuthModule } from './modules/auth/modules/auth.module';
@@ -21,6 +21,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { ConfigModule } from '@nestjs/config';
+import { PostsModule } from './modules/posts/posts.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { ConfigModule } from '@nestjs/config';
     MarketMakerModule,
     SettlementModule,
     RealtimeModule,
+    PostsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MarketDataService } from '../market-data/market-data.service';
+import { MarketDataService } from '../market-data/services/market-data.service';
 import Decimal from 'decimal.js';
 
 type DecimalValue = string | number | { toString(): string };
