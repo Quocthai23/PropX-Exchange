@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountsService } from './accounts.service';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import Decimal from 'decimal.js';
 

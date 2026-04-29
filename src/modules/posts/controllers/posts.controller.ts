@@ -9,6 +9,7 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -30,13 +31,13 @@ import {
   PaginationQueryDto,
   CommentDto,
 } from '../dto/posts.dto';
-// Chú ý: Cập nhật lại đường dẫn import JwtAuthGuard và CurrentUser cho đúng với dự án của bạn
-// import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-// import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../../auth/types/jwt-payload.type';
 
 @ApiTags('Posts')
 @Controller('posts')
-// @UseGuards(JwtAuthGuard) // Kích hoạt Guard này khi ghép code thực tế
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('accessToken')
 @ApiBadRequestResponse({
   description: 'Malformed request payload or failed domain validation.',
@@ -65,10 +66,10 @@ export class PostsController {
   })
   @ApiResponse({ status: 200, description: 'Return paginated list of posts' })
   async getPosts(
-    @Query() query: QueryPostsDto /*, @CurrentUser() user: JwtPayload */,
+    @CurrentUser() user: JwtPayload,
+    @Query() query: QueryPostsDto,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.getPosts(userId, query);
+    return await this.postsService.getPosts(user.sub, query);
   }
 
   // CHÚ Ý: Route /me/bookmarks phải đặt TRƯỚC route /:postId để tránh bị bắt nhầm
@@ -79,10 +80,10 @@ export class PostsController {
     description: 'Return paginated list of bookmarked posts',
   })
   async getBookmarkedPosts(
-    @Query() query: PaginationQueryDto /*, @CurrentUser() user: JwtPayload */,
+    @CurrentUser() user: JwtPayload,
+    @Query() query: PaginationQueryDto,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.getBookmarkedPosts(userId, query);
+    return await this.postsService.getBookmarkedPosts(user.sub, query);
   }
 
   @Get(':postId')
@@ -91,10 +92,10 @@ export class PostsController {
   @ApiResponse({ status: 200, description: 'Return a single post detail' })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async getPost(
-    @Param('postId') postId: string /*, @CurrentUser() user: JwtPayload */,
+    @CurrentUser() user: JwtPayload,
+    @Param('postId') postId: string,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.getPostById(userId, postId);
+    return await this.postsService.getPostById(user.sub, postId);
   }
 
   @Post()
@@ -111,10 +112,10 @@ export class PostsController {
   )
   @ApiResponse({ status: 200, description: 'Post created successfully' })
   async createPost(
-    @Body() dto: CreatePostDto /*, @CurrentUser() user: JwtPayload */,
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreatePostDto,
   ) {
-    const userId = 'mock-user-id'; // user.sub
-    return await this.postsService.createPost(userId, dto);
+    return await this.postsService.createPost(user.sub, dto);
   }
 
   @Patch(':postId')
@@ -123,11 +124,11 @@ export class PostsController {
   @ApiResponse({ status: 200, description: 'Post updated successfully' })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async updatePost(
+    @CurrentUser() user: JwtPayload,
     @Param('postId') postId: string,
-    @Body() dto: Partial<CreatePostDto> /*, @CurrentUser() user: JwtPayload */,
+    @Body() dto: Partial<CreatePostDto>,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.updatePost(userId, postId, dto);
+    return await this.postsService.updatePost(user.sub, postId, dto);
   }
 
   @Delete(':postId')
@@ -136,10 +137,10 @@ export class PostsController {
   @ApiResponse({ status: 200, description: 'Post deleted successfully' })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async deletePost(
-    @Param('postId') postId: string /*, @CurrentUser() user: JwtPayload */,
+    @CurrentUser() user: JwtPayload,
+    @Param('postId') postId: string,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.deletePost(userId, postId);
+    return await this.postsService.deletePost(user.sub, postId);
   }
 
   @Post(':postId/like')
@@ -152,10 +153,10 @@ export class PostsController {
   })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async togglePostLike(
-    @Param('postId') postId: string /*, @CurrentUser() user: JwtPayload */,
+    @CurrentUser() user: JwtPayload,
+    @Param('postId') postId: string,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.togglePostLike(userId, postId);
+    return await this.postsService.togglePostLike(user.sub, postId);
   }
 
   @Post(':postId/bookmark')
@@ -168,10 +169,10 @@ export class PostsController {
   })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async togglePostBookmark(
-    @Param('postId') postId: string /*, @CurrentUser() user: JwtPayload */,
+    @CurrentUser() user: JwtPayload,
+    @Param('postId') postId: string,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.togglePostBookmark(userId, postId);
+    return await this.postsService.togglePostBookmark(user.sub, postId);
   }
 
   // ==========================================
@@ -187,11 +188,11 @@ export class PostsController {
   })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async getComments(
+    @CurrentUser() user: JwtPayload,
     @Param('postId') postId: string,
-    @Query() query: PaginationQueryDto /*, @CurrentUser() user: JwtPayload */,
+    @Query() query: PaginationQueryDto,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.getPostComments(userId, postId, query);
+    return await this.postsService.getPostComments(user.sub, postId, query);
   }
 
   @Post(':postId/comments')
@@ -201,11 +202,11 @@ export class PostsController {
   @ApiResponse({ status: 200, description: 'Comment created successfully' })
   @ApiNotFoundResponse({ description: 'Requested post was not found.' })
   async createComment(
+    @CurrentUser() user: JwtPayload,
     @Param('postId') postId: string,
-    @Body() dto: CommentDto /*, @CurrentUser() user: JwtPayload */,
+    @Body() dto: CommentDto,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.createComment(userId, postId, dto);
+    return await this.postsService.createComment(user.sub, postId, dto);
   }
 
   @Patch('comments/:id')
@@ -214,11 +215,11 @@ export class PostsController {
   @ApiResponse({ status: 200, description: 'Comment updated successfully' })
   @ApiNotFoundResponse({ description: 'Requested comment was not found.' })
   async updateComment(
+    @CurrentUser() user: JwtPayload,
     @Param('id') commentId: string,
-    @Body() dto: CommentDto /*, @CurrentUser() user: JwtPayload */,
+    @Body() dto: CommentDto,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.updateComment(userId, commentId, dto);
+    return await this.postsService.updateComment(user.sub, commentId, dto);
   }
 
   @Delete('comments/:id')
@@ -227,10 +228,10 @@ export class PostsController {
   @ApiResponse({ status: 200, description: 'Comment deleted successfully' })
   @ApiNotFoundResponse({ description: 'Requested comment was not found.' })
   async deleteComment(
-    @Param('id') commentId: string /*, @CurrentUser() user: JwtPayload */,
+    @CurrentUser() user: JwtPayload,
+    @Param('id') commentId: string,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.deleteComment(userId, commentId);
+    return await this.postsService.deleteComment(user.sub, commentId);
   }
 
   @Post('comments/:id/like')
@@ -243,9 +244,9 @@ export class PostsController {
   })
   @ApiNotFoundResponse({ description: 'Requested comment was not found.' })
   async toggleCommentLike(
-    @Param('id') commentId: string /*, @CurrentUser() user: JwtPayload */,
+    @CurrentUser() user: JwtPayload,
+    @Param('id') commentId: string,
   ) {
-    const userId = 'mock-user-id';
-    return await this.postsService.toggleCommentLike(userId, commentId);
+    return await this.postsService.toggleCommentLike(user.sub, commentId);
   }
 }

@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BalancesService } from './balances.service';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import Decimal from 'decimal.js';
 import { BadRequestException } from '@nestjs/common';
 
 const mockPrisma = {
   $transaction: jest.fn((fn) => fn(mockTx)),
   balance: {
+    findFirst: jest.fn(),
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -16,6 +17,7 @@ const mockPrisma = {
 
 const mockTx = {
   balance: {
+    findFirst: jest.fn(),
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -54,15 +56,8 @@ describe('BalancesService', () => {
     });
 
     it('should create balance if it does not exist', async () => {
-      mockTx.balance.findUnique.mockResolvedValueOnce(null);
+      mockTx.balance.findFirst.mockResolvedValueOnce(null);
       mockTx.balance.create.mockResolvedValue({
-        id: 'balance-id',
-        userId: 'user-id',
-        assetId: 'asset-id',
-        available: new Decimal(0),
-        locked: new Decimal(0),
-      });
-      mockTx.balance.findUnique.mockResolvedValueOnce({
         id: 'balance-id',
         userId: 'user-id',
         assetId: 'asset-id',
@@ -88,14 +83,7 @@ describe('BalancesService', () => {
     });
 
     it('should credit available balance', async () => {
-      mockTx.balance.findUnique.mockResolvedValueOnce({
-        id: 'balance-id',
-        userId: 'user-id',
-        assetId: 'asset-id',
-        available: new Decimal(50),
-        locked: new Decimal(0),
-      });
-      mockTx.balance.findUnique.mockResolvedValueOnce({
+      mockTx.balance.findFirst.mockResolvedValueOnce({
         id: 'balance-id',
         userId: 'user-id',
         assetId: 'asset-id',
@@ -121,14 +109,7 @@ describe('BalancesService', () => {
     });
 
     it('should debit available balance', async () => {
-      mockTx.balance.findUnique.mockResolvedValueOnce({
-        id: 'balance-id',
-        userId: 'user-id',
-        assetId: 'asset-id',
-        available: new Decimal(100),
-        locked: new Decimal(0),
-      });
-      mockTx.balance.findUnique.mockResolvedValueOnce({
+      mockTx.balance.findFirst.mockResolvedValueOnce({
         id: 'balance-id',
         userId: 'user-id',
         assetId: 'asset-id',
@@ -154,14 +135,7 @@ describe('BalancesService', () => {
     });
 
     it('should throw BadRequestException if insufficient balance', async () => {
-      mockTx.balance.findUnique.mockResolvedValueOnce({
-        id: 'balance-id',
-        userId: 'user-id',
-        assetId: 'asset-id',
-        available: new Decimal(50),
-        locked: new Decimal(0),
-      });
-      mockTx.balance.findUnique.mockResolvedValueOnce({
+      mockTx.balance.findFirst.mockResolvedValueOnce({
         id: 'balance-id',
         userId: 'user-id',
         assetId: 'asset-id',
@@ -188,7 +162,7 @@ describe('BalancesService', () => {
     });
 
     it('should throw BadRequestException if balance not found', async () => {
-      mockTx.balance.findUnique.mockResolvedValue(null);
+      mockTx.balance.findFirst.mockResolvedValue(null);
 
       await expect(
         service.transferBetweenAvailableAndLocked(
@@ -201,7 +175,7 @@ describe('BalancesService', () => {
     });
 
     it('should transfer from available to locked', async () => {
-      mockTx.balance.findUnique.mockResolvedValue({
+      mockTx.balance.findFirst.mockResolvedValue({
         id: 'balance-id',
         userId: 'user-id',
         assetId: 'asset-id',
@@ -228,7 +202,7 @@ describe('BalancesService', () => {
     });
 
     it('should transfer from locked to available', async () => {
-      mockTx.balance.findUnique.mockResolvedValue({
+      mockTx.balance.findFirst.mockResolvedValue({
         id: 'balance-id',
         userId: 'user-id',
         assetId: 'asset-id',
@@ -275,7 +249,7 @@ describe('BalancesService', () => {
         userId: 'user-id',
         assetId: 'asset-1',
       };
-      mockPrisma.balance.findUnique.mockResolvedValue(mockBalance);
+      mockPrisma.balance.findFirst.mockResolvedValue(mockBalance);
 
       const result = await service.getBalance('user-id', 'asset-1');
 

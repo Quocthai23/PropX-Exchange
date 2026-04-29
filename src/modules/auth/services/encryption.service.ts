@@ -1,15 +1,30 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { AppConfigService } from '@/config/app-config.service';
 
 @Injectable()
 export class EncryptionService {
   private readonly algorithm = 'aes-256-gcm';
+  private readonly secretKey: Buffer;
 
-  private readonly secretKey = crypto.scryptSync(
-    process.env.WALLET_ENCRYPTION_KEY || 'default-secret-key-change-in-prod',
-    'salt-rwa-platform',
-    32,
-  );
+  constructor(private readonly config: AppConfigService) {
+    this.secretKey = crypto.scryptSync(
+      this.getEncryptionKey(),
+      'salt-rwa-platform',
+      32,
+    );
+  }
+
+  private getEncryptionKey(): string {
+    const key = this.config.walletEncryptionKey;
+    if (key) {
+      return key;
+    }
+    if (this.config.isProduction) {
+      throw new Error('WALLET_ENCRYPTION_KEY is required');
+    }
+    return 'default-secret-key-change-in-prod';
+  }
 
   encrypt(text: string): string {
     const iv = crypto.randomBytes(16);

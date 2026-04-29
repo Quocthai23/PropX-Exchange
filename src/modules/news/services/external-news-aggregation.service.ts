@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { AppConfigService } from '../../../config/app-config.service';
 
 export type ExternalProviderId =
   | 'newsapi'
@@ -88,7 +89,10 @@ interface NewsPrisma {
 export class ExternalNewsAggregationService {
   private readonly logger = new Logger(ExternalNewsAggregationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: AppConfigService,
+  ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleHourlySync() {
@@ -169,19 +173,19 @@ export class ExternalNewsAggregationService {
   }
 
   private buildProviderDescriptors(): ProviderDescriptor[] {
-    const language = process.env.EXTERNAL_NEWS_LANGUAGE || 'en';
-    const country = process.env.EXTERNAL_NEWS_COUNTRY || 'us';
+    const language = this.config.externalNewsLanguage;
+    const country = this.config.externalNewsCountry;
 
-    const newsApiKey = process.env.NEWSAPI_API_KEY;
-    const freeNewsApiKey = process.env.FREENEWSAPI_API_KEY;
-    const theNewsApiKey = process.env.THENEWSAPI_API_KEY;
-    const mediastackKey = process.env.MEDIASTACK_API_KEY;
-    const fcsApiKey = process.env.FCSAPI_API_KEY;
-    const rapidApiKey = process.env.RAPIDAPI_KEY;
-    const currentsApiKey = process.env.CURRENTS_API_KEY;
-    const gnewsApiKey = process.env.GNEWS_API_KEY;
-    const newsDataApiKey = process.env.NEWSDATA_API_KEY;
-    const openNewsFeedUrl = process.env.OPENNEWS_CANADA_FEED_URL;
+    const newsApiKey = this.config.newsApiKey;
+    const freeNewsApiKey = this.config.freeNewsApiKey;
+    const theNewsApiKey = this.config.theNewsApiKey;
+    const mediastackKey = this.config.mediastackApiKey;
+    const fcsApiKey = this.config.fcsApiKey;
+    const rapidApiKey = this.config.rapidApiKey;
+    const currentsApiKey = this.config.currentsApiKey;
+    const gnewsApiKey = this.config.gnewsApiKey;
+    const newsDataApiKey = this.config.newsDataApiKey;
+    const openNewsFeedUrl = this.config.openNewsCanadaFeedUrl;
 
     return [
       {
@@ -194,7 +198,7 @@ export class ExternalNewsAggregationService {
         notes: 'Free plan returns truncated content',
         enabled: Boolean(newsApiKey),
         request: {
-          url: `${process.env.NEWSAPI_BASE_URL || 'https://newsapi.org'}/v2/top-headlines?language=${language}&country=${country}&pageSize=25&apiKey=${newsApiKey || ''}`,
+          url: `${this.config.newsApiBaseUrl}/v2/top-headlines?language=${language}&country=${country}&pageSize=25&apiKey=${newsApiKey || ''}`,
         },
       },
       {
@@ -206,7 +210,7 @@ export class ExternalNewsAggregationService {
         notes: 'Full content is paid-only',
         enabled: Boolean(freeNewsApiKey),
         request: {
-          url: `${process.env.FREENEWSAPI_BASE_URL || 'https://freenewsapi.com'}/api/v1/news?apikey=${freeNewsApiKey || ''}&lang=${language}`,
+          url: `${this.config.freeNewsApiBaseUrl}/api/v1/news?apikey=${freeNewsApiKey || ''}&lang=${language}`,
         },
       },
       {
@@ -218,7 +222,7 @@ export class ExternalNewsAggregationService {
         notes: 'Requires apiKey',
         enabled: Boolean(theNewsApiKey),
         request: {
-          url: `${process.env.THENEWSAPI_BASE_URL || 'https://api.thenewsapi.com'}/v1/news/top?api_token=${theNewsApiKey || ''}&language=${language}&limit=20`,
+          url: `${this.config.theNewsApiBaseUrl}/v1/news/top?api_token=${theNewsApiKey || ''}&language=${language}&limit=20`,
         },
       },
       {
@@ -230,7 +234,7 @@ export class ExternalNewsAggregationService {
         notes: 'Free plan returns snippets only',
         enabled: Boolean(mediastackKey),
         request: {
-          url: `${process.env.MEDIASTACK_BASE_URL || 'http://api.mediastack.com'}/v1/news?access_key=${mediastackKey || ''}&languages=${language}&limit=25`,
+          url: `${this.config.mediastackBaseUrl}/v1/news?access_key=${mediastackKey || ''}&languages=${language}&limit=25`,
         },
       },
       {
@@ -242,7 +246,7 @@ export class ExternalNewsAggregationService {
         notes: 'No credit card required',
         enabled: Boolean(fcsApiKey),
         request: {
-          url: `${process.env.FCSAPI_BASE_URL || 'https://fcsapi.com'}/api-v3/news/latest?access_key=${fcsApiKey || ''}&language=${language}`,
+          url: `${this.config.fcsApiBaseUrl}/api-v3/news/latest?access_key=${fcsApiKey || ''}&language=${language}`,
         },
       },
       {
@@ -254,12 +258,10 @@ export class ExternalNewsAggregationService {
         notes: 'Requires RapidAPI key',
         enabled: Boolean(rapidApiKey),
         request: {
-          url: `${process.env.CONTEXTUALWEB_BASE_URL || 'https://contextualwebsearch-websearch-v1.p.rapidapi.com'}/api/search/NewsSearchAPI?q=${encodeURIComponent(process.env.EXTERNAL_NEWS_KEYWORD || 'rwa investment')}&pageNumber=1&pageSize=20&autoCorrect=true`,
+          url: `${this.config.contextualWebBaseUrl}/api/search/NewsSearchAPI?q=${encodeURIComponent(this.config.externalNewsKeyword)}&pageNumber=1&pageSize=20&autoCorrect=true`,
           headers: {
             'X-RapidAPI-Key': rapidApiKey || '',
-            'X-RapidAPI-Host':
-              process.env.CONTEXTUALWEB_RAPIDAPI_HOST ||
-              'contextualwebsearch-websearch-v1.p.rapidapi.com',
+            'X-RapidAPI-Host': this.config.contextualWebRapidApiHost,
           },
         },
       },
@@ -272,7 +274,7 @@ export class ExternalNewsAggregationService {
         notes: 'Requires apiKey',
         enabled: Boolean(currentsApiKey),
         request: {
-          url: `${process.env.CURRENTS_BASE_URL || 'https://api.currentsapi.services'}/v1/latest-news?language=${language}&apiKey=${currentsApiKey || ''}`,
+          url: `${this.config.currentsBaseUrl}/v1/latest-news?language=${language}&apiKey=${currentsApiKey || ''}`,
         },
       },
       {
@@ -284,7 +286,7 @@ export class ExternalNewsAggregationService {
         notes: 'Max 10 articles per request in free plan',
         enabled: Boolean(gnewsApiKey),
         request: {
-          url: `${process.env.GNEWS_BASE_URL || 'https://gnews.io'}/api/v4/top-headlines?lang=${language}&country=${country}&max=10&apikey=${gnewsApiKey || ''}`,
+          url: `${this.config.gnewsBaseUrl}/api/v4/top-headlines?lang=${language}&country=${country}&max=10&apikey=${gnewsApiKey || ''}`,
         },
       },
       {
@@ -296,7 +298,7 @@ export class ExternalNewsAggregationService {
         notes: 'Requires apikey',
         enabled: Boolean(newsDataApiKey),
         request: {
-          url: `${process.env.NEWSDATA_BASE_URL || 'https://newsdata.io'}/api/1/latest?apikey=${newsDataApiKey || ''}&language=${language}`,
+          url: `${this.config.newsDataBaseUrl}/api/1/latest?apikey=${newsDataApiKey || ''}&language=${language}`,
         },
       },
       {

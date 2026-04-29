@@ -1,9 +1,10 @@
-﻿import {
+import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
+import { AppConfigService } from '@/config/app-config.service';
 
 interface IpfsFileResult {
   cid: string;
@@ -15,8 +16,8 @@ export class IpfsService {
   private readonly logger = new Logger(IpfsService.name);
   private readonly jwt: string | undefined;
 
-  constructor() {
-    this.jwt = process.env.PINATA_JWT;
+  constructor(private readonly config: AppConfigService) {
+    this.jwt = this.config.pinataJwt;
     if (!this.jwt) {
       this.logger.warn(
         'PINATA_JWT is not set. IPFS upload features are disabled until configured.',

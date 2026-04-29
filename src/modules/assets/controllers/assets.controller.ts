@@ -1,9 +1,9 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AssetsService } from '../services/assets.service';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import type { JwtPayload } from '../../auth/types/jwt-payload.type';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
+import type { JwtPayload } from '@/modules/auth/types/jwt-payload.type';
 
 @Controller()
 export class AssetsController {

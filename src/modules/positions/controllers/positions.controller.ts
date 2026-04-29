@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PositionsService } from '../services/positions.service';
 import {
@@ -7,14 +16,14 @@ import {
   UpdatePositionDto,
   GetUserPositionsQueryDto,
 } from '../dto/positions.dto';
-// TODO: Import JwtAuthGuard và CurrentUser từ auth module
-// import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-// import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../../auth/types/jwt-payload.type';
 
 @ApiTags('Positions')
 @Controller('positions')
 @ApiBearerAuth('accessToken')
-// @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class PositionsController {
   constructor(private readonly positionsService: PositionsService) {}
 
@@ -22,42 +31,48 @@ export class PositionsController {
   @ApiOperation({
     summary: 'Get statistics about positions and orders of the account',
   })
-  async getStats(@Query('accountId') accountId: string) {
-    const userId = 'mock-user-id'; // Thay bằng user.sub
-    return this.positionsService.getPositionsStats(userId, accountId);
+  async getStats(
+    @CurrentUser() user: JwtPayload,
+    @Query('accountId') accountId: string,
+  ) {
+    return this.positionsService.getPositionsStats(user.sub, accountId);
   }
 
   @Post('bulk-close')
   @ApiOperation({ summary: 'Bulk close positions' })
-  async bulkClose(@Body() dto: BulkClosePositionsDto) {
-    const userId = 'mock-user-id';
-    return this.positionsService.bulkClosePositions(userId, dto);
+  async bulkClose(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: BulkClosePositionsDto,
+  ) {
+    return this.positionsService.bulkClosePositions(user.sub, dto);
   }
 
   @Post(':positionId/close')
   @ApiOperation({ summary: 'Close position' })
   async closePosition(
+    @CurrentUser() user: JwtPayload,
     @Param('positionId') positionId: string,
     @Body() dto: ClosePositionDto,
   ) {
-    const userId = 'mock-user-id';
-    return this.positionsService.closePosition(userId, positionId, dto);
+    return this.positionsService.closePosition(user.sub, positionId, dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'List positions' })
-  async getPositions(@Query() query: GetUserPositionsQueryDto) {
-    const userId = 'mock-user-id';
-    return this.positionsService.getPositions(userId, query);
+  async getPositions(
+    @CurrentUser() user: JwtPayload,
+    @Query() query: GetUserPositionsQueryDto,
+  ) {
+    return this.positionsService.getPositions(user.sub, query);
   }
 
   @Put(':positionId')
   @ApiOperation({ summary: 'Update position' })
   async updatePosition(
+    @CurrentUser() user: JwtPayload,
     @Param('positionId') positionId: string,
     @Body() dto: UpdatePositionDto,
   ) {
-    const userId = 'mock-user-id';
-    return this.positionsService.updatePosition(userId, positionId, dto);
+    return this.positionsService.updatePosition(user.sub, positionId, dto);
   }
 }

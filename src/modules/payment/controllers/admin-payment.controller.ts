@@ -13,6 +13,8 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentService } from '../services/payment.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../users/dto/roles.guard';
+import { Roles } from '../../users/dto/roles.decorator';
 import {
   GetTransactionHistoryDto,
   AdminUpdateWithdrawStatusDto,
@@ -20,8 +22,9 @@ import {
 } from '../dto/payment.dto';
 
 @ApiTags('Admin - Payment')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard) // TODO: Thêm AdminGuard
+@ApiBearerAuth('accessToken')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 @Controller('admin')
 export class AdminPaymentController {
   constructor(private readonly paymentService: PaymentService) {}

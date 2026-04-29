@@ -1235,8 +1235,13 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
         "tags": [
-          "AdminCorporateActions"
+          "Admin - Assets"
         ]
       }
     },
@@ -1276,8 +1281,13 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
         "tags": [
-          "AdminCorporateActions"
+          "Admin - Assets"
         ]
       }
     },
@@ -1499,12 +1509,37 @@
             }
           },
           {
-            "name": "accountId",
+            "name": "type",
             "required": false,
             "in": "query",
+            "description": "Transaction type",
             "schema": {
-              "pattern": "^(real|demo)_[0-9]{8}$",
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "DEPOSIT",
+                "WITHDRAW",
+                "TRANSFER",
+                "TRADE_BUY",
+                "TRADE_SELL",
+                "DIVIDEND",
+                "FEE"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Transaction status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "COMPLETED",
+                "FAILED",
+                "CANCELLED"
+              ]
             }
           },
           {
@@ -1586,12 +1621,37 @@
             }
           },
           {
-            "name": "accountId",
+            "name": "type",
             "required": false,
             "in": "query",
+            "description": "Transaction type",
             "schema": {
-              "pattern": "^(real|demo)_[0-9]{8}$",
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "DEPOSIT",
+                "WITHDRAW",
+                "TRANSFER",
+                "TRADE_BUY",
+                "TRADE_SELL",
+                "DIVIDEND",
+                "FEE"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Transaction status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "COMPLETED",
+                "FAILED",
+                "CANCELLED"
+              ]
             }
           },
           {
@@ -1638,7 +1698,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Admin Get Transaction Histories",
@@ -1695,7 +1755,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Admin Update Withdraw Transaction Status",
@@ -1743,7 +1803,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Sweep Funds (Gom quỹ từ ví người dùng về ví tổng)",
@@ -1865,15 +1925,6 @@
         "operationId": "OrdersController_getOrders",
         "parameters": [
           {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Cursor for pagination (position ID)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "take",
             "required": false,
             "in": "query",
@@ -1885,47 +1936,15 @@
             }
           },
           {
-            "name": "accountId",
-            "required": true,
-            "in": "query",
-            "description": "Trading account ID",
-            "schema": {
-              "pattern": "^(real|demo)_[0-9]{8}$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "symbol",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "side",
             "required": false,
             "in": "query",
-            "description": "Order side: 0 for long, 1 for short",
+            "description": "Order side",
             "schema": {
-              "type": "number",
+              "type": "string",
               "enum": [
-                0,
-                1
-              ]
-            }
-          },
-          {
-            "name": "orderType",
-            "required": false,
-            "in": "query",
-            "description": "Order type: 0 for market, 1 for limit, 2 for stop",
-            "schema": {
-              "type": "number",
-              "enum": [
-                0,
-                1,
-                2
+                "BUY",
+                "SELL"
               ]
             }
           },
@@ -1933,61 +1952,36 @@
             "name": "status",
             "required": false,
             "in": "query",
-            "description": "Array of order statuses",
+            "description": "Order status",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          },
-          {
-            "name": "sortBy",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": "createdAt",
               "type": "string",
               "enum": [
-                "createdAt",
-                "quantity",
-                "orderType",
-                "symbol",
-                "side"
+                "PENDING",
+                "OPEN",
+                "PARTIALLY_FILLED",
+                "FILLED",
+                "CANCELLED",
+                "REJECTED"
               ]
             }
           },
           {
-            "name": "sortDir",
+            "name": "assetId",
             "required": false,
             "in": "query",
+            "description": "Asset ID",
             "schema": {
-              "default": "desc",
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            }
-          },
-          {
-            "name": "fromDate",
-            "required": false,
-            "in": "query",
-            "description": "Start date (YYYY-MM-DD)",
-            "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
               "type": "string"
             }
           },
           {
-            "name": "toDate",
+            "name": "skip",
             "required": false,
             "in": "query",
-            "description": "End date (YYYY-MM-DD)",
             "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-              "type": "string"
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
             }
           }
         ],
@@ -2148,10 +2142,21 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "IN_PROGRESS",
+                "RESOLVED",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -2159,10 +2164,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "type": "string"
             }
           },
           {
@@ -2240,7 +2242,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -2351,6 +2360,16 @@
             }
           },
           {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
             "name": "cursor",
             "required": false,
             "in": "query",
@@ -2417,7 +2436,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -2479,10 +2505,21 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "IN_PROGRESS",
+                "RESOLVED",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -2490,10 +2527,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "type": "string"
             }
           },
           {
@@ -4499,14 +4533,7 @@
         },
         "responses": {
           "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
+            "description": ""
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -5358,24 +5385,23 @@
       "DepositDemoDto": {
         "type": "object",
         "properties": {
-          "accountId": {
+          "amount": {
             "type": "string",
-            "description": "Account ID",
-            "pattern": "^(real|demo)_[0-9]{8}$"
+            "description": "Deposit amount"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client-generated UUID to prevent duplicate submissions"
           }
         },
         "required": [
-          "accountId"
+          "amount"
         ]
       },
       "CreateWalletDto": {
         "type": "object",
         "properties": {
-          "accountId": {
-            "type": "string",
-            "description": "Account ID",
-            "pattern": "^(real|demo)_[0-9]{8}$"
-          },
           "type": {
             "type": "string",
             "enum": [
@@ -5394,26 +5420,16 @@
             ],
             "description": "Chain ID"
           }
-        },
-        "required": [
-          "accountId",
-          "type",
-          "chainId"
-        ]
+        }
       },
       "WithdrawV2Dto": {
         "type": "object",
         "properties": {
-          "accountId": {
-            "type": "string",
-            "description": "Account ID",
-            "pattern": "^(real|demo)_[0-9]{8}$"
-          },
           "amount": {
             "type": "string",
             "description": "Withdrawal amount"
           },
-          "address": {
+          "destinationAddress": {
             "type": "string",
             "description": "Blockchain wallet address"
           },
@@ -5439,9 +5455,8 @@
           }
         },
         "required": [
-          "accountId",
           "amount",
-          "address",
+          "destinationAddress",
           "chainId",
           "idempotencyKey",
           "challengeId"
@@ -5450,20 +5465,13 @@
       "TransferV2Dto": {
         "type": "object",
         "properties": {
-          "fromAccountId": {
-            "type": "string",
-            "description": "Sender Account ID",
-            "pattern": "^(real|demo)_[0-9]{8}$"
-          },
           "amount": {
             "type": "string",
             "description": "Amount to transfer as a string"
           },
-          "toUserEmail": {
+          "assetId": {
             "type": "string",
-            "format": "email",
-            "description": "Recipient user email, used for validation only",
-            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\\.)+[A-Za-z]{2,}$"
+            "description": "Asset ID"
           },
           "idempotencyKey": {
             "type": "string",
@@ -5477,9 +5485,7 @@
           }
         },
         "required": [
-          "fromAccountId",
           "amount",
-          "toUserEmail",
           "idempotencyKey",
           "challengeId"
         ]
@@ -5488,20 +5494,21 @@
         "type": "object",
         "properties": {
           "status": {
-            "type": "number",
-            "description": "New status (3 = COMPLETED, 5 = REJECTED)",
+            "type": "string",
+            "description": "New status",
             "enum": [
-              3,
-              5
+              "COMPLETED",
+              "FAILED",
+              "CANCELLED"
             ]
           },
           "transactionHash": {
             "type": "string",
-            "description": "Required if status is 3 (COMPLETED)"
+            "description": "Required if status is COMPLETED"
           },
           "rejectedReason": {
             "type": "string",
-            "description": "Required if status is 5 (REJECTED)"
+            "description": "Required if status is FAILED or CANCELLED"
           },
           "idempotencyKey": {
             "type": "string",
@@ -5545,11 +5552,6 @@
       "BulkCancelOrdersDto": {
         "type": "object",
         "properties": {
-          "accountId": {
-            "type": "string",
-            "pattern": "^(real|demo)_[0-9]{8}$",
-            "description": "Trading account ID"
-          },
           "orderIds": {
             "minItems": 1,
             "description": "Array of order IDs to cancel",
@@ -5560,18 +5562,12 @@
           }
         },
         "required": [
-          "accountId",
           "orderIds"
         ]
       },
       "UpdateOrderDto": {
         "type": "object",
         "properties": {
-          "accountId": {
-            "type": "string",
-            "pattern": "^(real|demo)_[0-9]{8}$",
-            "description": "Trading account ID"
-          },
           "cancel": {
             "type": "boolean",
             "description": "Set to true to cancel the order. If true, other fields are ignored"
@@ -5588,54 +5584,52 @@
             "type": "object",
             "description": "New take profit price. Optional, set to null to remove"
           }
-        },
-        "required": [
-          "accountId"
-        ]
+        }
       },
       "CreateOrderDto": {
         "type": "object",
         "properties": {
-          "symbol": {
+          "assetId": {
             "type": "string",
-            "description": "Trading symbol, e.g. \"XAUUSD\""
+            "description": "Asset ID"
           },
           "side": {
-            "type": "number",
-            "description": "Order side: 0 for long, 1 for short"
+            "type": "string",
+            "description": "Order side",
+            "enum": [
+              "BUY",
+              "SELL"
+            ]
           },
-          "stopLossPrice": {
-            "type": "object",
-            "description": "Stop loss price. Optional"
-          },
-          "takeProfitPrice": {
-            "type": "object",
-            "description": "Take profit price. Optional"
+          "type": {
+            "type": "string",
+            "description": "Order type",
+            "enum": [
+              "MARKET",
+              "LIMIT"
+            ]
           },
           "quantity": {
-            "type": "object",
-            "description": "Order quantity. Must be within asset min/max trade size"
-          },
-          "accountId": {
             "type": "string",
-            "pattern": "^(real|demo)_[0-9]{8}$",
-            "description": "Trading account ID"
-          },
-          "orderType": {
-            "type": "number",
-            "description": "Order type: 0 for market, 1 for limit, 2 for stop"
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Order quantity"
           },
           "price": {
-            "type": "object",
-            "description": "Limit/Stop price (required for LIMIT/STOP orders, ignored for MARKET)"
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Limit price (required for LIMIT orders, ignored for MARKET)"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client-generated UUID to prevent duplicate submissions"
           }
         },
         "required": [
-          "symbol",
+          "assetId",
           "side",
-          "quantity",
-          "accountId",
-          "orderType"
+          "type",
+          "quantity"
         ]
       },
       "CreateSupportTicketDto": {
@@ -5661,14 +5655,17 @@
             "maxLength": 5000,
             "description": "Initial message content"
           },
-          "messageType": {
-            "type": "number",
-            "default": 0,
-            "description": "Message type. 0 = TEXT, 1 = IMAGE",
-            "enum": [
-              0,
-              1
-            ]
+          "title": {
+            "type": "string",
+            "description": "Optional title"
+          },
+          "category": {
+            "type": "string",
+            "description": "Optional category"
+          },
+          "priority": {
+            "type": "string",
+            "description": "Optional priority (free-form string)"
           }
         },
         "required": [
@@ -5681,36 +5678,28 @@
         "properties": {
           "subject": {
             "type": "string",
-            "description": "Ticket subject",
-            "enum": [
-              "Account Issue",
-              "Deposit",
-              "Withdrawal",
-              "Trading Issue",
-              "Technical Issue",
-              "Verification",
-              "Billing",
-              "Other"
-            ]
+            "description": "Ticket subject"
           },
-          "status": {
-            "type": "number",
-            "description": "Ticket status. 0 = OPEN, 1 = IN_PROGRESS, 2 = RESOLVED, 3 = CLOSED",
-            "enum": [
-              0,
-              1,
-              2,
-              3
-            ]
+          "title": {
+            "type": "string",
+            "description": "Optional title"
+          },
+          "category": {
+            "type": "string",
+            "description": "Optional category"
           },
           "priority": {
-            "type": "number",
-            "description": "Ticket priority. 0 = LOW, 1 = MEDIUM, 2 = HIGH, 3 = URGENT",
+            "type": "string",
+            "description": "Optional priority (free-form string)"
+          },
+          "status": {
+            "type": "string",
+            "description": "Ticket status",
             "enum": [
-              0,
-              1,
-              2,
-              3
+              "OPEN",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED"
             ]
           }
         }

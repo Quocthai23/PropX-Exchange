@@ -10,9 +10,9 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AccountsService } from '../services/accounts.service';
 import { UpdateAccountDto } from '../dto/accounts.dto';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import type { JwtPayload } from '../../auth/types/jwt-payload.type';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
+import type { JwtPayload } from '@/modules/auth/types/jwt-payload.type';
 
 @ApiTags('Accounts')
 @Controller('accounts')

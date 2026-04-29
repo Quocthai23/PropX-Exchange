@@ -1,5 +1,6 @@
-﻿import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { KMSClient, DecryptCommand } from '@aws-sdk/client-kms';
+import { AppConfigService } from '../../config/app-config.service';
 
 @Injectable()
 export class KmsService implements OnModuleInit {
@@ -7,17 +8,17 @@ export class KmsService implements OnModuleInit {
   private adminPrivateKey: string | null = null;
   private kmsClient: KMSClient;
 
-  constructor() {
+  constructor(private readonly config: AppConfigService) {
     this.kmsClient = new KMSClient({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: this.config.awsRegion || 'us-east-1',
     });
   }
 
   async onModuleInit() {
-    if (process.env.USE_AWS_KMS === 'true') {
+    if (this.config.useAwsKms) {
       this.logger.log('Initializing AWS KMS to decrypt admin private key...');
       try {
-        const encryptedKey = process.env.CHAIN_ADMIN_PRIVATE_KEY_ENCRYPTED;
+        const encryptedKey = this.config.chainAdminPrivateKeyEncryptedBase64;
         if (!encryptedKey)
           throw new Error(
             'Missing CHAIN_ADMIN_PRIVATE_KEY_ENCRYPTED environment variable',
@@ -44,7 +45,7 @@ export class KmsService implements OnModuleInit {
       this.logger.warn(
         'USE_AWS_KMS=false. Using admin private key from .env (dev only).',
       );
-      this.adminPrivateKey = process.env.CHAIN_ADMIN_PRIVATE_KEY || null;
+      this.adminPrivateKey = this.config.chainAdminPrivateKeyPlain || null;
     }
   }
 

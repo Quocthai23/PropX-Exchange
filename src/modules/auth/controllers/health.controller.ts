@@ -6,8 +6,9 @@ import {
   MicroserviceHealthIndicator,
 } from '@nestjs/terminus';
 import { Transport, RedisOptions } from '@nestjs/microservices';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { AppConfigService } from '@/config/app-config.service';
 
 @ApiTags('System')
 @Controller('health')
@@ -17,6 +18,7 @@ export class HealthController {
     private prismaHealth: PrismaHealthIndicator,
     private microservice: MicroserviceHealthIndicator,
     private prisma: PrismaService,
+    private readonly config: AppConfigService,
   ) {}
 
   @Get()
@@ -29,8 +31,8 @@ export class HealthController {
         this.microservice.pingCheck<RedisOptions>('redis', {
           transport: Transport.REDIS,
           options: {
-            host: process.env.REDIS_HOST || 'localhost',
-            port: parseInt(process.env.REDIS_PORT || '6379'),
+            host: this.config.redisHost,
+            port: this.config.redisPort,
           },
         }),
     ]);

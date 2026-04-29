@@ -219,7 +219,7 @@ export class PostsService {
   }
 
   async getPostComments(
-    userId: string,
+    _userId: string,
     postId: string,
     query: PaginationQueryDto,
   ) {
@@ -287,7 +287,15 @@ export class PostsService {
     return { success: true };
   }
 
-  async toggleCommentLike(userId: string, commentId: string) {
+  async toggleCommentLike(_userId: string, commentId: string) {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      select: { id: true },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
     return { isLiked: true };
   }
 }

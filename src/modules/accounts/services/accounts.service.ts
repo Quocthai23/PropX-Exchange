@@ -3,7 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { UpdateAccountDto } from '../dto/accounts.dto';
 import Decimal from 'decimal.js';
 

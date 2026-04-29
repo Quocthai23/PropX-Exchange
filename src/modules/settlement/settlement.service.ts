@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BlockchainService } from '../assets/services/blockchain.service';
+import { AppConfigService } from '../../config/app-config.service';
 
 interface SettlementTrade {
   id: string;
@@ -50,12 +51,13 @@ export class SettlementService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly blockchainService: BlockchainService,
+    private readonly config: AppConfigService,
   ) {}
 
   // Run every 5 minutes to batch and submit settlements on-chain.
   @Cron(CronExpression.EVERY_5_MINUTES)
   async processSettlements() {
-    if (process.env.ENABLE_SETTLEMENT !== 'true') return;
+    if (!this.config.enableSettlement) return;
 
     this.logger.log('Starting batch settlement process...');
 

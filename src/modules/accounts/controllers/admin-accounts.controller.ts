@@ -1,14 +1,15 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AccountsService } from '../services/accounts.service';
-// TODO: Import JwtAuthGuard từ auth module
-// import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-// import { AdminGuard } from '../../auth/guards/admin.guard';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/modules/users/dto/roles.guard';
+import { Roles } from '@/modules/users/dto/roles.decorator';
 
 @ApiTags('Admin - User')
 @Controller('admin/accounts')
 @ApiBearerAuth('accessToken')
-// @UseGuards(JwtAuthGuard, AdminGuard) // Bỏ comment khi ráp Auth Guard
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 export class AdminAccountsController {
   constructor(private readonly accountsService: AccountsService) {}
 

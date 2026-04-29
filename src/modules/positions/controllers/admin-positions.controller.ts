@@ -1,15 +1,16 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PositionsService } from '../services/positions.service';
 import { GetAdminPositionsQueryDto } from '../dto/positions.dto';
-// TODO: Import JwtAuthGuard và AdminGuard
-// import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-// import { AdminGuard } from '../../auth/guards/admin.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../users/dto/roles.guard';
+import { Roles } from '../../users/dto/roles.decorator';
 
 @ApiTags('Admin - User')
 @Controller('admin/positions')
 @ApiBearerAuth('accessToken')
-// @UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 export class AdminPositionsController {
   constructor(private readonly positionsService: PositionsService) {}
 

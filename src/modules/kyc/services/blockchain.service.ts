@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ethers } from 'ethers';
 import { KmsService } from '../../../shared/services/kms.service';
+import { AppConfigService } from '../../../config/app-config.service';
 
 const DEFAULT_ABI = [
   'function addToWhitelist(address wallet) external returns (bool)',
@@ -25,9 +26,12 @@ export class BlockchainService implements OnModuleInit {
     | null = null;
   private readonly isEnabled: boolean;
 
-  constructor(private readonly kmsService: KmsService) {
-    const rpcUrl = process.env.CHAIN_RPC_URL;
-    const contractAddress = process.env.IDENTITY_REGISTRY_ADDRESS;
+  constructor(
+    private readonly kmsService: KmsService,
+    private readonly config: AppConfigService,
+  ) {
+    const rpcUrl = this.config.chainRpcUrl;
+    const contractAddress = this.config.identityRegistryAddress;
 
     this.isEnabled = Boolean(rpcUrl && contractAddress);
 
@@ -49,8 +53,8 @@ export class BlockchainService implements OnModuleInit {
     try {
       // Async initialization - get private key from KMS (or .env fallback)
       const privateKey = await this.kmsService.getAdminPrivateKey();
-      const contractAddress = process.env.IDENTITY_REGISTRY_ADDRESS;
-      const rawAbi = process.env.IDENTITY_REGISTRY_ABI_JSON;
+      const contractAddress = this.config.identityRegistryAddress;
+      const rawAbi = this.config.identityRegistryAbiJson;
 
       if (!contractAddress) {
         throw new Error('IDENTITY_REGISTRY_ADDRESS is required');

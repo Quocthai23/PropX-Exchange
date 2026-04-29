@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { AppConfigService } from '../../../config/app-config.service';
 
 export interface ExternalValuationTarget {
   source: 'batdongsan' | 'chotot' | 'custom';
@@ -66,7 +67,10 @@ interface ValuationPrisma {
 export class ExternalValuationService {
   private readonly logger = new Logger(ExternalValuationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: AppConfigService,
+  ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async captureHourlyValuationSnapshots() {
@@ -223,7 +227,7 @@ export class ExternalValuationService {
   }
 
   private getTargetsFromEnv(): ExternalValuationTarget[] {
-    const raw = process.env.EXTERNAL_VALUATION_TARGETS_JSON;
+    const raw = this.config.externalValuationTargetsJson;
 
     if (!raw) {
       return [];

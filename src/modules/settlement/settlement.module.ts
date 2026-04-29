@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SettlementService } from './settlement.service';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AssetsModule } from '../assets/modules/assets.module';
+import { PrismaService } from '@/prisma/prisma.service';
+import { AssetsModule } from '@/modules/assets/assets.module';
 
 @Module({
   imports: [AssetsModule],

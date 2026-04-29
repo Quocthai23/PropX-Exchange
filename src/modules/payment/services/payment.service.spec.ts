@@ -3,7 +3,7 @@ import { PaymentService } from './payment.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { BalancesService } from '../../balances/services/balances.service';
 import { getQueueToken } from '@nestjs/bullmq';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 
 const mockPrisma = {
   $transaction: jest.fn((fn) => fn(mockTx)),
@@ -13,9 +13,6 @@ const mockPrisma = {
     update: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
-  },
-  account: {
-    findUnique: jest.fn(),
   },
 };
 
@@ -58,47 +55,32 @@ describe('PaymentService', () => {
       await expect(
         service.depositDemo('user-id', {
           amount: '0',
-          accountId: 'account-id',
         } as any),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw NotFoundException if account not found', async () => {
-      mockPrisma.account.findUnique.mockResolvedValue(null);
-
-      await expect(
-        service.depositDemo('user-id', {
-          amount: '100',
-          accountId: 'account-id',
-        } as any),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw BadRequestException if not account owner', async () => {
-      mockPrisma.account.findUnique.mockResolvedValue({
-        id: 'account-id',
-        userId: 'other-user-id',
+    it('should return existing transaction if idempotency key exists', async () => {
+      mockPrisma.transaction.findUnique.mockResolvedValue({
+        id: 'existing-tx',
       });
 
-      await expect(
-        service.depositDemo('user-id', {
-          amount: '100',
-          accountId: 'account-id',
-        } as any),
-      ).rejects.toThrow(BadRequestException);
+      const result = await service.depositDemo('user-id', {
+        amount: '100',
+        idempotencyKey: '00000000-0000-4000-8000-000000000000',
+      } as any);
+
+      expect(result.transactionId).toEqual('existing-tx');
+      expect(result.success).toEqual(true);
+      expect(mockBalancesService.updateBalance).not.toHaveBeenCalled();
+      expect(mockPrisma.transaction.create).not.toHaveBeenCalled();
     });
 
     it('should deposit demo successfully', async () => {
-      mockPrisma.account.findUnique.mockResolvedValue({
-        id: 'account-id',
-        userId: 'user-id',
-      });
       mockBalancesService.updateBalance.mockResolvedValue({});
       mockPrisma.transaction.create.mockResolvedValue({ id: 'tx-id' });
 
       const result = await service.depositDemo('user-id', {
         amount: '100',
-        accountId: 'account-id',
       } as any);
 
       expect(result.transactionId).toEqual('tx-id');

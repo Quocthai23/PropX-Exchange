@@ -9,14 +9,16 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AssetsService } from '../services/assets.service';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { CreateAssetDto } from '../dto/create-asset.dto';
 import { UpdateAssetDto } from '../dto/asset.dto';
-// import { AdminGuard } from '../../auth/guards/admin.guard'; // TODO: Add Role Guard
+import { RolesGuard } from '@/modules/users/dto/roles.guard';
+import { Roles } from '@/modules/users/dto/roles.decorator';
 
 @ApiTags('Admin - Assets')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard) // TODO: Add AdminGuard to restrict access
+@ApiBearerAuth('accessToken')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 @Controller('admin/assets')
 export class AdminAssetsController {
   constructor(private readonly assetsService: AssetsService) {}

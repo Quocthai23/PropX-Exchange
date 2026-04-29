@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MarketDataService } from '../market-data/services/market-data.service';
 import Decimal from 'decimal.js';
+import { AppConfigService } from '../../config/app-config.service';
 
 type DecimalValue = string | number | { toString(): string };
 
@@ -57,13 +58,14 @@ export class MarketMakerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly marketDataService: MarketDataService,
+    private readonly config: AppConfigService,
   ) {}
 
   // Run every 30 seconds.
   @Cron('*/30 * * * * *')
   async simulateTrades() {
     // Use environment variable to enable/disable the bot and avoid unnecessary DB noise.
-    if (process.env.ENABLE_MARKET_MAKER !== 'true') return;
+    if (!this.config.enableMarketMaker) return;
 
     const prisma = this.prisma as unknown as MarketMakerPrisma;
 

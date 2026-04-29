@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
-import { HealthController } from '../controllers/health.controller';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { HealthController } from './controllers/health.controller';
+import { PrismaService } from '@/prisma/prisma.service';
 
 @Module({
   imports: [TerminusModule],

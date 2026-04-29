@@ -38,17 +38,21 @@ import { CurrentUser } from '../decorators/current-user.decorator';
 import type { JwtPayload } from '../types/jwt-payload.type';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import type { Response, Request } from 'express';
+import { AppConfigService } from '@/config/app-config.service';
 
 @ApiTags('Auth')
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly config: AppConfigService,
+  ) {}
 
   private getRefreshCookieConfig() {
     return {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: this.config.isProduction,
       sameSite: 'strict' as const,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     };

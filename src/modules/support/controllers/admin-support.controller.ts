@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SupportService } from '../services/support.service';
@@ -13,12 +14,17 @@ import {
   AdminGetSupportTicketsQueryDto,
   UpdateSupportTicketDto,
 } from '../dto/support.dto';
-// TODO: Import JwtAuthGuard và AdminGuard
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../users/dto/roles.guard';
+import { Roles } from '../../users/dto/roles.decorator';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../../auth/types/jwt-payload.type';
 
 @ApiTags('Admin - Support')
 @Controller('admin/support')
 @ApiBearerAuth('accessToken')
-// @UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN', 'SUPPORT_STAFF')
 export class AdminSupportController {
   constructor(private readonly supportService: SupportService) {}
 
@@ -30,18 +36,20 @@ export class AdminSupportController {
 
   @Post(':id/join')
   @ApiOperation({ summary: 'Admin join ticket' })
-  async adminJoinTicket(@Param('id') id: string) {
-    const adminId = 'mock-admin-id';
-    return this.supportService.adminJoinTicket(adminId, id);
+  async adminJoinTicket(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+  ) {
+    return this.supportService.adminJoinTicket(user.sub, id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Admin update ticket' })
   async adminUpdateTicket(
+    @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() dto: UpdateSupportTicketDto,
   ) {
-    const adminId = 'mock-admin-id';
-    return this.supportService.adminUpdateTicket(adminId, id, dto);
+    return this.supportService.adminUpdateTicket(user.sub, id, dto);
   }
 }

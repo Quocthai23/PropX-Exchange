@@ -1,9 +1,15 @@
-import { Controller, Post, Param, Body } from '@nestjs/common';
+import { Controller, Post, Param, Body, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CorporateActionService } from '../services/corporate-actions.service';
-// import { AdminGuard } from '../../auth/guards/admin.guard'; // Assuming you have an AdminGuard
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/modules/users/dto/roles.guard';
+import { Roles } from '@/modules/users/dto/roles.decorator';
 
+@ApiTags('Admin - Assets')
 @Controller('admin/assets/:id/corporate-actions')
-// @UseGuards(AdminGuard)
+@ApiBearerAuth('accessToken')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 export class AdminCorporateActionsController {
   constructor(
     private readonly corporateActionService: CorporateActionService,

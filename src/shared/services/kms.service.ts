@@ -1,5 +1,6 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { KMSClient, DecryptCommand } from '@aws-sdk/client-kms';
+import { AppConfigService } from '../../config/app-config.service';
 
 @Injectable()
 export class KmsService {
@@ -7,12 +8,12 @@ export class KmsService {
   private kmsClient: KMSClient | null = null;
   private cachedDecryptedKey: string | null = null;
 
-  constructor() {
-    const useKms = process.env.USE_AWS_KMS === 'true';
+  constructor(private readonly config: AppConfigService) {
+    const useKms = this.config.useAwsKms;
 
     if (useKms) {
-      const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-      const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+      const accessKeyId = this.config.awsAccessKeyId;
+      const secretAccessKey = this.config.awsSecretAccessKey;
 
       if (!accessKeyId || !secretAccessKey) {
         throw new Error(
@@ -21,7 +22,7 @@ export class KmsService {
       }
 
       this.kmsClient = new KMSClient({
-        region: process.env.AWS_REGION || 'us-east-1',
+        region: this.config.awsRegion || 'us-east-1',
         credentials: {
           accessKeyId,
           secretAccessKey,
@@ -48,7 +49,7 @@ export class KmsService {
   async getAdminPrivateKey(): Promise<string> {
     // If using plaintext dev mode
     if (!this.kmsClient) {
-      const plainKey = process.env.CHAIN_ADMIN_PRIVATE_KEY;
+      const plainKey = this.config.chainAdminPrivateKeyPlain;
       if (!plainKey) {
         throw new Error('CHAIN_ADMIN_PRIVATE_KEY not configured in .env');
       }
@@ -61,7 +62,8 @@ export class KmsService {
     }
 
     try {
-      const encryptedKeyBase64 = process.env.CHAIN_ADMIN_PRIVATE_KEY_ENCRYPTED;
+      const encryptedKeyBase64 =
+        this.config.chainAdminPrivateKeyEncryptedBase64;
       if (!encryptedKeyBase64) {
         throw new Error('CHAIN_ADMIN_PRIVATE_KEY_ENCRYPTED not configured');
       }

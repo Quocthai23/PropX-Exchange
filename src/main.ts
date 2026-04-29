@@ -1,4 +1,4 @@
-﻿import { NestFactory } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import type {
   OpenAPIObject,
@@ -11,6 +11,12 @@ import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import * as fs from 'fs';
+import { randomUUID } from 'crypto';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import type { LoggerService } from '@nestjs/common';
+import { RequestLoggingInterceptor } from './shared/interceptors/request-logging.interceptor';
+import { ApiExceptionFilter } from './shared/filters/api-exception.filter';
+import { AppConfigService } from './config/app-config.service';
 
 interface SwaggerOperation {
   responses?: Record<string, unknown>;
@@ -282,6 +288,29 @@ function applyDefaultErrorResponses(document: OpenAPIObject) {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = app.get<LoggerService>(WINSTON_MODULE_NEST_PROVIDER);
+  const configService = app.get(AppConfigService);
+  app.useLogger(logger);
+
+  app.use(
+    (
+      req: { headers?: Record<string, unknown>; traceId?: string },
+      res: { setHeader(name: string, value: string): void },
+      next: () => void,
+    ) => {
+      const incoming = req.headers?.['x-trace-id'];
+      const traceId =
+        typeof incoming === 'string' && incoming.trim() !== ''
+          ? incoming
+          : randomUUID();
+      req.traceId = traceId;
+      res.setHeader('X-Trace-Id', traceId);
+      next();
+    },
+  );
+
+  app.useGlobalInterceptors(new RequestLoggingInterceptor(logger));
+  app.useGlobalFilters(new ApiExceptionFilter());
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
@@ -309,10 +338,7 @@ async function bootstrap() {
       },
       'access-token',
     )
-    .addServer(
-      `http://localhost:${process.env.PORT ?? 3000}`,
-      'Local Development',
-    )
+    .addServer(`http://localhost:${configService.port}`, 'Local Development')
     .addTag('Auth', 'Authentication endpoints')
     .addTag('Users', 'User management endpoints')
     .addTag('Assets', 'Asset management endpoints')
@@ -353,12 +379,12 @@ async function bootstrap() {
     customSiteTitle: 'RWA API Documentation',
   });
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(
-    `Application is running on: http://localhost:${process.env.PORT ?? 3000}`,
+  await app.listen(configService.port);
+  logger.log(
+    `Application is running on: http://localhost:${configService.port}`,
   );
-  console.log(
-    `Swagger documentation available at: http://localhost:${process.env.PORT ?? 3000}/api/docs`,
+  logger.log(
+    `Swagger documentation available at: http://localhost:${configService.port}/api/docs`,
   );
 }
 

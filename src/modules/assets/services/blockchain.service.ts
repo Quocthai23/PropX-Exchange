@@ -17,7 +17,8 @@ import {
   formatUnits,
   parseUnits,
 } from 'ethers';
-import { KmsService } from '../../../shared/services/kms.service';
+import { KmsService } from '@/shared/services/kms.service';
+import { AppConfigService } from '@/config/app-config.service';
 
 interface TokenizeRequest {
   name: string;
@@ -45,15 +46,18 @@ export class BlockchainService implements OnModuleInit {
   private readonly depositReceiver?: string;
   private readonly requiredConfirmations: number;
 
-  constructor(private readonly kmsService: KmsService) {
-    this.useMockChain = process.env.USE_MOCK_CHAIN === 'true';
+  constructor(
+    private readonly kmsService: KmsService,
+    private readonly config: AppConfigService,
+  ) {
+    this.useMockChain = this.config.useMockChain;
     this.requiredConfirmations = this.normalizeConfirmations(
-      Number(process.env.CHAIN_CONFIRMATIONS ?? '12'),
+      Number(this.config.chainConfirmations ?? '12'),
       'CHAIN_CONFIRMATIONS',
     );
 
     const rawConfirmationsByChainId =
-      process.env.CHAIN_CONFIRMATIONS_BY_CHAIN_ID_JSON;
+      this.config.chainConfirmationsByChainIdJson;
     if (rawConfirmationsByChainId) {
       try {
         const parsed = JSON.parse(rawConfirmationsByChainId) as Record<
@@ -79,14 +83,14 @@ export class BlockchainService implements OnModuleInit {
       this.confirmationByChainId = {};
     }
 
-    this.tokenFactoryAddress = process.env.ASSET_TOKEN_FACTORY_ADDRESS;
-    const rawFactoryAbi = process.env.ASSET_TOKEN_FACTORY_ABI_JSON;
+    this.tokenFactoryAddress = this.config.assetTokenFactoryAddress;
+    const rawFactoryAbi = this.config.assetTokenFactoryAbiJson;
     this.tokenFactoryAbi = rawFactoryAbi
       ? (JSON.parse(rawFactoryAbi) as InterfaceAbi)
       : undefined;
 
-    this.usdtTokenAddress = process.env.USDT_TOKEN_ADDRESS;
-    this.depositReceiver = process.env.DEPOSIT_RECEIVER_ADDRESS?.toLowerCase();
+    this.usdtTokenAddress = this.config.usdtTokenAddress;
+    this.depositReceiver = this.config.depositReceiverAddress?.toLowerCase();
   }
 
   private normalizeConfirmations(value: number, source: string): number {
@@ -116,7 +120,7 @@ export class BlockchainService implements OnModuleInit {
       return;
     }
 
-    const rpcUrl = process.env.CHAIN_RPC_URL;
+    const rpcUrl = this.config.chainRpcUrl;
     if (!rpcUrl) throw new Error('CHAIN_RPC_URL is required.');
 
     const adminKey = await this.kmsService.getAdminPrivateKey();

@@ -35,4 +35,4 @@ ENV NODE_ENV production
 EXPOSE ${PORT:-3000}
 
 # Command to run migrations and start the application
-CMD ["sh", "-c", "echo 'Waiting for database...' && until nc -z mariadb 3306; do sleep 1; done && echo 'Database is ready! Giving it a moment...' && sleep 5 && yarn prisma migrate deploy && node dist/src/main.js"]
+CMD ["sh", "-c", "echo 'Waiting for database...' && until nc -z mariadb 3306; do sleep 1; done && echo 'Database is ready! Giving it a moment...' && sleep 5 && yarn prisma migrate deploy && node dist/main.js"]

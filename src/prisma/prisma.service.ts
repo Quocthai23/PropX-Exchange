@@ -1,7 +1,8 @@
-﻿import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 // If this import fails, run: npx prisma generate
 import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import { AppConfigService } from '../config/app-config.service';
 
 /**
  * Note: If you see an error here, ensure you have run 'npx prisma generate'
@@ -12,8 +13,8 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  constructor() {
-    const datasourceUrl = process.env.DATABASE_URL;
+  constructor(private readonly config: AppConfigService) {
+    const datasourceUrl = config.databaseUrl;
 
     if (!datasourceUrl) {
       throw new Error('DATABASE_URL is required');

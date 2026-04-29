@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from '../services/orders.service';
@@ -15,12 +16,14 @@ import {
   GetOrdersQueryDto,
   CreateOrderDto,
 } from '../dto/orders.dto';
-// TODO: Import JwtAuthGuard và CurrentUser từ auth module
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../../auth/types/jwt-payload.type';
 
 @ApiTags('Orders')
 @Controller('orders')
 @ApiBearerAuth('accessToken')
-// @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
@@ -29,9 +32,11 @@ export class OrdersController {
     summary: 'Bulk cancel orders',
     description: 'Cancel multiple open orders at once.',
   })
-  async bulkCancel(@Body() dto: BulkCancelOrdersDto) {
-    const userId = 'mock-user-id'; // Lấy từ @CurrentUser
-    return this.ordersService.bulkCancelOrders(userId, dto);
+  async bulkCancel(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: BulkCancelOrdersDto,
+  ) {
+    return this.ordersService.bulkCancelOrders(user.sub, dto);
   }
 
   @Patch(':orderId')
@@ -40,11 +45,11 @@ export class OrdersController {
     description: 'Update mutable fields or cancel by setting cancel=true',
   })
   async updateOrder(
+    @CurrentUser() user: JwtPayload,
     @Param('orderId') orderId: string,
     @Body() dto: UpdateOrderDto,
   ) {
-    const userId = 'mock-user-id';
-    return this.ordersService.updateOrder(userId, orderId, dto);
+    return this.ordersService.updateOrder(user.sub, orderId, dto);
   }
 
   @Get()
@@ -52,9 +57,11 @@ export class OrdersController {
     summary: 'List orders',
     description: 'List orders with filters and sorting',
   })
-  async getOrders(@Query() query: GetOrdersQueryDto) {
-    const userId = 'mock-user-id';
-    return this.ordersService.getOrders(userId, query);
+  async getOrders(
+    @CurrentUser() user: JwtPayload,
+    @Query() query: GetOrdersQueryDto,
+  ) {
+    return this.ordersService.getOrders(user.sub, query);
   }
 
   @Post()
@@ -62,8 +69,10 @@ export class OrdersController {
     summary: 'Create order',
     description: 'Create a new trading order (MARKET vs PENDING)',
   })
-  async createOrder(@Body() dto: CreateOrderDto) {
-    const userId = 'mock-user-id';
-    return this.ordersService.createOrder(userId, dto);
+  async createOrder(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateOrderDto,
+  ) {
+    return this.ordersService.createOrder(user.sub, dto);
   }
 }

@@ -12,37 +12,53 @@ import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { ethers } from 'ethers';
 import * as nodemailer from 'nodemailer';
 import { createHash } from 'crypto';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { EncryptionService } from './encryption.service';
 import type { JwtPayload } from '../types/jwt-payload.type';
+import { AppConfigService } from '@/config/app-config.service';
 
 @Injectable()
 export class AuthService {
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null;
   private readonly logger = new Logger(AuthService.name);
-  private readonly refreshTokenSecret =
-    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || '';
-  private readonly refreshTokenExpiresIn =
-    process.env.JWT_REFRESH_EXPIRES_IN || '7d';
+  private readonly refreshTokenSecret: string;
+  private readonly refreshTokenExpiresIn: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly encryptionService: EncryptionService,
+    private readonly config: AppConfigService,
   ) {
+    this.refreshTokenSecret =
+      this.config.jwtRefreshSecret ?? this.config.jwtSecret ?? '';
+    this.refreshTokenExpiresIn = this.config.jwtRefreshExpiresIn ?? '7d';
+
     if (!this.refreshTokenSecret) {
-      throw new Error('JWT_SECRET or JWT_REFRESH_SECRET is required');
+      throw new Error('JWT_SECRET is required');
     }
 
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+    const smtpHost = this.config.smtpHost ?? 'smtp.gmail.com';
+    const smtpPort = this.config.smtpPort ?? 587;
+    const smtpUser = this.config.smtpUser;
+    const smtpPass = this.config.smtpPass;
+
+    if (!smtpUser || !smtpPass) {
+      this.transporter = null;
+      this.logger.warn(
+        'SMTP credentials are not configured. OTP emails are disabled.',
+      );
+    } else {
+      this.transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: false,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+    }
   }
 
   private hashToken(token: string): string {
@@ -108,9 +124,13 @@ export class AuthService {
       create: { email, code: otpCode, expiresAt },
     });
 
+    if (!this.transporter) {
+      throw new InternalServerErrorException('SMTP is not configured.');
+    }
+
     try {
       await this.transporter.sendMail({
-        from: `"RWA Platform Admin" <${process.env.SMTP_USER}>`,
+        from: `"RWA Platform Admin" <${this.config.smtpUser}>`,
         to: email,
         subject: 'RWA Platform login verification code',
         text: `Your OTP code is: ${otpCode}. This code will expire in 5 minutes.`,
