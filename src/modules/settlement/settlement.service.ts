@@ -13,10 +13,10 @@ interface SettlementTrade {
     symbol: string;
   };
   buyer: {
-    walletAddress: string;
+    walletAddress: string | null;
   };
   seller: {
-    walletAddress: string;
+    walletAddress: string | null;
   };
   quantity: {
     toString(): string;
@@ -91,15 +91,30 @@ export class SettlementService {
       if (!asset.contractAddress) continue;
 
       try {
+        const missingWalletTrades = trades.filter(
+          (t) => !t.buyer.walletAddress || !t.seller.walletAddress,
+        );
+        if (missingWalletTrades.length > 0) {
+          await settlementPrisma.trade.updateMany({
+            where: { id: { in: missingWalletTrades.map((t) => t.id) } },
+            data: { settlementStatus: 'FAILED' },
+          });
+        }
+
+        const eligibleTrades = trades.filter(
+          (t) => t.buyer.walletAddress && t.seller.walletAddress,
+        );
+        if (eligibleTrades.length === 0) continue;
+
         // Lock status to prevent duplicate pickup in the next cron run.
         await settlementPrisma.trade.updateMany({
-          where: { id: { in: trades.map((t) => t.id) } },
+          where: { id: { in: eligibleTrades.map((t) => t.id) } },
           data: { settlementStatus: 'PROCESSING' },
         });
 
-        const settlementData = trades.map((t) => ({
-          from: t.seller.walletAddress,
-          to: t.buyer.walletAddress,
+        const settlementData = eligibleTrades.map((t) => ({
+          from: t.seller.walletAddress!,
+          to: t.buyer.walletAddress!,
           amount: new Decimal(t.quantity.toString()),
         }));
 
@@ -111,12 +126,12 @@ export class SettlementService {
 
         // Update successful settlement results
         await settlementPrisma.trade.updateMany({
-          where: { id: { in: trades.map((t) => t.id) } },
+          where: { id: { in: eligibleTrades.map((t) => t.id) } },
           data: { settlementStatus: 'SETTLED', txHash },
         });
 
         this.logger.log(
-          `Successfully settled ${trades.length} trades for ${asset.symbol}. TxHash: ${txHash}`,
+          `Successfully settled ${eligibleTrades.length} trades for ${asset.symbol}. TxHash: ${txHash}`,
         );
       } catch (error) {
         this.logger.error(

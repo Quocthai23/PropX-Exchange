@@ -1,7 +1,7 @@
 ﻿// User response types for API
 export interface UserResponse {
   id: string;
-  walletAddress: string;
+  walletAddress?: string | null;
   email?: string;
   username?: string;
   role: string;
@@ -12,7 +12,7 @@ export interface UserResponse {
 
 export interface UserProfileResponse {
   id: string;
-  walletAddress: string;
+  walletAddress?: string | null;
   email?: string;
   username?: string;
   role: string;

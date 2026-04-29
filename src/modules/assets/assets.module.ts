@@ -12,12 +12,14 @@ import { KmsService } from '@/shared/services/kms.service';
 import { RedeemService } from './services/redeem.service';
 import { DailyPriceCron } from './jobs/daily-price.cron';
 import { MultiSigService } from '@/shared/services/multisig.service';
+import { RedemptionController } from './controllers/redemption.controller';
 
 @Module({
   controllers: [
     AssetsController,
     AdminAssetsController,
     AdminCorporateActionsController,
+    RedemptionController,
   ],
   providers: [
     AssetsService,
@@ -31,6 +33,6 @@ import { MultiSigService } from '@/shared/services/multisig.service';
     DailyPriceCron,
     MultiSigService,
   ],
-  exports: [AssetsService, BlockchainService],
+  exports: [AssetsService, BlockchainService, IpfsService],
 })
 export class AssetsModule {}

@@ -8,7 +8,6 @@ import { PaymentLedgerService } from './services/payment-ledger.service';
 import { PaymentTransactionHistoryService } from './services/payment-transaction-history.service';
 import { BalancesModule } from '../balances/balances.module';
 import { RolesGuard } from '../users/dto/roles.guard';
-import { EncryptionService } from '../auth/services/encryption.service';
 
 @Module({
   imports: [
@@ -22,7 +21,6 @@ import { EncryptionService } from '../auth/services/encryption.service';
     PaymentService,
     PaymentLedgerService,
     PaymentTransactionHistoryService,
-    EncryptionService,
     PrismaService,
     RolesGuard,
   ],

@@ -32,6 +32,14 @@ export class DepositDemoDto {
 }
 
 export class CreateWalletDto {
+  @ApiProperty({
+    description:
+      'User wallet address (non-custodial). The backend does not store private keys.',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
   @ApiPropertyOptional({ enum: ['EVM', 'SOL'], description: 'Wallet type' })
   @IsOptional()
   @IsEnum(['EVM', 'SOL'])

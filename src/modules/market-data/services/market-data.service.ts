@@ -21,7 +21,12 @@ export interface CandlePoint {
 export interface ReferencePriceAnchor {
   assetId: string;
   referencePrice: number | null;
+  valuationSnapshotPrice: number | null;
   marketPrice: number | null;
+  bestBid: number | null;
+  bestAsk: number | null;
+  midPrice: number | null;
+  lastTradePrice: number | null;
   bandUpper: number | null;
   bandLower: number | null;
 }
@@ -178,41 +183,105 @@ export class MarketDataService {
   }
 
   async getReferencePriceAnchor(assetId: string): Promise<ReferencePriceAnchor> {
-    const asset = await this.prisma.asset.findUnique({
-      where: { id: assetId },
-      select: {
-        id: true,
-        tokenPrice: true,
-        referencePrice: true,
-        priceBandPercentage: true,
-      },
-    });
+    const [asset, bestBidOrder, bestAskOrder, latestValuation] =
+      await Promise.all([
+        this.prisma.asset.findUnique({
+          where: { id: assetId },
+          select: {
+            id: true,
+            tokenPrice: true,
+            referencePrice: true,
+            priceBandPercentage: true,
+          },
+        }),
+        this.prisma.order.findFirst({
+          where: {
+            assetId,
+            side: 'BUY',
+            status: { in: ['OPEN', 'PARTIALLY_FILLED'] },
+            price: { not: null },
+          },
+          orderBy: [{ price: 'desc' }, { createdAt: 'asc' }],
+          select: { price: true },
+        }),
+        this.prisma.order.findFirst({
+          where: {
+            assetId,
+            side: 'SELL',
+            status: { in: ['OPEN', 'PARTIALLY_FILLED'] },
+            price: { not: null },
+          },
+          orderBy: [{ price: 'asc' }, { createdAt: 'asc' }],
+          select: { price: true },
+        }),
+        this.prisma.assetValuationSnapshot.findFirst({
+          where: { assetId },
+          orderBy: { capturedAt: 'desc' },
+          select: { price: true },
+        }),
+      ]);
 
     if (!asset) {
       return {
         assetId,
         referencePrice: null,
+        valuationSnapshotPrice: null,
         marketPrice: null,
+        bestBid: null,
+        bestAsk: null,
+        midPrice: null,
+        lastTradePrice: null,
         bandUpper: null,
         bandLower: null,
       };
     }
 
-    const referencePrice = asset.referencePrice
+    const configuredReferencePrice = asset.referencePrice
       ? new Decimal(asset.referencePrice.toString())
       : null;
-    const band = new Decimal(asset.priceBandPercentage.toString());
-    const bandUpper = referencePrice
-      ? referencePrice.mul(new Decimal(1).plus(band))
+    const snapshotReferencePrice =
+      latestValuation?.price !== undefined && latestValuation?.price !== null
+        ? new Decimal(latestValuation.price.toString())
+        : null;
+    const effectiveReferencePrice =
+      configuredReferencePrice ?? snapshotReferencePrice;
+
+    const bestBid =
+      bestBidOrder?.price !== null && bestBidOrder?.price !== undefined
+        ? new Decimal(bestBidOrder.price.toString())
+        : null;
+    const bestAsk =
+      bestAskOrder?.price !== null && bestAskOrder?.price !== undefined
+        ? new Decimal(bestAskOrder.price.toString())
+        : null;
+    const midPrice =
+      bestBid && bestAsk ? bestBid.plus(bestAsk).div(2) : null;
+    const lastTradePrice = asset.tokenPrice
+      ? new Decimal(asset.tokenPrice.toString())
       : null;
-    const bandLower = referencePrice
-      ? referencePrice.mul(new Decimal(1).minus(band))
+    const marketPrice = midPrice ?? lastTradePrice;
+
+    const band = new Decimal(asset.priceBandPercentage.toString());
+    const bandUpper = effectiveReferencePrice
+      ? effectiveReferencePrice.mul(new Decimal(1).plus(band))
+      : null;
+    const bandLower = effectiveReferencePrice
+      ? effectiveReferencePrice.mul(new Decimal(1).minus(band))
       : null;
 
     return {
       assetId: asset.id,
-      marketPrice: Number(asset.tokenPrice),
-      referencePrice: referencePrice ? Number(referencePrice) : null,
+      marketPrice: marketPrice ? Number(marketPrice) : null,
+      referencePrice: configuredReferencePrice
+        ? Number(configuredReferencePrice)
+        : null,
+      valuationSnapshotPrice: snapshotReferencePrice
+        ? Number(snapshotReferencePrice)
+        : null,
+      bestBid: bestBid ? Number(bestBid) : null,
+      bestAsk: bestAsk ? Number(bestAsk) : null,
+      midPrice: midPrice ? Number(midPrice) : null,
+      lastTradePrice: lastTradePrice ? Number(lastTradePrice) : null,
       bandUpper: bandUpper ? Number(bandUpper) : null,
       bandLower: bandLower ? Number(bandLower) : null,
     };

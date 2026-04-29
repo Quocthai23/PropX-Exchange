@@ -8,7 +8,6 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import Decimal from 'decimal.js';
-import { ethers } from 'ethers';
 import {
   DepositDemoDto,
   CreateWalletDto,
@@ -20,7 +19,6 @@ import {
 } from '../dto/payment.dto';
 import { PaymentLedgerService } from './payment-ledger.service';
 import { PaymentTransactionHistoryService } from './payment-transaction-history.service';
-import { EncryptionService } from '@/modules/auth/services/encryption.service';
 
 @Injectable()
 export class PaymentService {
@@ -30,7 +28,6 @@ export class PaymentService {
     private readonly prisma: PrismaService,
     private readonly paymentLedgerService: PaymentLedgerService,
     private readonly paymentTransactionHistoryService: PaymentTransactionHistoryService,
-    private readonly encryptionService: EncryptionService,
     @InjectQueue('transaction-processing')
     private readonly transactionQueue: Queue,
   ) {}
@@ -75,31 +72,25 @@ export class PaymentService {
   async createWallet(userId: string, dto: CreateWalletDto) {
     const user = await this.db.user.findUnique({
       where: { id: userId },
-      select: { walletAddress: true, encryptedPrivateKey: true },
+      select: { walletAddress: true },
     });
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    if (!user.walletAddress || !user.encryptedPrivateKey) {
-      const wallet = ethers.Wallet.createRandom();
-      const encryptedPrivateKey = this.encryptionService.encrypt(
-        wallet.privateKey,
-      );
-
+    if (!user.walletAddress) {
       await this.db.user.update({
         where: { id: userId },
         data: {
-          walletAddress: wallet.address,
-          encryptedPrivateKey,
+          walletAddress: dto.address,
         },
       });
 
       return {
         wallet: {
           userId,
-          address: wallet.address,
+          address: dto.address,
           chainId: dto.chainId ?? null,
           type: dto.type ?? 'EVM',
         },

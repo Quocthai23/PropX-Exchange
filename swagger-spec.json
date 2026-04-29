@@ -799,7 +799,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -1734,6 +1741,199 @@
         ]
       }
     },
+    "/assets/{id}/redeem": {
+      "post": {
+        "operationId": "RedemptionController_requestRedeem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Request full asset redemption (requires 100% supply)",
+        "tags": [
+          "Redemption",
+          "Asset Redemption"
+        ]
+      }
+    },
+    "/admin/redemptions": {
+      "get": {
+        "operationId": "RedemptionController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List redemption requests (admin)",
+        "tags": [
+          "Redemption",
+          "Admin - Asset Redemption"
+        ]
+      }
+    },
+    "/admin/redemptions/{id}": {
+      "patch": {
+        "operationId": "RedemptionController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUpdateRedemptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Update redemption request status (admin)",
+        "tags": [
+          "Redemption",
+          "Admin - Asset Redemption"
+        ]
+      }
+    },
+    "/admin/redemptions/{id}/complete": {
+      "post": {
+        "operationId": "RedemptionController_complete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Complete redemption: burn tokens and close asset",
+        "tags": [
+          "Redemption",
+          "Admin - Asset Redemption"
+        ]
+      }
+    },
     "/payment/deposit-demo": {
       "post": {
         "operationId": "PaymentController_depositDemo",
@@ -1965,7 +2165,10 @@
                 "TRADE_BUY",
                 "TRADE_SELL",
                 "DIVIDEND",
-                "FEE"
+                "FEE",
+                "MINT",
+                "BURN",
+                "DIVIDEND_CLAIM"
               ]
             }
           },
@@ -2077,7 +2280,10 @@
                 "TRADE_BUY",
                 "TRADE_SELL",
                 "DIVIDEND",
-                "FEE"
+                "FEE",
+                "MINT",
+                "BURN",
+                "DIVIDEND_CLAIM"
               ]
             }
           },
@@ -4920,6 +5126,370 @@
           "Posts"
         ]
       }
+    },
+    "/onboarding": {
+      "post": {
+        "operationId": "OnboardingController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssetOnboardingRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create an asset onboarding request",
+        "tags": [
+          "Asset Onboarding"
+        ]
+      }
+    },
+    "/admin/onboarding": {
+      "get": {
+        "operationId": "AdminOnboardingController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "List onboarding requests (admin)",
+        "tags": [
+          "Admin - Onboarding"
+        ]
+      }
+    },
+    "/admin/onboarding/{id}/status": {
+      "patch": {
+        "operationId": "AdminOnboardingController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUpdateOnboardingStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Update onboarding request status (admin)",
+        "tags": [
+          "Admin - Onboarding"
+        ]
+      }
+    },
+    "/admin/onboarding/{id}/tokenize": {
+      "post": {
+        "operationId": "AdminOnboardingController_tokenize",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenizeOnboardingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Tokenize approved onboarding request (admin)",
+        "tags": [
+          "Admin - Onboarding"
+        ]
+      }
+    },
+    "/assets/{id}/proposals": {
+      "post": {
+        "operationId": "DaoController_createProposal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProposalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create DAO proposal for an asset",
+        "tags": [
+          "Dao",
+          "DAO Governance"
+        ]
+      }
+    },
+    "/proposals/{id}/vote": {
+      "post": {
+        "operationId": "DaoController_vote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteProposalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Vote on a proposal",
+        "tags": [
+          "Dao",
+          "DAO Governance"
+        ]
+      }
+    },
+    "/admin/proposals/{id}/execute": {
+      "patch": {
+        "operationId": "DaoController_execute",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Mark a passed proposal as executed (admin)",
+        "tags": [
+          "Dao",
+          "Admin - DAO Governance"
+        ]
+      }
     }
   },
   "info": {
@@ -5400,6 +5970,30 @@
           "approved"
         ]
       },
+      "AdminUpdateRedemptionDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING_LEGAL",
+              "COMPLETED",
+              "REJECTED"
+            ]
+          },
+          "legalTransferDocs": {
+            "description": "Legal transfer documents (URLs, signed contracts, handover docs)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
       "DepositDemoDto": {
         "type": "object",
         "properties": {
@@ -5420,6 +6014,10 @@
       "CreateWalletDto": {
         "type": "object",
         "properties": {
+          "address": {
+            "type": "string",
+            "description": "User wallet address (non-custodial). The backend does not store private keys."
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -5438,7 +6036,10 @@
             ],
             "description": "Chain ID"
           }
-        }
+        },
+        "required": [
+          "address"
+        ]
       },
       "WithdrawV2Dto": {
         "type": "object",
@@ -6085,6 +6686,162 @@
         },
         "required": [
           "content"
+        ]
+      },
+      "CreateAssetOnboardingRequestDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Căn hộ Vinhomes Smart City"
+          },
+          "description": {
+            "type": "string",
+            "description": "Asset description",
+            "example": "2PN, full nội thất..."
+          },
+          "location": {
+            "type": "string",
+            "example": "Hà Nội - Nam Từ Liêm"
+          },
+          "estimatedValue": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Expected appraisal value",
+            "example": "3500000000"
+          },
+          "legalDocuments": {
+            "description": "Array of URLs for legal document images (title deed, IDs, etc.)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "estimatedValue",
+          "legalDocuments"
+        ]
+      },
+      "AdminUpdateOnboardingStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPRAISING",
+              "APPROVED",
+              "REJECTED",
+              "TOKENIZED"
+            ]
+          },
+          "adminNotes": {
+            "type": "string",
+            "description": "Notes from appraisal/legal team"
+          },
+          "appraisedValue": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Appraised value after real-world appraisal",
+            "example": "3400000000"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "TokenizeOnboardingDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 2,
+            "description": "On-chain token symbol",
+            "example": "RWA-VINH-01"
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Asset category ID"
+          },
+          "totalSupply": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Total supply to mint",
+            "example": "1000000"
+          },
+          "tokenPrice": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Initial token price (USDT)",
+            "example": "1"
+          },
+          "tokenStandard": {
+            "type": "string",
+            "description": "ERC20 / ERC3643 ...",
+            "example": "ERC20"
+          },
+          "spvName": {
+            "type": "string",
+            "description": "SPV legal entity that holds the underlying asset",
+            "example": "RWA SPV JSC"
+          },
+          "auditReportUrl": {
+            "type": "string",
+            "description": "Periodic audit report link",
+            "example": "https://example.com/audit/report.pdf"
+          }
+        },
+        "required": [
+          "symbol",
+          "categoryId",
+          "totalSupply",
+          "tokenPrice"
+        ]
+      },
+      "CreateProposalDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "example": "Có nên bán đứt dự án với giá 3.5 tỷ?"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Proposal details"
+          },
+          "snapshotDate": {
+            "type": "string",
+            "description": "Snapshot time (ISO)",
+            "example": "2026-05-01T00:00:00.000Z"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Voting end time (ISO)",
+            "example": "2026-05-08T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "snapshotDate",
+          "endDate"
+        ]
+      },
+      "VoteProposalDto": {
+        "type": "object",
+        "properties": {
+          "isFor": {
+            "type": "boolean",
+            "description": "True: For, False: Against"
+          }
+        },
+        "required": [
+          "isFor"
         ]
       },
       "ValidationErrorItem": {

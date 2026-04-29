@@ -26,6 +26,8 @@ import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from '@/modules/auth/winston.config';
 import { validateEnv, type ValidatedEnv } from '@/config/env.validation';
 import { AppConfigModule } from '@/config/app-config.module';
+import { OnboardingModule } from '@/modules/onboarding/onboarding.module';
+import { DaoModule } from '@/modules/dao/dao.module';
 
 @Module({
   imports: [
@@ -74,6 +76,8 @@ import { AppConfigModule } from '@/config/app-config.module';
     RealtimeModule,
     PostsModule,
     NotificationsModule,
+    OnboardingModule,
+    DaoModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

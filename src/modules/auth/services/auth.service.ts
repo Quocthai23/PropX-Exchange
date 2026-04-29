@@ -9,11 +9,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
-import { ethers } from 'ethers';
 import * as nodemailer from 'nodemailer';
 import { createHash } from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
-import { EncryptionService } from './encryption.service';
 import type { JwtPayload } from '../types/jwt-payload.type';
 import { AppConfigService } from '@/config/app-config.service';
 
@@ -27,7 +25,6 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly encryptionService: EncryptionService,
     private readonly config: AppConfigService,
   ) {
     this.refreshTokenSecret =
@@ -71,12 +68,12 @@ export class AuthService {
 
   async issueTokenPair(user: {
     id: string;
-    walletAddress: string;
+    walletAddress?: string | null;
     role: string;
   }): Promise<{ accessToken: string; refreshToken: string }> {
     const accessPayload: JwtPayload = {
       sub: user.id,
-      walletAddress: user.walletAddress,
+      walletAddress: user.walletAddress ?? null,
       role: user.role as JwtPayload['role'],
     };
 
@@ -149,7 +146,7 @@ export class AuthService {
   ): Promise<{
     accessToken: string;
     refreshToken: string;
-    user: { id: string; email: string; walletAddress: string };
+    user: { id: string; email: string; walletAddress: string | null };
   }> {
     const otpRecord = await this.prisma.otp.findUnique({ where: { email } });
 
@@ -174,17 +171,10 @@ export class AuthService {
     });
 
     if (!user) {
-      const wallet = ethers.Wallet.createRandom();
-
-      const encryptedPrivateKey = this.encryptionService.encrypt(
-        wallet.privateKey,
-      );
-
       user = await this.prisma.user.create({
         data: {
           email,
-          walletAddress: wallet.address,
-          encryptedPrivateKey,
+          walletAddress: null,
         },
         select: {
           id: true,
@@ -203,7 +193,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        walletAddress: user.walletAddress,
+        walletAddress: user.walletAddress ?? null,
       },
     };
   }
@@ -243,19 +233,13 @@ export class AuthService {
     });
 
     if (!user) {
-      const wallet = ethers.Wallet.createRandom();
-      const encryptedPrivateKey = this.encryptionService.encrypt(
-        wallet.privateKey,
-      );
-
       user = await this.prisma.user.create({
         data: {
           email,
           username:
             decoded.name?.trim() || `${normalizedProvider}_${socialSub}`,
           avatar: decoded.picture,
-          walletAddress: wallet.address,
-          encryptedPrivateKey,
+          walletAddress: null,
         },
         select: {
           id: true,
@@ -276,7 +260,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         username: user.username,
-        walletAddress: user.walletAddress,
+        walletAddress: user.walletAddress ?? null,
         avatar: user.avatar,
       },
     };
@@ -413,12 +397,6 @@ export class AuthService {
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    // Tạo ví mới cho user
-    const wallet = ethers.Wallet.createRandom();
-    const encryptedPrivateKey = this.encryptionService.encrypt(
-      wallet.privateKey,
-    );
-
     // Lưu user vào DB
     return this.prisma.user.create({
       data: {
@@ -427,8 +405,7 @@ export class AuthService {
         passwordHash: hashedPassword,
         referenceCode: data.referenceCode,
         avatar: data.avatar,
-        walletAddress: wallet.address,
-        encryptedPrivateKey,
+        walletAddress: null,
       },
     });
   }

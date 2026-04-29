@@ -53,6 +53,9 @@ enum TransactionType {
   TRADE_SELL
   DIVIDEND
   FEE
+  MINT // When issuing new RWA tokens
+  BURN // When burning tokens for redemption
+  DIVIDEND_CLAIM
 }
 
 enum TransactionStatus {
@@ -69,6 +72,28 @@ enum AssetTradingStatus {
   CLOSED
 }
 
+enum OnboardingStatus {
+  PENDING
+  APPRAISING // Đang thẩm định thực tế
+  APPROVED // Đã duyệt, chờ token hóa
+  REJECTED
+  TOKENIZED // Đã mint thành công token
+}
+
+enum RedemptionStatus {
+  PENDING
+  PROCESSING_LEGAL // Đang làm thủ tục sang tên sổ đỏ
+  COMPLETED // Đã sang tên, Token đã bị Burn
+  REJECTED
+}
+
+enum ProposalStatus {
+  ACTIVE
+  PASSED
+  REJECTED
+  EXECUTED
+}
+
 model AssetCategory {
   id          String   @id @default(uuid())
   name        String   @unique
@@ -81,53 +106,56 @@ model AssetCategory {
 }
 
 model User {
-  id                  String               @id @default(uuid())
-  email               String               @unique
-  walletAddress       String               @unique
-  encryptedPrivateKey String               @db.Text
-  username            String?              @unique
-  avatar              String?
-  role                UserRole             @default(INVESTOR)
-  kycStatus           KycStatus            @default(NONE)
-  refreshTokenHash    String?              @db.Text
+  id                    String          @id @default(uuid())
+  email                 String          @unique
+  walletAddress         String?         @unique
+  username              String?         @unique
+  avatar                String?
+  role                  UserRole        @default(INVESTOR)
+  kycStatus             KycStatus       @default(NONE)
+  refreshTokenHash      String?         @db.Text
   refreshTokenExpiresAt DateTime?
-  supportTickets      SupportTicket[]      @relation("SupportTicketOwner")
-  sentTicketMessages  TicketMessage[]      @relation("TicketMessageSender")
-  buyerTrades         Trade[]              @relation("BuyerTrades")
-  sellerTrades        Trade[]              @relation("SellerTrades")
-  dividendClaims      DividendClaim[]
-  balances            Balance[]
-  orders              Order[]
-  transactions        Transaction[]
-  kycRecord           KycRecord?
-  approvedKycRecords  KycRecord[]          @relation("KycApprover")
-  auditLogs           AuditLog[]           @relation("AuditLogPerformer")
-  accounts            Account[]
-  notifications       Notification[]
-  positions           Position[]
-  posts               Post[]
-  postLikes           PostLike[]
-  comments            Comment[]
-  postBookmarks       PostBookmark[]
-  
+  supportTickets        SupportTicket[] @relation("SupportTicketOwner")
+  sentTicketMessages    TicketMessage[] @relation("TicketMessageSender")
+  buyerTrades           Trade[]         @relation("BuyerTrades")
+  sellerTrades          Trade[]         @relation("SellerTrades")
+  dividendClaims        DividendClaim[]
+  balances              Balance[]
+  orders                Order[]
+  transactions          Transaction[]
+  kycRecord             KycRecord?
+  approvedKycRecords    KycRecord[]     @relation("KycApprover")
+  auditLogs             AuditLog[]      @relation("AuditLogPerformer")
+  accounts              Account[]
+  notifications         Notification[]
+  posts                 Post[]
+  postLikes             PostLike[]
+  comments              Comment[]
+  postBookmarks         PostBookmark[]
+
   // New fields for profile
-  gender              String?
-  bio                 String?              @db.Text
-  coverAvatar         String?
-  displayName         String?
-  referenceCode       String?              @unique
-  referredBy          String?
-  referrer            User?                @relation("UserReferrals", fields: [referredBy], references: [id])
-  referrals           User[]               @relation("UserReferrals")
-  passwordHash        String?              @db.Text
-  enabledMfa          Boolean              @default(false)
-  status              UserStatus           @default(ACTIVE)
-  favoriteAssets      FavoriteAsset[]
-  outgoingRelations   UserRelation[]       @relation("OutgoingRelations")
-  incomingRelations   UserRelation[]       @relation("IncomingRelations")
-  
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  gender                  String?
+  bio                     String?                  @db.Text
+  coverAvatar             String?
+  displayName             String?
+  referenceCode           String?                  @unique
+  referredBy              String?
+  referrer                User?                    @relation("UserReferrals", fields: [referredBy], references: [id])
+  referrals               User[]                   @relation("UserReferrals")
+  passwordHash            String?                  @db.Text
+  enabledMfa              Boolean                  @default(false)
+  status                  UserStatus               @default(ACTIVE)
+  favoriteAssets          FavoriteAsset[]
+  outgoingRelations       UserRelation[]           @relation("OutgoingRelations")
+  incomingRelations       UserRelation[]           @relation("IncomingRelations")
+  assetOnboardingRequests AssetOnboardingRequest[]
+  assetRedemptionRequests AssetRedemptionRequest[]
+  daoProposalsProposed    DaoProposal[]            @relation("DaoProposalProposer")
+  proposalVotes           ProposalVote[]
+
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  daoVotingSnapshots DaoVotingSnapshot[]
 }
 
 model FavoriteAsset {
@@ -137,49 +165,49 @@ model FavoriteAsset {
   assetId   String
   asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  
+
   @@unique([userId, assetId])
 }
 
 model UserRelation {
-  id           String   @id @default(uuid())
-  fromUserId   String
-  fromUser     User     @relation("OutgoingRelations", fields: [fromUserId], references: [id], onDelete: Cascade)
-  toUserId     String
-  toUser       User     @relation("IncomingRelations", fields: [toUserId], references: [id], onDelete: Cascade)
-  isFollowing  Boolean  @default(false)
-  isBlocking   Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
+  id          String   @id @default(uuid())
+  fromUserId  String
+  fromUser    User     @relation("OutgoingRelations", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId    String
+  toUser      User     @relation("IncomingRelations", fields: [toUserId], references: [id], onDelete: Cascade)
+  isFollowing Boolean  @default(false)
+  isBlocking  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@unique([fromUserId, toUserId])
 }
 
 model SupportTicket {
-  id        String              @id @default(uuid())
-  userId    String
-  user      User                @relation("SupportTicketOwner", fields: [userId], references: [id])
-  subject   String
-  title     String?
-  status    SupportTicketStatus @default(OPEN)
-  category  String?
-  priority  String?
+  id              String              @id @default(uuid())
+  userId          String
+  user            User                @relation("SupportTicketOwner", fields: [userId], references: [id])
+  subject         String
+  title           String?
+  status          SupportTicketStatus @default(OPEN)
+  category        String?
+  priority        String?
   assignedAdminId String?
-  messages  TicketMessage[]
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  messages        TicketMessage[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   @@index([userId, status, createdAt])
 }
 
 model TicketMessage {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   ticketId  String
   ticket    SupportTicket @relation(fields: [ticketId], references: [id])
   senderId  String
-  sender    User      @relation("TicketMessageSender", fields: [senderId], references: [id])
-  content   String   @db.Text
-  createdAt DateTime @default(now())
+  sender    User          @relation("TicketMessageSender", fields: [senderId], references: [id])
+  content   String        @db.Text
+  createdAt DateTime      @default(now())
 
   @@index([ticketId, createdAt])
 }
@@ -193,41 +221,47 @@ model Otp {
 }
 
 model KycRecord {
-  id           String    @id @default(uuid())
-  userId       String    @unique
-  user         User      @relation(fields: [userId], references: [id])
-  fullName     String
-  dob          DateTime
-  idNumber     String    @unique
-  idFrontImg   String
-  idBackImg    String
-  selfieImg    String
-  status       KycStatus @default(PENDING)
-  rejectReason String?
-  approvedBy   String?
-  approver     User?     @relation("KycApprover", fields: [approvedBy], references: [id])
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id])
+  fullName           String
+  dob                DateTime
+  idNumber           String    @unique
+  idFrontImg         String
+  idBackImg          String
+  selfieImg          String
+  status             KycStatus @default(PENDING)
+  onChainWhitelisted Boolean   @default(false)
+  whitelistTxHash    String?
+  rejectReason       String?
+  approvedBy         String?
+  approver           User?     @relation("KycApprover", fields: [approvedBy], references: [id])
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model Asset {
-  id                    String                 @id @default(uuid())
-  contractAddress       String?                @unique
-  txHash                String?                @unique
-  symbol                String                 @unique
+  id                    String                   @id @default(uuid())
+  contractAddress       String?                  @unique
+  txHash                String?                  @unique
+  symbol                String                   @unique
   name                  String
-  description           String?                @db.Text
+  description           String?                  @db.Text
   logo                  String?
   categoryId            String
-  category              AssetCategory          @relation(fields: [categoryId], references: [id])
+  category              AssetCategory            @relation(fields: [categoryId], references: [id])
   totalSupply           Decimal
   tokenPrice            Decimal
   referencePrice        Decimal?
-  priceBandPercentage   Decimal                @default(0.07)
-  tradingStatus         AssetTradingStatus     @default(OPEN)
+  priceBandPercentage   Decimal                  @default(0.07)
+  tradingStatus         AssetTradingStatus       @default(OPEN)
   expectedApy           Decimal?
-  isHot                 Boolean                @default(false)
-  isActive              Boolean                @default(false)
+  tokenStandard         String? // VD: "ERC20", "ERC3643"
+  spvName               String? // Special Purpose Vehicle - Pháp nhân đứng tên tài sản ngoài đời
+  legalDocsIpfs         String? // CID of encrypted, immutable legal docs on IPFS
+  auditReportUrl        String? // Link báo cáo kiểm toán tài sản định kỳ
+  isHot                 Boolean                  @default(false)
+  isActive              Boolean                  @default(false)
   candlesticks          Candlestick[]
   dividendDistributions DividendDistribution[]
   corporateActions      CorporateAction[]
@@ -236,23 +270,107 @@ model Asset {
   favoriteAssets        FavoriteAsset[]
   balances              Balance[]
   orders                Order[]
-  positions             Position[]
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
+  redemptionRequests    AssetRedemptionRequest[]
+  daoProposals          DaoProposal[]
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
 }
 
 model Balance {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assetId   String?
-  asset     Asset?   @relation(fields: [assetId], references: [id])
-  available Decimal  @default(0)
-  locked    Decimal  @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetId      String?
+  asset        Asset?   @relation(fields: [assetId], references: [id])
+  available    Decimal  @default(0)
+  locked       Decimal  @default(0)
+  avgCostPrice Decimal?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@unique([userId, assetId])
+}
+
+model AssetOnboardingRequest {
+  id             String           @id @default(uuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String // VD: "Căn hộ Vinhomes Smart City"
+  description    String           @db.Text
+  location       String? // Vị trí tài sản
+  estimatedValue Decimal // Định giá mong muốn
+  legalDocuments Json // Mảng URL ảnh Sổ đỏ, giấy tờ pháp lý
+  status         OnboardingStatus @default(PENDING)
+  adminNotes     String?          @db.Text // Ghi chú của đội thẩm định
+  appraisedValue Decimal? // Giá trị định giá sau khi thẩm định
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([userId, status, createdAt(sort: Desc)])
+}
+
+model AssetRedemptionRequest {
+  id                String           @id @default(uuid())
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetId           String
+  asset             Asset            @relation(fields: [assetId], references: [id])
+  tokenQuantity     Decimal // Số lượng token mang đi quy đổi
+  status            RedemptionStatus @default(PENDING)
+  legalTransferDocs Json? // Hợp đồng/biên bản chuyển nhượng đã ký
+  burnTxHash        String? // Hash giao dịch Burn token on-chain
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@index([assetId, status, createdAt(sort: Desc)])
+}
+
+model DaoProposal {
+  id           String              @id @default(uuid())
+  assetId      String
+  asset        Asset               @relation(fields: [assetId], references: [id])
+  proposerId   String // Người tạo đề xuất (UserId)
+  proposer     User                @relation("DaoProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
+  title        String
+  description  String              @db.Text
+  snapshotDate DateTime // Thời điểm chốt quyền vote
+  endDate      DateTime // Hạn chót bỏ phiếu
+  status       ProposalStatus      @default(ACTIVE)
+  votes        ProposalVote[]
+  snapshots    DaoVotingSnapshot[]
+  createdAt    DateTime            @default(now())
+
+  @@index([assetId, status, endDate])
+  @@index([proposerId, createdAt(sort: Desc)])
+}
+
+model DaoVotingSnapshot {
+  id          String      @id @default(uuid())
+  proposalId  String
+  proposal    DaoProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votingPower Decimal
+  createdAt   DateTime    @default(now())
+
+  @@unique([proposalId, userId])
+  @@index([proposalId, votingPower(sort: Desc)])
+}
+
+model ProposalVote {
+  id          String      @id @default(uuid())
+  proposalId  String
+  proposal    DaoProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isFor       Boolean // True: Đồng ý, False: Chống
+  votingPower Decimal // Trọng số tại snapshotDate
+  createdAt   DateTime    @default(now())
+
+  @@unique([proposalId, userId])
+  @@index([proposalId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model Order {
@@ -273,42 +391,42 @@ model Order {
 }
 
 model Transaction {
-  id                    String                   @id @default(uuid())
-  userId                String
-  user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type                  TransactionType
-  amount                Decimal
-  fee                   Decimal                  @default(0)
-  status                TransactionStatus
-  txHash                String?                  @unique
-  confirmations         Int                      @default(0)
-  idempotencyKey        String?                  @unique
-  
+  id             String            @id @default(uuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           TransactionType
+  amount         Decimal
+  fee            Decimal           @default(0)
+  status         TransactionStatus
+  txHash         String?           @unique
+  confirmations  Int               @default(0)
+  idempotencyKey String?           @unique
+
   // Gas spike handling fields
-  gasPrice              Decimal?                 // Initial gas price in wei
-  lastGasPrice          Decimal?                 // Latest gas price from speed-up
-  speedUpAttempts       Int                      @default(0)
-  stuckSince            DateTime?                // When transaction got stuck (no confirmations after 1 hour)
-  refundStatus          String                   @default("NONE")  // NONE, PENDING, COMPLETED
-  refundTxHash          String?                  // Hash of refund transaction if processed
-  speedUpAttempts_      GasSpeedUpAttempt[]
-  
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
+  gasPrice         Decimal? // Initial gas price in wei
+  lastGasPrice     Decimal? // Latest gas price from speed-up
+  speedUpAttempts  Int                 @default(0)
+  stuckSince       DateTime? // When transaction got stuck (no confirmations after 1 hour)
+  refundStatus     String              @default("NONE") // NONE, PENDING, COMPLETED
+  refundTxHash     String? // Hash of refund transaction if processed
+  speedUpAttempts_ GasSpeedUpAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model GasSpeedUpAttempt {
-  id              String      @id @default(uuid())
-  transactionId   String
-  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  previousTxHash  String
-  newTxHash       String
-  oldGasPrice     Decimal     // Previous gas price
-  newGasPrice     Decimal     // New gas price
-  gasFeePaid      Decimal     // Extra gas fee paid for speed-up
-  status          String      @default("PENDING")  // PENDING, COMPLETED, FAILED
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id             String      @id @default(uuid())
+  transactionId  String
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  previousTxHash String
+  newTxHash      String
+  oldGasPrice    Decimal // Previous gas price
+  newGasPrice    Decimal // New gas price
+  gasFeePaid     Decimal // Extra gas fee paid for speed-up
+  status         String      @default("PENDING") // PENDING, COMPLETED, FAILED
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }
 
 model AuditLog {
@@ -349,15 +467,15 @@ model CorporateAction {
 }
 
 model DividendDistribution {
-  id           String   @id @default(uuid())
+  id           String          @id @default(uuid())
   assetId      String
-  asset        Asset    @relation(fields: [assetId], references: [id])
+  asset        Asset           @relation(fields: [assetId], references: [id])
   totalAmount  Decimal
   snapshotDate DateTime
-  status       String   @default("PENDING") // PENDING, READY_FOR_CLAIM, COMPLETED
+  status       String          @default("PENDING") // PENDING, READY_FOR_CLAIM, COMPLETED
   claims       DividendClaim[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }
 
 model DividendClaim {
@@ -379,7 +497,7 @@ model Candlestick {
   id         String   @id @default(uuid())
   assetId    String
   asset      Asset    @relation(fields: [assetId], references: [id])
-  resolution String   // VD: "1m", "5m", "15m", "30m", "1h", "1d"
+  resolution String // VD: "1m", "5m", "15m", "30m", "1h", "1d"
   openTime   DateTime
   open       Decimal
   high       Decimal
@@ -409,52 +527,51 @@ model Trade {
 }
 
 model NewsArticle {
-  id         String   @id @default(uuid())
-  source     String
-  externalId String?
-  dedupeKey  String   @unique
-  title      String
-  summary    String?  @db.Text
-  content    String?  @db.Text
-  url        String
-  imageUrl   String?
+  id          String   @id @default(uuid())
+  source      String
+  externalId  String?
+  dedupeKey   String   @unique
+  title       String
+  summary     String?  @db.Text
+  content     String?  @db.Text
+  url         String
+  imageUrl    String?
   publishedAt DateTime
-  language   String?
-  country    String?
-  category   String?
-  keywords   String?  @db.Text
-  rawPayload Json?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  language    String?
+  country     String?
+  category    String?
+  keywords    String?  @db.Text
+  rawPayload  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([source, publishedAt(sort: Desc)])
   @@index([publishedAt(sort: Desc)])
 }
 
 model AccountType {
-  id          String   @id @default(uuid())
-  code        String   @unique
+  id          String    @id @default(uuid())
+  code        String    @unique
   name        String
-  description String?  @db.Text
-  currency    String   @default("USDT")
-  isActive    Boolean  @default(true)
+  description String?   @db.Text
+  currency    String    @default("USDT")
+  isActive    Boolean   @default(true)
   accounts    Account[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Account {
-  id             String   @id @default(uuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountTypeId  String
-  accountType    AccountType @relation(fields: [accountTypeId], references: [id])
-  name           String
-  avatar         String?
-  leverage       Decimal  @default(1.0)
-  status         String   @default("ACTIVE") // ACTIVE, INACTIVE, BANNED
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountTypeId String
+  accountType   AccountType @relation(fields: [accountTypeId], references: [id])
+  name          String
+  avatar        String?
+  status        String      @default("ACTIVE") // ACTIVE, INACTIVE, BANNED
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@unique([userId, accountTypeId])
   @@index([userId, status])
@@ -464,7 +581,7 @@ model Notification {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   // "KYC_APPROVED", "KYC_REJECTED", "ORDER_FILLED", etc.
+  type      String // "KYC_APPROVED", "KYC_REJECTED", "ORDER_FILLED", etc.
   title     String
   content   String?  @db.Text
   isRead    Boolean  @default(false)
@@ -475,16 +592,16 @@ model Notification {
 }
 
 model Post {
-  id          String        @id @default(uuid())
-  userId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content     String?       @db.Text
-  mediaUrls   Json?
-  likes       PostLike[]
-  comments    Comment[]
-  bookmarks   PostBookmark[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id        String         @id @default(uuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String?        @db.Text
+  mediaUrls Json?
+  likes     PostLike[]
+  comments  Comment[]
+  bookmarks PostBookmark[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 }
 
 model PostLike {
@@ -499,14 +616,14 @@ model PostLike {
 }
 
 model Comment {
-  id        String     @id @default(uuid())
+  id        String   @id @default(uuid())
   postId    String
-  post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String     @db.Text
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PostBookmark {
@@ -520,39 +637,21 @@ model PostBookmark {
   @@unique([postId, userId])
 }
 
-model Position {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assetId       String
-  asset         Asset    @relation(fields: [assetId], references: [id])
-  quantity      Decimal
-  avgEntryPrice Decimal
-  unrealizedPnl Decimal  @default(0)
-  realizedPnl   Decimal  @default(0)
-  status        String   @default("OPEN")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([userId, assetId])
-  @@index([userId, status])
-}
-
 model AssetValuationSnapshot {
-  id          String   @id @default(uuid())
-  assetId     String?
-  asset       Asset?   @relation(fields: [assetId], references: [id])
-  areaCode    String?
-  source      String
-  title       String?
-  listingUrl  String?
-  price       Decimal
-  currency    String   @default("VND")
-  landArea    Decimal?
-  pricePerM2  Decimal?
-  capturedAt  DateTime
-  rawPayload  Json?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  assetId    String?
+  asset      Asset?   @relation(fields: [assetId], references: [id])
+  areaCode   String?
+  source     String
+  title      String?
+  listingUrl String?
+  price      Decimal
+  currency   String   @default("VND")
+  landArea   Decimal?
+  pricePerM2 Decimal?
+  capturedAt DateTime
+  rawPayload Json?
+  createdAt  DateTime @default(now())
 
   @@index([assetId, capturedAt(sort: Desc)])
   @@index([areaCode, capturedAt(sort: Desc)])

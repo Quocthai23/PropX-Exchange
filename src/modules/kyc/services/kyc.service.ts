@@ -23,7 +23,7 @@ interface KycPrisma {
     update(args: Record<string, unknown>): Promise<unknown>;
   };
   user: {
-    findUnique(args: Record<string, unknown>): Promise<{ walletAddress: string } | null>;
+    findUnique(args: Record<string, unknown>): Promise<{ walletAddress: string | null } | null>;
     update(args: Record<string, unknown>): Promise<unknown>;
   };
   auditLog: {
@@ -111,6 +111,11 @@ export class KycService {
     if (!user) {
       throw new NotFoundException('User not found.');
     }
+    if (!user.walletAddress) {
+      throw new BadRequestException(
+        'User has not linked a wallet address yet. Cannot whitelist.',
+      );
+    }
 
     await this.prisma.$transaction([
       this.prisma.kycRecord.update({
@@ -189,11 +194,16 @@ export class KycService {
     walletAddress: string,
     adminId: string,
   ) {
-    await this.blockchainService.addToWhitelist(walletAddress);
+    const { txHash } = await this.blockchainService.addToWhitelist(walletAddress);
     await this.prisma.$transaction([
       this.prisma.kycRecord.update({
         where: { userId },
-        data: { status: 'APPROVED' as KycStatus, rejectReason: null },
+        data: {
+          status: 'APPROVED' as KycStatus,
+          rejectReason: null,
+          onChainWhitelisted: true,
+          whitelistTxHash: txHash,
+        },
       }),
       this.prisma.user.update({
         where: { id: userId },

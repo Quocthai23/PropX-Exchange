@@ -83,6 +83,39 @@ export class OrderMatchingService {
       const side = order.side;
       const assetId = order.assetId;
       const userId = order.userId;
+      const hasPendingDaoSnapshot =
+        (await prisma.daoProposal.count({
+          where: {
+            assetId,
+            status: 'ACTIVE',
+            snapshotDate: { lte: new Date() },
+            snapshots: { none: {} },
+          },
+        })) > 0;
+
+      if (hasPendingDaoSnapshot) {
+        await this.orderMatchingQueue.add(
+          'match',
+          { orderId } as OrderMatchingJobData,
+          {
+            jobId: `${orderId}-snapshot-retry-${Date.now()}`,
+            delay: 15_000,
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 1000,
+            },
+            removeOnComplete: true,
+            removeOnFail: false,
+          },
+        );
+
+        this.logger.warn(
+          `Order ${orderId} re-queued because DAO snapshot is pending for asset ${assetId}.`,
+        );
+        return { matched: 0 };
+      }
+
       const priceDec = new Decimal(order.price?.toString() ?? 0);
       const quantityDec = new Decimal(order.quantity.toString());
       // Find matching orders from counterparty

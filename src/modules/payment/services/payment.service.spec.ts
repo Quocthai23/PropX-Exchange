@@ -5,7 +5,6 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { BadRequestException } from '@nestjs/common';
 import { PaymentLedgerService } from './payment-ledger.service';
 import { PaymentTransactionHistoryService } from './payment-transaction-history.service';
-import { EncryptionService } from '@/modules/auth/services/encryption.service';
 
 const mockPrisma = {
   $transaction: jest.fn((fn) => fn(mockTx)),
@@ -41,10 +40,6 @@ const mockQueue = {
   add: jest.fn(),
 };
 
-const mockEncryptionService = {
-  encrypt: jest.fn(),
-};
-
 describe('PaymentService', () => {
   let service: PaymentService;
 
@@ -62,7 +57,6 @@ describe('PaymentService', () => {
           provide: getQueueToken('transaction-processing'),
           useValue: mockQueue,
         },
-        { provide: EncryptionService, useValue: mockEncryptionService },
       ],
     }).compile();
 

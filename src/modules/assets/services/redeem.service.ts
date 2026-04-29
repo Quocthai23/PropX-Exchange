@@ -5,10 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import Decimal from 'decimal.js';
+import { parseUnits } from 'ethers';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BlockchainService } from './blockchain.service';
 import { $Enums } from '@prisma/client';
 import { MultiSigService } from '@/shared/services/multisig.service';
+import { AdminUpdateRedemptionDto } from '../dto/redeem-asset.dto';
+
+const DEFAULT_ASSET_TOKEN_DECIMALS = 18;
 
 interface AssetRedeemView {
   id: string;
@@ -89,10 +93,7 @@ export class RedeemService {
       throw new NotFoundException('Asset not found.');
     }
 
-    if (
-      !asset.isActive ||
-      asset.tradingStatus !== $Enums.AssetTradingStatus.OPEN
-    ) {
+    if (!asset.isActive || asset.tradingStatus !== $Enums.AssetTradingStatus.OPEN) {
       throw new BadRequestException(
         `Asset ${asset.symbol} is not eligible for redeem at this time.`,
       );
@@ -112,14 +113,15 @@ export class RedeemService {
       );
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    const redemptionRequest = await this.prisma.$transaction(async (tx) => {
       const txAsset = tx.asset as unknown as AssetUpdateDelegate;
 
+      // Pause trading while redemption is handled off-chain
       await txAsset.update({
         where: { id: assetId },
         data: {
           isActive: false,
-          tradingStatus: $Enums.AssetTradingStatus.CLOSED,
+          tradingStatus: $Enums.AssetTradingStatus.PAUSED,
         },
       });
 
@@ -147,82 +149,159 @@ export class RedeemService {
         },
       });
 
+      const redemption = await tx.assetRedemptionRequest.create({
+        data: {
+          userId,
+          assetId,
+          tokenQuantity: totalSupplyDec,
+          status: $Enums.RedemptionStatus.PENDING,
+        },
+      });
+
       await tx.supportTicket.create({
         data: {
           userId,
-          subject: `Redeem request for ${asset.symbol}`,
+          subject: `Asset redemption request for ${asset.symbol}`,
         },
       });
 
       await tx.auditLog.create({
         data: {
-          entity: 'ASSET',
-          entityId: assetId,
-          action: 'REDEEM_REQUESTED',
+          entity: 'ASSET_REDEMPTION_REQUEST',
+          entityId: redemption.id,
+          action: 'CREATED',
           performedBy: userId,
-          details: `User requested redeem for asset ${asset.symbol}`,
+          details: `User requested redemption for asset ${asset.symbol}`,
         },
       });
-    });
 
-    let burnProposalId: string | null = null;
-    if (asset.contractAddress) {
-      const proposal = await this.multiSigService.createProposal(userId, {
-        type: 'BURN_ASSET_TOKEN',
-        payload: {
-          assetId,
-          assetAddress: asset.contractAddress,
-          amount: asset.totalSupply.toString(),
-          requestedBy: userId,
-        },
-      });
-      burnProposalId = proposal.proposalId;
-      this.logger.log(
-        `Redeem requested for ${asset.symbol}. Burn proposal ${burnProposalId} created.`,
-      );
-    }
+      return redemption;
+    });
 
     return {
       success: true,
       message:
         'Redeem request submitted. Admin will contact you to complete legal off-chain settlement.',
-      burnProposalId,
+      redemptionRequestId: redemptionRequest.id,
     };
   }
 
-  async approveBurnProposal(proposalId: string, adminId: string) {
-    const approval = await this.multiSigService.approve(proposalId, adminId);
-    if (approval.status !== 'EXECUTED') {
-      return {
-        proposalId,
-        status: approval.status,
-        approvals: approval.approvals.length,
-        requiredApprovals: approval.requiredApprovals,
-      };
+  async listRedemptionRequests() {
+    const data = await this.prisma.assetRedemptionRequest.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, email: true, walletAddress: true } },
+        asset: { select: { id: true, symbol: true, contractAddress: true } },
+      },
+    });
+    return { data, total: data.length };
+  }
+
+  async updateRedemptionStatus(
+    redemptionId: string,
+    adminId: string,
+    dto: AdminUpdateRedemptionDto,
+  ) {
+    const existing = await this.prisma.assetRedemptionRequest.findUnique({
+      where: { id: redemptionId },
+      include: { asset: { select: { symbol: true } } },
+    });
+    if (!existing) throw new NotFoundException('redemption-request-not-found');
+
+    if (existing.status === $Enums.RedemptionStatus.COMPLETED) {
+      throw new BadRequestException('redemption-request-already-completed');
     }
 
-    const assetAddress = String(approval.payload.assetAddress ?? '');
-    const amount = BigInt(String(approval.payload.amount ?? '0'));
-    const assetId = String(approval.payload.assetId ?? '');
-    const txHash = await this.blockchainService.burnAssetToken({
-      assetAddress,
-      amount,
+    const data: Record<string, unknown> = {
+      status: dto.status,
+    };
+    if (dto.legalTransferDocs !== undefined) {
+      data.legalTransferDocs = dto.legalTransferDocs;
+    }
+
+    const updated = await this.prisma.assetRedemptionRequest.update({
+      where: { id: redemptionId },
+      data: data as any,
     });
 
     await this.prisma.auditLog.create({
       data: {
-        entity: 'ASSET',
-        entityId: assetId,
-        action: 'LIQUIDATED',
+        entity: 'ASSET_REDEMPTION_REQUEST',
+        entityId: redemptionId,
+        action: `STATUS_${dto.status}`,
         performedBy: adminId,
-        details: `Burn executed via multisig. txHash=${txHash}`,
+        details: `Admin updated redemption for ${existing.asset.symbol}`,
       },
     });
 
-    return {
-      proposalId,
-      status: 'EXECUTED',
-      txHash,
-    };
+    return { success: true, data: updated };
+  }
+
+  async completeRedemption(redemptionId: string, adminId: string) {
+    const req = await this.prisma.assetRedemptionRequest.findUnique({
+      where: { id: redemptionId },
+      include: { asset: true, user: { select: { id: true } } },
+    });
+    if (!req) throw new NotFoundException('redemption-request-not-found');
+
+    if (req.status !== $Enums.RedemptionStatus.PROCESSING_LEGAL) {
+      throw new BadRequestException(
+        `invalid-status: expected PROCESSING_LEGAL, got ${req.status}`,
+      );
+    }
+
+    if (!req.asset.contractAddress) {
+      throw new BadRequestException('asset-missing-contractAddress');
+    }
+
+    const burnTxHash = await this.blockchainService.burnAssetToken({
+      assetAddress: req.asset.contractAddress,
+      amount: parseUnits(
+        new Decimal(req.tokenQuantity as any).toString(),
+        DEFAULT_ASSET_TOKEN_DECIMALS,
+      ),
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.assetRedemptionRequest.update({
+        where: { id: redemptionId },
+        data: {
+          status: $Enums.RedemptionStatus.COMPLETED,
+          burnTxHash,
+        },
+      });
+
+      await tx.transaction.create({
+        data: {
+          userId: req.userId,
+          type: $Enums.TransactionType.BURN,
+          amount: new Decimal(req.tokenQuantity as any),
+          fee: new Decimal(0),
+          status: $Enums.TransactionStatus.COMPLETED,
+          txHash: burnTxHash,
+          confirmations: 0,
+        } as any,
+      });
+
+      await tx.asset.update({
+        where: { id: req.assetId },
+        data: {
+          isActive: false,
+          tradingStatus: $Enums.AssetTradingStatus.CLOSED,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          entity: 'ASSET_REDEMPTION_REQUEST',
+          entityId: redemptionId,
+          action: 'COMPLETED',
+          performedBy: adminId,
+          details: `Burn completed. txHash=${burnTxHash}`,
+        },
+      });
+    });
+
+    return { success: true, burnTxHash };
   }
 }

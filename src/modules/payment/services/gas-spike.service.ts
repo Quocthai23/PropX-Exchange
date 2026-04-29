@@ -133,6 +133,11 @@ export class GasSpikeService {
     if (!user) {
       throw new BadRequestException('User not found.');
     }
+    if (!user.walletAddress) {
+      throw new BadRequestException(
+        'User has not linked a wallet address. Cannot speed up on-chain withdrawal.',
+      );
+    }
 
     try {
       // Execute speed-up transaction
