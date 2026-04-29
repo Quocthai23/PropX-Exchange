@@ -6,19 +6,20 @@ import {
 } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { $Enums } from '@prisma/client';
 
-type CorporateActionCreateData = {
+interface CorporateActionCreateData {
   assetId: string;
   type: 'DIVIDEND' | 'LIQUIDATION' | 'DEPRECIATION';
   amount: string;
   recordDate: Date;
   executionDate: Date;
   status: string;
-};
+}
 
-type CorporateActionDelegate = {
+interface CorporateActionDelegate {
   create(args: { data: CorporateActionCreateData }): Promise<unknown>;
-};
+}
 
 @Injectable()
 export class CorporateActionService {
@@ -128,10 +129,10 @@ export class CorporateActionService {
         await tx.transaction.create({
           data: {
             userId: holding.userId,
-            type: 'DIVIDEND_PAYOUT',
+            type: $Enums.TransactionType.DIVIDEND,
             amount: userPayoutAmount.toString(),
             fee: '0',
-            status: 'COMPLETED',
+            status: $Enums.TransactionStatus.COMPLETED,
           },
         });
       });
@@ -231,10 +232,10 @@ export class CorporateActionService {
         await tx.transaction.create({
           data: {
             userId: holding.userId,
-            type: 'LIQUIDATION_PAYOUT',
+            type: $Enums.TransactionType.TRANSFER,
             amount: payoutAmount.toString(),
             fee: '0',
-            status: 'COMPLETED',
+            status: $Enums.TransactionStatus.COMPLETED,
           },
         });
       });
@@ -244,9 +245,15 @@ export class CorporateActionService {
       this.prisma.order.updateMany({
         where: {
           assetId,
-          status: { in: ['OPEN', 'PARTIAL'] },
+          status: {
+            in: [
+              $Enums.OrderStatus.PENDING,
+              $Enums.OrderStatus.OPEN,
+              $Enums.OrderStatus.PARTIALLY_FILLED,
+            ],
+          },
         },
-        data: { status: 'CANCELLED' },
+        data: { status: $Enums.OrderStatus.CANCELLED },
       }),
       this.prisma.asset.update({
         where: { id: assetId },

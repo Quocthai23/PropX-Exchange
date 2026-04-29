@@ -12,9 +12,9 @@ import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import * as fs from 'fs';
 
-type SwaggerOperation = {
+interface SwaggerOperation {
   responses?: Record<string, unknown>;
-};
+}
 
 const HTTP_METHODS = new Set([
   'get',

@@ -5,8 +5,10 @@ import { DividendsController } from '../controllers/dividends.controller';
 import { DividendSnapshotCron } from '../jobs/dividend-snapshot.cron';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { RolesGuard } from '../../users/dto/roles.guard';
+import { BalancesModule } from '../../balances/balances.module';
 
 @Module({
+  imports: [BalancesModule],
   controllers: [AdminDividendsController, DividendsController],
   providers: [
     DividendsService,

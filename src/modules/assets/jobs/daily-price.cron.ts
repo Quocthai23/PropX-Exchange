@@ -2,12 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../../prisma/prisma.service';
 
-type AssetListItem = {
+interface AssetListItem {
   id: string;
   symbol: string;
-};
+}
 
-type AssetDailyPriceDelegate = {
+interface AssetDailyPriceDelegate {
   findMany(args: {
     where: {
       isActive: boolean;
@@ -22,7 +22,7 @@ type AssetDailyPriceDelegate = {
     where: { id: string };
     data: { referencePrice: unknown };
   }): Promise<unknown>;
-};
+}
 
 @Injectable()
 export class DailyPriceCron {

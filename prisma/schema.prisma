@@ -99,8 +99,15 @@ model User {
   orders              Order[]
   transactions        Transaction[]
   kycRecord           KycRecord?
+  approvedKycRecords  KycRecord[]          @relation("KycApprover")
   auditLogs           AuditLog[]           @relation("AuditLogPerformer")
   accounts            Account[]
+  notifications       Notification[]
+  positions           Position[]
+  posts               Post[]
+  postLikes           PostLike[]
+  comments            Comment[]
+  postBookmarks       PostBookmark[]
   
   // New fields for profile
   gender              String?
@@ -152,7 +159,11 @@ model SupportTicket {
   userId    String
   user      User                @relation("SupportTicketOwner", fields: [userId], references: [id])
   subject   String
+  title     String?
   status    SupportTicketStatus @default(OPEN)
+  category  String?
+  priority  String?
+  assignedAdminId String?
   messages  TicketMessage[]
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
@@ -224,6 +235,7 @@ model Asset {
   favoriteAssets        FavoriteAsset[]
   balances              Balance[]
   orders                Order[]
+  positions             Position[]
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 }
@@ -444,6 +456,84 @@ model Account {
   updatedAt      DateTime @updatedAt
 
   @@unique([userId, accountTypeId])
+  @@index([userId, status])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "KYC_APPROVED", "KYC_REJECTED", "ORDER_FILLED", etc.
+  title     String
+  content   String?  @db.Text
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+}
+
+model Post {
+  id          String        @id @default(uuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String?       @db.Text
+  mediaUrls   Json?
+  likes       PostLike[]
+  comments    Comment[]
+  bookmarks   PostBookmark[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Comment {
+  id        String     @id @default(uuid())
+  postId    String
+  post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String     @db.Text
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model PostBookmark {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Position {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetId       String
+  asset         Asset    @relation(fields: [assetId], references: [id])
+  quantity      Decimal
+  avgEntryPrice Decimal
+  unrealizedPnl Decimal  @default(0)
+  realizedPnl   Decimal  @default(0)
+  status        String   @default("OPEN")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, assetId])
   @@index([userId, status])
 }
 

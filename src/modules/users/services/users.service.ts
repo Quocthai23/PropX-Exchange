@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Injectable,
   NotFoundException,
@@ -18,7 +13,7 @@ import {
 
 type DecimalValue = string | number | { toString(): string };
 
-type PortfolioPosition = {
+export interface PortfolioPosition {
   assetId: string;
   symbol: string;
   name: string;
@@ -27,7 +22,7 @@ type PortfolioPosition = {
   marketValue: string;
   expectedApy: string;
   annualYieldEstimate: string;
-};
+}
 
 @Injectable()
 export class UsersService {
@@ -360,7 +355,7 @@ export class UsersService {
           where: {
             assetId,
             price: { not: null },
-            status: { in: ['FILLED', 'PARTIAL'] },
+            status: { in: ['FILLED', 'PARTIALLY_FILLED'] },
           },
           orderBy: { updatedAt: 'desc' },
           select: { price: true },

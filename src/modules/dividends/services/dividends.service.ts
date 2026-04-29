@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { BalancesService } from '../../balances/services/balances.service';
 import { CreateDistributionDto } from '../dto/create-distribution.dto';
 
 type DecimalValue = string | number | { toString(): string };
@@ -15,19 +16,19 @@ const toDecimalValue = (value: DecimalValue): string | number =>
     ? value
     : value.toString();
 
-type DividendDistributionRecord = {
+export interface DividendDistributionRecord {
   id: string;
   assetId: string;
   totalAmount: DecimalValue;
-};
+}
 
-type DividendClaimRecord = {
+export interface DividendClaimRecord {
   id: string;
   distributionId: string;
   userId: string;
   amount: DecimalValue;
   status: string;
-};
+}
 
 type ClaimableDividend = DividendClaimRecord & {
   distribution: {
@@ -38,7 +39,7 @@ type ClaimableDividend = DividendClaimRecord & {
   };
 };
 
-type DividendsTransaction = {
+interface DividendsTransaction {
   dividendDistribution: {
     update(args: {
       where: { id: string };
@@ -47,12 +48,12 @@ type DividendsTransaction = {
   };
   dividendClaim: {
     createMany(args: {
-      data: Array<{
+      data: {
         distributionId: string;
         userId: string;
         amount: string;
         status: string;
-      }>;
+      }[];
     }): Promise<unknown>;
     findUnique(args: {
       where: {
@@ -68,14 +69,14 @@ type DividendsTransaction = {
     findMany(args: {
       where: {
         assetId: string;
-        OR: Array<{ available?: { gt: string }; locked?: { gt: string } }>;
+        OR: { available?: { gt: string }; locked?: { gt: string } }[];
       };
     }): Promise<
-      Array<{
+      {
         userId: string;
         available: DecimalValue;
         locked: DecimalValue;
-      }>
+      }[]
     >;
     upsert(args: {
       where: { userId_assetId: { userId: string; assetId: string } };
@@ -99,9 +100,9 @@ type DividendsTransaction = {
       };
     }): Promise<unknown>;
   };
-};
+}
 
-type DividendsPrisma = {
+interface DividendsPrisma {
   asset: {
     findUnique(args: {
       where: { id: string };
@@ -146,13 +147,16 @@ type DividendsPrisma = {
     }): Promise<ClaimableDividend[]>;
   };
   $transaction<T>(fn: (tx: DividendsTransaction) => Promise<T>): Promise<T>;
-};
+}
 
 @Injectable()
 export class DividendsService {
   private readonly logger = new Logger(DividendsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly balancesService: BalancesService,
+  ) {}
 
   async createDistribution(adminId: string, dto: CreateDistributionDto) {
     const snapshotDate = dto.snapshotDate
@@ -309,12 +313,13 @@ export class DividendsService {
         data: { status: 'CLAIMED', claimedAt: new Date() },
       });
 
-      // Add USDT to user's balance
-      await tx.balance.upsert({
-        where: { userId_assetId: { userId, assetId: '' } },
-        update: { available: { increment: claim.amount } },
-        create: { userId, assetId: '', available: claim.amount, locked: '0' },
-      });
+      // Add USDT to user's balance using BalancesService
+      await this.balancesService.updateBalance(
+        userId,
+        null,
+        new Decimal(toDecimalValue(claim.amount)),
+        'credit',
+      );
 
       // Create Transaction Record
       await tx.transaction.create({

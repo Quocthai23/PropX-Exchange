@@ -19,11 +19,11 @@ import {
 } from 'ethers';
 import { KmsService } from '../../../shared/services/kms.service';
 
-type TokenizeRequest = {
+interface TokenizeRequest {
   name: string;
   symbol: string;
   totalSupply: bigint;
-};
+}
 
 @Injectable()
 export class BlockchainService implements OnModuleInit {

@@ -10,15 +10,15 @@ import {
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
-type MarketSubscriptionPayload = {
+interface MarketSubscriptionPayload {
   assetId: string;
-};
+}
 
-type UserSubscriptionPayload = {
+interface UserSubscriptionPayload {
   userId: string;
-};
+}
 
-type TradeRealtimePayload = {
+interface TradeRealtimePayload {
   assetId: string;
   price: string;
   quantity: string;
@@ -27,23 +27,23 @@ type TradeRealtimePayload = {
   buyerUserId: string;
   sellerUserId: string;
   matchedAt: string;
-};
+}
 
-type UserTradeNotification = {
+interface UserTradeNotification {
   side: 'BUY' | 'SELL';
   orderId: string;
   assetId: string;
   price: string;
   quantity: string;
   matchedAt: string;
-};
+}
 
-type PriceUpdatePayload = {
+interface PriceUpdatePayload {
   assetId: string;
   price: string;
   quantity: string;
   timestamp: string;
-};
+}
 
 @WebSocketGateway({
   namespace: 'trading',

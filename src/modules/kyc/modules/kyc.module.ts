@@ -7,12 +7,14 @@ import { RolesGuard } from '../../users/dto/roles.guard';
 import { BlockchainService } from '../services/blockchain.service';
 import { KycApprovalProcessor } from '../jobs/kyc-approval.processor';
 import { KmsService } from '../../../shared/services/kms.service';
+import { NotificationsModule } from '../../notifications/notifications.module';
 
 @Module({
   imports: [
     BullModule.registerQueue({
       name: 'kyc-approval',
     }),
+    NotificationsModule,
   ],
   controllers: [KycController],
   providers: [

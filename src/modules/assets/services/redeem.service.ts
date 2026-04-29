@@ -7,17 +7,18 @@ import {
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { BlockchainService } from './blockchain.service';
+import { $Enums } from '@prisma/client';
 
-type AssetRedeemView = {
+interface AssetRedeemView {
   id: string;
   symbol: string;
   totalSupply: Decimal.Value;
   contractAddress: string | null;
   isActive: boolean;
   tradingStatus: string;
-};
+}
 
-type AssetRedeemDelegate = {
+interface AssetRedeemDelegate {
   findUnique(args: {
     where: { id: string };
     select: {
@@ -29,9 +30,9 @@ type AssetRedeemDelegate = {
       tradingStatus: true;
     };
   }): Promise<AssetRedeemView | null>;
-};
+}
 
-type AssetUpdateDelegate = {
+interface AssetUpdateDelegate {
   update(args: {
     where: { id: string };
     data: {
@@ -39,7 +40,7 @@ type AssetUpdateDelegate = {
       tradingStatus: string;
     };
   }): Promise<unknown>;
-};
+}
 
 @Injectable()
 export class RedeemService {
@@ -64,7 +65,7 @@ export class RedeemService {
       throw new NotFoundException('User not found.');
     }
 
-    if (user.kycStatus !== 'APPROVED') {
+    if (user.kycStatus !== $Enums.KycStatus.APPROVED) {
       throw new BadRequestException(
         'Redeem request requires approved KYC status.',
       );
@@ -86,15 +87,12 @@ export class RedeemService {
       throw new NotFoundException('Asset not found.');
     }
 
-    if (!asset.isActive || asset.tradingStatus === 'HALTED') {
+    if (
+      !asset.isActive ||
+      asset.tradingStatus !== $Enums.AssetTradingStatus.OPEN
+    ) {
       throw new BadRequestException(
         `Asset ${asset.symbol} is not eligible for redeem at this time.`,
-      );
-    }
-
-    if (asset.tradingStatus === 'REDEEMING') {
-      throw new BadRequestException(
-        `Asset ${asset.symbol} is already in redeeming state.`,
       );
     }
 
@@ -119,7 +117,7 @@ export class RedeemService {
         where: { id: assetId },
         data: {
           isActive: false,
-          tradingStatus: 'REDEEMING',
+          tradingStatus: $Enums.AssetTradingStatus.CLOSED,
         },
       });
 
@@ -127,10 +125,14 @@ export class RedeemService {
         where: {
           assetId,
           status: {
-            in: ['OPEN', 'PARTIAL', 'PARTIALLY_FILLED', 'NEW'],
+            in: [
+              $Enums.OrderStatus.PENDING,
+              $Enums.OrderStatus.OPEN,
+              $Enums.OrderStatus.PARTIALLY_FILLED,
+            ],
           },
         },
-        data: { status: 'CANCELLED' },
+        data: { status: $Enums.OrderStatus.CANCELLED },
       });
 
       await tx.balance.update({

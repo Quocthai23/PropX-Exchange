@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
@@ -340,7 +336,10 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('User not found');
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({ where: { email }, data: { passwordHash: hashedPassword } });
+    await this.prisma.user.update({
+      where: { email },
+      data: { passwordHash: hashedPassword },
+    });
   }
 
   async createChallenge(dto: any, user: any) {
@@ -367,7 +366,9 @@ export class AuthService {
       return { success: true, factor: 'EMAIL_OTP' };
     } else if (dto.factor === 'TOTP') {
       const speakeasy = require('speakeasy');
-      const userRecord = await this.prisma.user.findUnique({ where: { id: user.sub } });
+      const userRecord = await this.prisma.user.findUnique({
+        where: { id: user.sub },
+      });
       if (!userRecord) {
         throw new UnauthorizedException('User not found');
       }
@@ -377,13 +378,21 @@ export class AuthService {
     }
   }
 
-  async changePassword(userId: string, oldPassword: string, newPassword: string) {
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.passwordHash) throw new UnauthorizedException('User not found');
+    if (!user || !user.passwordHash)
+      throw new UnauthorizedException('User not found');
     const bcrypt = require('bcryptjs');
     const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
     if (!isMatch) throw new UnauthorizedException('Old password is incorrect');
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: hashedPassword } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: hashedPassword },
+    });
   }
 }

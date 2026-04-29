@@ -1,4 +1,12 @@
-import { Controller, Get, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AccountsService } from '../services/accounts.service';
 import { UpdateAccountDto } from '../dto/accounts.dto';
@@ -26,7 +34,7 @@ export class AccountsController {
   @ApiOperation({ summary: 'Get account balance details' })
   async getBalance(
     @Query('accountId') accountId: string,
-    @CurrentUser() user: JwtPayload
+    @CurrentUser() user: JwtPayload,
   ) {
     return this.accountsService.getBalance(user.sub, accountId);
   }
@@ -37,8 +45,8 @@ export class AccountsController {
     description: 'Get all trading accounts of current user',
   })
   async getAccounts(
+    @CurrentUser() user: JwtPayload,
     @Query('accountTypeId') accountTypeId?: string,
-    @CurrentUser() user: JwtPayload
   ) {
     return this.accountsService.getAccounts(user.sub, accountTypeId);
   }
@@ -50,7 +58,7 @@ export class AccountsController {
   async updateAccount(
     @Param('id') id: string,
     @Body() dto: UpdateAccountDto,
-    @CurrentUser() user: JwtPayload
+    @CurrentUser() user: JwtPayload,
   ) {
     return this.accountsService.updateAccount(user.sub, id, dto);
   }

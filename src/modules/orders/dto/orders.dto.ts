@@ -4,7 +4,7 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsNumber,
+  IsInt,
   Min,
   Max,
   Matches,
@@ -12,17 +12,11 @@ import {
   ArrayMinSize,
   IsEnum,
   IsBoolean,
+  IsUUID,
 } from 'class-validator';
+import { $Enums } from '@prisma/client';
 
 export class BulkCancelOrdersDto {
-  @ApiProperty({
-    description: 'Trading account ID',
-    pattern: '^(real|demo)_[0-9]{8}$',
-  })
-  @IsString()
-  @Matches(/^(real|demo)_[0-9]{8}$/)
-  accountId: string;
-
   @ApiProperty({
     description: 'Array of order IDs to cancel',
     type: [String],
@@ -35,14 +29,6 @@ export class BulkCancelOrdersDto {
 }
 
 export class UpdateOrderDto {
-  @ApiProperty({
-    description: 'Trading account ID',
-    pattern: '^(real|demo)_[0-9]{8}$',
-  })
-  @IsString()
-  @Matches(/^(real|demo)_[0-9]{8}$/)
-  accountId: string;
-
   @ApiPropertyOptional({
     description:
       'Set to true to cancel the order. If true, other fields are ignored',
@@ -71,136 +57,74 @@ export class UpdateOrderDto {
 }
 
 export class GetOrdersQueryDto {
-  @ApiPropertyOptional({ description: 'Cursor for pagination (position ID)' })
-  @IsOptional()
-  @IsString()
-  cursor?: string;
-
   @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
   @IsOptional()
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
   @Min(1)
   @Max(100)
-  @Type(() => Number)
   take?: number = 20;
 
-  @ApiProperty({
-    description: 'Trading account ID',
-    pattern: '^(real|demo)_[0-9]{8}$',
-  })
-  @IsString()
-  @Matches(/^(real|demo)_[0-9]{8}$/)
-  accountId: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  symbol?: string;
-
-  @ApiPropertyOptional({
-    description: 'Order side: 0 for long, 1 for short',
-    enum: [0, 1],
-  })
   @IsOptional()
   @Type(() => Number)
-  @IsEnum([0, 1])
-  side?: number;
+  @IsInt()
+  @Min(0)
+  skip?: number = 0;
 
   @ApiPropertyOptional({
-    description: 'Order type: 0 for market, 1 for limit, 2 for stop',
-    enum: [0, 1, 2],
+    description: 'Order side',
+    enum: $Enums.OrderSide,
   })
   @IsOptional()
-  @Type(() => Number)
-  @IsEnum([0, 1, 2])
-  orderType?: number;
+  @IsEnum($Enums.OrderSide)
+  side?: $Enums.OrderSide;
 
   @ApiPropertyOptional({
-    description: 'Array of order statuses',
-    type: [Number],
+    description: 'Order status',
+    enum: $Enums.OrderStatus,
   })
   @IsOptional()
-  @Transform(({ value }) =>
-    Array.isArray(value) ? value.map(Number) : [Number(value)],
-  )
-  status?: number[];
+  @IsEnum($Enums.OrderStatus)
+  status?: $Enums.OrderStatus;
 
-  @ApiPropertyOptional({
-    enum: ['createdAt', 'quantity', 'orderType', 'symbol', 'side'],
-    default: 'createdAt',
-  })
-  @IsOptional()
-  @IsEnum(['createdAt', 'quantity', 'orderType', 'symbol', 'side'])
-  sortBy?: string = 'createdAt';
-
-  @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'desc' })
-  @IsOptional()
-  @IsEnum(['asc', 'desc'])
-  sortDir?: string = 'desc';
-
-  @ApiPropertyOptional({
-    pattern: '^\\d{4}-\\d{2}-\\d{2}$',
-    description: 'Start date (YYYY-MM-DD)',
-  })
+  @ApiPropertyOptional({ description: 'Asset ID' })
   @IsOptional()
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  fromDate?: string;
-
-  @ApiPropertyOptional({
-    pattern: '^\\d{4}-\\d{2}-\\d{2}$',
-    description: 'End date (YYYY-MM-DD)',
-  })
-  @IsOptional()
-  @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  toDate?: string;
+  assetId?: string;
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ description: 'Trading symbol, e.g. "XAUUSD"' })
+  @ApiProperty({ description: 'Asset ID' })
   @IsString()
   @IsNotEmpty()
-  symbol: string;
+  assetId: string;
 
-  @ApiProperty({ description: 'Order side: 0 for long, 1 for short' })
-  @Type(() => Number)
-  @IsNumber()
-  side: number;
+  @ApiProperty({ description: 'Order side', enum: $Enums.OrderSide })
+  @IsEnum($Enums.OrderSide)
+  side: $Enums.OrderSide;
 
-  @ApiPropertyOptional({ description: 'Stop loss price. Optional' })
-  @IsOptional()
-  stopLossPrice?: number | string | null;
+  @ApiProperty({ description: 'Order type', enum: $Enums.OrderType })
+  @IsEnum($Enums.OrderType)
+  type: $Enums.OrderType;
 
-  @ApiPropertyOptional({ description: 'Take profit price. Optional' })
-  @IsOptional()
-  takeProfitPrice?: number | string | null;
-
-  @ApiProperty({
-    description: 'Order quantity. Must be within asset min/max trade size',
-  })
-  @IsNotEmpty()
-  quantity: number | string;
-
-  @ApiProperty({
-    description: 'Trading account ID',
-    pattern: '^(real|demo)_[0-9]{8}$',
-  })
+  @ApiProperty({ description: 'Order quantity' })
   @IsString()
-  @Matches(/^(real|demo)_[0-9]{8}$/)
-  accountId: string;
-
-  @ApiProperty({
-    description: 'Order type: 0 for market, 1 for limit, 2 for stop',
-  })
-  @Type(() => Number)
-  @IsNumber()
-  orderType: number;
+  @IsNotEmpty()
+  @Matches(/^\d+(\.\d+)?$/)
+  quantity: string;
 
   @ApiPropertyOptional({
-    description:
-      'Limit/Stop price (required for LIMIT/STOP orders, ignored for MARKET)',
+    description: 'Limit price (required for LIMIT orders, ignored for MARKET)',
   })
   @IsOptional()
-  price?: number | string;
+  @IsString()
+  @Matches(/^\d+(\.\d+)?$/)
+  price?: string;
+
+  @ApiPropertyOptional({
+    description: 'Client-generated UUID to prevent duplicate submissions',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  idempotencyKey?: string;
 }

@@ -14,7 +14,7 @@ export type ExternalProviderId =
   | 'newsdata'
   | 'opennews_canada';
 
-export type NewsProviderCatalog = {
+export interface NewsProviderCatalog {
   id: ExternalProviderId;
   name: string;
   website: string;
@@ -22,9 +22,9 @@ export type NewsProviderCatalog = {
   freeLimit: string;
   notes: string;
   enabled: boolean;
-};
+}
 
-type ProviderDescriptor = {
+interface ProviderDescriptor {
   id: ExternalProviderId;
   name: string;
   website: string;
@@ -36,14 +36,14 @@ type ProviderDescriptor = {
     url: string;
     headers?: Record<string, string>;
   };
-};
+}
 
-type SyncNewsOptions = {
+interface SyncNewsOptions {
   trigger: 'cron' | 'manual';
   providers?: ExternalProviderId[];
-};
+}
 
-type NormalizedArticle = {
+interface NormalizedArticle {
   externalId: string | null;
   dedupeKey: string;
   source: string;
@@ -58,12 +58,12 @@ type NormalizedArticle = {
   category: string | null;
   keywords: string | null;
   rawPayload: unknown;
-};
+}
 
-type NewsPrisma = {
+interface NewsPrisma {
   newsArticle: {
     createMany(args: {
-      data: Array<{
+      data: {
         source: string;
         externalId: string | null;
         dedupeKey: string;
@@ -78,11 +78,11 @@ type NewsPrisma = {
         category: string | null;
         keywords: string | null;
         rawPayload: unknown;
-      }>;
+      }[];
       skipDuplicates: boolean;
     }): Promise<{ count: number }>;
   };
-};
+}
 
 @Injectable()
 export class ExternalNewsAggregationService {

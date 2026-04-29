@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type, Transform } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -11,6 +11,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { $Enums } from '@prisma/client';
 
 export class CreateSupportTicketDto {
   @ApiProperty({
@@ -50,63 +51,50 @@ export class CreateSupportTicketDto {
   @MaxLength(5000)
   message: string;
 
-  @ApiPropertyOptional({
-    description: 'Message type. 0 = TEXT, 1 = IMAGE',
-    enum: [0, 1],
-    default: 0,
-  })
+  @ApiPropertyOptional({ description: 'Optional title' })
   @IsOptional()
-  @Type(() => Number)
-  @IsEnum([0, 1])
-  messageType?: number = 0;
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({ description: 'Optional category' })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({ description: 'Optional priority (free-form string)' })
+  @IsOptional()
+  @IsString()
+  priority?: string;
 }
 
 export class UpdateSupportTicketDto {
-  @ApiPropertyOptional({
-    description: 'Ticket subject',
-    enum: [
-      'Account Issue',
-      'Deposit',
-      'Withdrawal',
-      'Trading Issue',
-      'Technical Issue',
-      'Verification',
-      'Billing',
-      'Other',
-    ],
-  })
+  @ApiPropertyOptional({ description: 'Ticket subject' })
   @IsOptional()
   @IsString()
-  @IsEnum([
-    'Account Issue',
-    'Deposit',
-    'Withdrawal',
-    'Trading Issue',
-    'Technical Issue',
-    'Verification',
-    'Billing',
-    'Other',
-  ])
   subject?: string;
 
-  @ApiPropertyOptional({
-    description:
-      'Ticket status. 0 = OPEN, 1 = IN_PROGRESS, 2 = RESOLVED, 3 = CLOSED',
-    enum: [0, 1, 2, 3],
-  })
+  @ApiPropertyOptional({ description: 'Optional title' })
   @IsOptional()
-  @Type(() => Number)
-  @IsEnum([0, 1, 2, 3])
-  status?: number;
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({ description: 'Optional category' })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({ description: 'Optional priority (free-form string)' })
+  @IsOptional()
+  @IsString()
+  priority?: string;
 
   @ApiPropertyOptional({
-    description: 'Ticket priority. 0 = LOW, 1 = MEDIUM, 2 = HIGH, 3 = URGENT',
-    enum: [0, 1, 2, 3],
+    description: 'Ticket status',
+    enum: $Enums.SupportTicketStatus,
   })
   @IsOptional()
-  @Type(() => Number)
-  @IsEnum([0, 1, 2, 3])
-  priority?: number;
+  @IsEnum($Enums.SupportTicketStatus)
+  status?: $Enums.SupportTicketStatus;
 }
 
 export class SupportMessageDto {
@@ -148,19 +136,20 @@ export class GetSupportTicketsQueryDto {
   @Type(() => Number)
   skip?: number = 0;
 
-  @ApiPropertyOptional({ type: [Number] })
+  @ApiPropertyOptional({ enum: $Enums.SupportTicketStatus })
   @IsOptional()
-  @Transform(({ value }) =>
-    Array.isArray(value) ? value.map(Number) : [Number(value)],
-  )
-  status?: number[];
+  @IsEnum($Enums.SupportTicketStatus)
+  status?: $Enums.SupportTicketStatus;
 
-  @ApiPropertyOptional({ type: [Number] })
+  @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }) =>
-    Array.isArray(value) ? value.map(Number) : [Number(value)],
-  )
-  priority?: number[];
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  priority?: string;
 
   @ApiPropertyOptional({ enum: ['createdAt'], default: 'createdAt' })
   @IsOptional()
@@ -185,6 +174,13 @@ export class GetMessagesQueryDto {
   @Max(100)
   @Type(() => Number)
   take?: number = 50;
+
+  @ApiPropertyOptional({ default: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  skip?: number = 0;
 
   @ApiPropertyOptional({ description: 'Cursor for cursor-based pagination' })
   @IsOptional()

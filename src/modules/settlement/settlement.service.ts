@@ -4,7 +4,7 @@ import Decimal from 'decimal.js';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BlockchainService } from '../assets/services/blockchain.service';
 
-type SettlementTrade = {
+interface SettlementTrade {
   id: string;
   assetId: string;
   asset: {
@@ -20,9 +20,9 @@ type SettlementTrade = {
   quantity: {
     toString(): string;
   };
-};
+}
 
-type SettlementPrisma = {
+interface SettlementPrisma {
   trade: {
     findMany: (args: {
       where: { settlementStatus: 'PENDING' };
@@ -41,7 +41,7 @@ type SettlementPrisma = {
       };
     }) => Promise<unknown>;
   };
-};
+}
 
 @Injectable()
 export class SettlementService {

@@ -1,5 +1,5 @@
 ﻿// User response types for API
-export type UserResponse = {
+export interface UserResponse {
   id: string;
   walletAddress: string;
   email?: string;
@@ -8,13 +8,13 @@ export type UserResponse = {
   kycStatus: string;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
-export type UserProfileResponse = {
+export interface UserProfileResponse {
   id: string;
   walletAddress: string;
   email?: string;
   username?: string;
   role: string;
   kycStatus: string;
-};
+}

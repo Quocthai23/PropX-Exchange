@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UpdateAccountDto } from '../dto/accounts.dto';
+import Decimal from 'decimal.js';
 
 @Injectable()
 export class AccountsService {
@@ -14,7 +19,7 @@ export class AccountsService {
   }
 
   async getAccounts(userId: string, accountTypeId?: string) {
-    const where: any = { userId };
+    const where: { userId: string; accountTypeId?: string } = { userId };
     if (accountTypeId) {
       where.accountTypeId = accountTypeId;
     }
@@ -32,11 +37,11 @@ export class AccountsService {
 
         const totalAvailable = balances.reduce(
           (sum, b) => sum.plus(b.available.toString()),
-          new (require('decimal.js'))(0)
+          new Decimal(0),
         );
         const totalLocked = balances.reduce(
           (sum, b) => sum.plus(b.locked.toString()),
-          new (require('decimal.js'))(0)
+          new Decimal(0),
         );
 
         return {
@@ -44,7 +49,7 @@ export class AccountsService {
           availableBalance: totalAvailable.toFixed(8),
           lockedBalance: totalLocked.toFixed(8),
         };
-      })
+      }),
     );
 
     return { accounts: accountsWithBalances };
@@ -63,7 +68,12 @@ export class AccountsService {
       throw new ForbiddenException('not-account-owner');
     }
 
-    const updateData: any = {};
+    const updateData: {
+      name?: string;
+      avatar?: string;
+      leverage?: number;
+      status?: string;
+    } = {};
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.avatar !== undefined) updateData.avatar = dto.avatar;
     if (dto.leverage !== undefined) updateData.leverage = dto.leverage;
@@ -88,11 +98,11 @@ export class AccountsService {
 
     const totalAvailable = balances.reduce(
       (sum, b) => sum.plus(b.available.toString()),
-      new (require('decimal.js'))(0)
+      new Decimal(0),
     );
     const totalLocked = balances.reduce(
       (sum, b) => sum.plus(b.locked.toString()),
-      new (require('decimal.js'))(0)
+      new Decimal(0),
     );
 
     return {
@@ -121,7 +131,7 @@ export class AccountsService {
 
     const totalAvailable = balances.reduce(
       (sum, b) => sum.plus(b.available.toString()),
-      new (require('decimal.js'))(0)
+      new Decimal(0),
     );
 
     return {
@@ -148,11 +158,11 @@ export class AccountsService {
 
     const totalAvailable = balances.reduce(
       (sum, b) => sum.plus(b.available.toString()),
-      new (require('decimal.js'))(0)
+      new Decimal(0),
     );
     const totalLocked = balances.reduce(
       (sum, b) => sum.plus(b.locked.toString()),
-      new (require('decimal.js'))(0)
+      new Decimal(0),
     );
     const totalBalance = totalAvailable.plus(totalLocked);
 

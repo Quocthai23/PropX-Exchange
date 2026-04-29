@@ -6,7 +6,7 @@ import {
   NewsProviderCatalog,
 } from './external-news-aggregation.service';
 
-type NewsArticleRecord = {
+interface NewsArticleRecord {
   id: string;
   source: string;
   externalId: string | null;
@@ -21,9 +21,9 @@ type NewsArticleRecord = {
   category: string | null;
   keywords: string | null;
   createdAt: Date;
-};
+}
 
-type NewsPrisma = {
+interface NewsPrisma {
   newsArticle: {
     findMany(args: {
       where?: {
@@ -33,7 +33,7 @@ type NewsPrisma = {
       take: number;
     }): Promise<NewsArticleRecord[]>;
   };
-};
+}
 
 @Injectable()
 export class NewsService {

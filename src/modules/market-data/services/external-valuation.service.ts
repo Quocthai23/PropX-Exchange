@@ -2,24 +2,24 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../../prisma/prisma.service';
 
-export type ExternalValuationTarget = {
+export interface ExternalValuationTarget {
   source: 'batdongsan' | 'chotot' | 'custom';
   endpoint: string;
   assetId?: string;
   areaCode?: string;
   title?: string;
   currency?: string;
-};
+}
 
-type ListingRecord = {
+interface ListingRecord {
   price: number;
   area?: number;
   url?: string;
   title?: string;
   raw: Record<string, unknown>;
-};
+}
 
-type SnapshotRecord = {
+interface SnapshotRecord {
   id: string;
   assetId: string | null;
   areaCode: string | null;
@@ -32,9 +32,9 @@ type SnapshotRecord = {
   pricePerM2: string | number | null;
   capturedAt: Date;
   createdAt: Date;
-};
+}
 
-type ValuationPrisma = {
+interface ValuationPrisma {
   assetValuationSnapshot: {
     create(args: {
       data: {
@@ -60,7 +60,7 @@ type ValuationPrisma = {
       take: number;
     }): Promise<SnapshotRecord[]>;
   };
-};
+}
 
 @Injectable()
 export class ExternalValuationService {
@@ -258,7 +258,7 @@ export class ExternalValuationService {
     }
   }
 
-  private extractRows(payload: unknown): Array<Record<string, unknown>> {
+  private extractRows(payload: unknown): Record<string, unknown>[] {
     if (Array.isArray(payload)) {
       return payload.filter((item) => this.isObject(item));
     }

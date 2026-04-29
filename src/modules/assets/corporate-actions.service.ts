@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../prisma/prisma.service';
+import { $Enums } from '@prisma/client';
 
 @Injectable()
 export class CorporateActionService {
@@ -49,35 +50,40 @@ export class CorporateActionService {
       if (userPayoutAmount.lte(0)) continue;
 
       // Execute atomic transaction for each user
-      await this.prisma.$transaction([
-        // Update user's USDT balance (assuming assetId: '' is USDT as in order-matching)
-        this.prisma.balance.upsert({
-          where: { userId_assetId: { userId: holding.userId, assetId: '' } },
-          create: {
-            userId: holding.userId,
-            assetId: '',
-            available: userPayoutAmount.toString(),
-            locked: '0',
-          },
-          update: {
-            available: {
-              increment: userPayoutAmount.toString(),
-            },
-          },
-        }),
+      await this.prisma.$transaction(async (tx) => {
+        const cashBalance = await tx.balance.findFirst({
+          where: { userId: holding.userId, assetId: null },
+          select: { id: true },
+        });
 
-        // Save dividend payout transaction history
-        this.prisma.transaction.create({
+        if (cashBalance) {
+          await tx.balance.update({
+            where: { id: cashBalance.id },
+            data: {
+              available: { increment: userPayoutAmount.toString() },
+            },
+          });
+        } else {
+          await tx.balance.create({
+            data: {
+              userId: holding.userId,
+              assetId: null,
+              available: userPayoutAmount.toString(),
+              locked: '0',
+            },
+          });
+        }
+
+        await tx.transaction.create({
           data: {
             userId: holding.userId,
-            type: 'DIVIDEND_PAYOUT', // Ensure this type exists in the schema
+            type: $Enums.TransactionType.DIVIDEND,
             amount: userPayoutAmount.toString(),
             fee: '0',
-            status: 'COMPLETED',
-            // Can add metadata specifying which Asset it's from
+            status: $Enums.TransactionStatus.COMPLETED,
           },
-        }),
-      ]);
+        });
+      });
 
       payoutCount++;
     }

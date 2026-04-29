@@ -9,25 +9,25 @@ const toDecimalValue = (value: DecimalValue): string | number =>
     ? value
     : value.toString();
 
-export type CandlePoint = {
+export interface CandlePoint {
   time: number;
   open: number;
   high: number;
   low: number;
   close: number;
   value: number;
-};
+}
 
-type CandlestickRecord = {
+interface CandlestickRecord {
   openTime: Date;
   open: DecimalValue;
   high: DecimalValue;
   low: DecimalValue;
   close: DecimalValue;
   volume: DecimalValue;
-};
+}
 
-type MarketDataPrisma = {
+interface MarketDataPrisma {
   candlestick: {
     findUnique(args: {
       where: {
@@ -74,7 +74,7 @@ type MarketDataPrisma = {
       orderBy: { openTime: 'asc' };
     }): Promise<CandlestickRecord[]>;
   };
-};
+}
 
 @Injectable()
 export class MarketDataService {

@@ -11,17 +11,17 @@ const toDecimalValue = (value: DecimalValue): string | number =>
     ? value
     : value.toString();
 
-type MarketAsset = {
+interface MarketAsset {
   id: string;
   symbol: string;
   tokenPrice: DecimalValue;
-};
+}
 
-type MarketCandle = {
+interface MarketCandle {
   close: DecimalValue;
-};
+}
 
-type MarketMakerPrisma = {
+interface MarketMakerPrisma {
   asset: {
     findMany(args: { where: { isActive: true } }): Promise<MarketAsset[]>;
   };
@@ -33,7 +33,7 @@ type MarketMakerPrisma = {
   };
   order: {
     createMany(args: {
-      data: Array<{
+      data: {
         userId: string;
         assetId: string;
         side: string;
@@ -42,10 +42,10 @@ type MarketMakerPrisma = {
         quantity: Decimal;
         filledQuantity: Decimal;
         status: string;
-      }>;
+      }[];
     }): Promise<unknown>;
   };
-};
+}
 
 @Injectable()
 export class MarketMakerService {

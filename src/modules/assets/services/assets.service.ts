@@ -26,7 +26,7 @@ export class AssetsService {
       include: { category: true },
     });
 
-    let favoriteAssetIds: Set<string> = new Set();
+    let favoriteAssetIds = new Set<string>();
     if (userId) {
       const favorites = await this.prisma.favoriteAsset.findMany({
         where: { userId },
@@ -50,7 +50,6 @@ export class AssetsService {
 
   async createAsset(dto: CreateAssetDto) {
     const asset = await this.prisma.asset.create({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: {
         ...dto,
         isActive: false,

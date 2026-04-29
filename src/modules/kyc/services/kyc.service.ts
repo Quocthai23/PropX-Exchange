@@ -7,7 +7,9 @@ import {
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { $Enums } from '@prisma/client';
 import { CreateKycDto } from '../dto/create-kyc.dto';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 
 @Injectable()
 export class KycService {
@@ -16,6 +18,7 @@ export class KycService {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('kyc-approval') private kycQueue: Queue,
+    private notificationsService: NotificationsService,
   ) {}
 
   async submitKyc(userId: string, dto: CreateKycDto) {
@@ -26,7 +29,7 @@ export class KycService {
       idFrontImg: dto.idFrontImg,
       idBackImg: dto.idBackImg,
       selfieImg: dto.selfieImg,
-      status: 'PENDING',
+      status: $Enums.KycStatus.PENDING,
       rejectReason: null,
     };
 
@@ -38,7 +41,16 @@ export class KycService {
       }),
       this.prisma.user.update({
         where: { id: userId },
-        data: { kycStatus: 'PENDING' },
+        data: { kycStatus: $Enums.KycStatus.PENDING },
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          entity: 'KYC',
+          entityId: userId,
+          action: 'SUBMITTED',
+          performedBy: userId,
+          details: 'User submitted KYC information for review.',
+        },
       }),
     ]);
 
@@ -78,33 +90,38 @@ export class KycService {
     await this.prisma.$transaction([
       this.prisma.kycRecord.update({
         where: { userId },
-        data: { status: 'APPROVING', rejectReason: null },
+        data: {
+          status: $Enums.KycStatus.APPROVED,
+          rejectReason: null,
+          approvedBy: adminId,
+        },
       }),
       this.prisma.user.update({
         where: { id: userId },
-        data: { kycStatus: 'APPROVING' },
+        data: { kycStatus: $Enums.KycStatus.APPROVED },
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          entity: 'KYC',
+          entityId: userId,
+          action: 'APPROVED',
+          performedBy: adminId,
+          details: `Admin ${adminId} approved KYC for user ${userId}.`,
+        },
       }),
     ]);
 
-    await this.prisma.auditLog.create({
-      data: {
-        entity: 'KYC',
-        entityId: userId,
-        action: 'APPROVED',
-        performedBy: adminId,
-        details: `Admin ${adminId} approved KYC for user ${userId}. Queued for blockchain verification.`,
-      },
-    });
-
-    await this.kycQueue.add('approve', {
-      targetUserId: userId,
-      walletAddress: user.walletAddress,
+    await this.notificationsService.createNotification({
+      userId,
+      type: 'KYC_APPROVED',
+      title: 'KYC Approved!',
+      content:
+        'Your KYC verification has been approved. You can now use all platform features.',
     });
 
     return {
-      message:
-        'KYC approval request has been queued for blockchain processing.',
-      approvalInProgress: true,
+      message: 'KYC approved successfully.',
+      status: 'APPROVED',
     };
   }
 
@@ -117,24 +134,30 @@ export class KycService {
       this.prisma.kycRecord.update({
         where: { userId },
         data: {
-          status: 'REJECTED',
+          status: $Enums.KycStatus.REJECTED,
           rejectReason: reason.trim(),
         },
       }),
       this.prisma.user.update({
         where: { id: userId },
-        data: { kycStatus: 'REJECTED' },
+        data: { kycStatus: $Enums.KycStatus.REJECTED },
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          entity: 'KYC',
+          entityId: userId,
+          action: 'REJECTED',
+          performedBy: adminId ?? 'SYSTEM',
+          details: reason.trim(),
+        },
       }),
     ]);
 
-    await this.prisma.auditLog.create({
-      data: {
-        entity: 'KYC',
-        entityId: userId,
-        action: 'REJECTED',
-        performedBy: adminId ?? 'SYSTEM',
-        details: reason.trim(),
-      },
+    await this.notificationsService.createNotification({
+      userId,
+      type: 'KYC_REJECTED',
+      title: 'KYC Rejected',
+      content: `Your KYC verification has been rejected. Reason: ${reason.trim()}. Please resubmit with correct information.`,
     });
 
     return {

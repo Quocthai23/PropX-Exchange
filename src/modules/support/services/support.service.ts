@@ -1,5 +1,10 @@
-﻿import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { $Enums } from '@prisma/client';
 import {
   CreateSupportTicketDto,
   UpdateSupportTicketDto,
@@ -14,25 +19,67 @@ export class SupportService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createTicket(userId: string, dto: CreateSupportTicketDto) {
-    await Promise.resolve();
-    void userId;
-    void dto;
-    // TODO: Create support ticket and initial message via Prisma
-    return { success: true };
+    return this.prisma.$transaction(async (tx) => {
+      const ticket = await tx.supportTicket.create({
+        data: {
+          userId,
+          subject: dto.subject,
+          title: dto.title,
+          category: dto.category,
+          priority: dto.priority,
+          status: $Enums.SupportTicketStatus.OPEN,
+        },
+      });
+
+      await tx.ticketMessage.create({
+        data: {
+          ticketId: ticket.id,
+          senderId: userId,
+          content: dto.message,
+        },
+      });
+
+      return ticket;
+    });
   }
 
   async getMyTickets(userId: string, query: GetSupportTicketsQueryDto) {
-    await Promise.resolve();
-    void userId;
-    void query;
-    return { data: [], total: 0 };
+    const where: any = { userId };
+    if (query.status) {
+      where.status = query.status;
+    }
+    if (query.category) {
+      where.category = query.category;
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.supportTicket.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: query.skip || 0,
+        take: query.take || 20,
+      }),
+      this.prisma.supportTicket.count({ where }),
+    ]);
+
+    return { data, total };
   }
 
   async getTicketDetail(userId: string, ticketId: string) {
-    await Promise.resolve();
-    void userId;
-    void ticketId;
-    return {};
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id: ticketId },
+      include: { user: true, messages: { include: { sender: true } } },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    if (ticket.userId !== userId) {
+      throw new ForbiddenException('Not ticket owner');
+    }
+
+    return ticket;
   }
 
   async updateTicket(
@@ -40,11 +87,27 @@ export class SupportService {
     ticketId: string,
     dto: UpdateSupportTicketDto,
   ) {
-    await Promise.resolve();
-    void userId;
-    void ticketId;
-    void dto;
-    return { success: true };
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    if (ticket.userId !== userId) {
+      throw new ForbiddenException('Not ticket owner');
+    }
+
+    return this.prisma.supportTicket.update({
+      where: { id: ticketId },
+      data: {
+        subject: dto.subject,
+        title: dto.title,
+        category: dto.category,
+        priority: dto.priority,
+      },
+    });
   }
 
   async getTicketMessages(
@@ -52,33 +115,92 @@ export class SupportService {
     ticketId: string,
     query: GetMessagesQueryDto,
   ) {
-    await Promise.resolve();
-    void userId;
-    void ticketId;
-    void query;
-    return { data: [], total: 0, nextCursor: null };
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    if (ticket.userId !== userId) {
+      throw new ForbiddenException('Not ticket owner');
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.ticketMessage.findMany({
+        where: { ticketId },
+        orderBy: { createdAt: 'asc' },
+        skip: query.skip || 0,
+        take: query.take || 50,
+        include: { sender: true },
+      }),
+      this.prisma.ticketMessage.count({ where: { ticketId } }),
+    ]);
+
+    return { data, total, nextCursor: null };
   }
 
   async sendMessage(userId: string, ticketId: string, dto: SupportMessageDto) {
-    await Promise.resolve();
-    void userId;
-    void ticketId;
-    void dto;
-    return { success: true };
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    if (ticket.userId !== userId) {
+      throw new ForbiddenException('Not ticket owner');
+    }
+
+    return this.prisma.ticketMessage.create({
+      data: {
+        ticketId,
+        senderId: userId,
+        content: dto.content,
+      },
+      include: { sender: true },
+    });
   }
 
   // ================= ADMIN FUNCTIONS ================= //
 
   async adminGetTickets(query: AdminGetSupportTicketsQueryDto) {
-    await Promise.resolve();
-    void query;
-    return { data: [], total: 0 };
+    const where: any = {};
+    if (query.status) {
+      where.status = query.status;
+    }
+    if (query.category) {
+      where.category = query.category;
+    }
+    if (query.userId) {
+      where.userId = query.userId;
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.supportTicket.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: query.skip || 0,
+        take: query.take || 20,
+        include: { user: true },
+      }),
+      this.prisma.supportTicket.count({ where }),
+    ]);
+
+    return { data, total };
   }
 
   async adminJoinTicket(adminId: string, ticketId: string) {
-    await Promise.resolve();
-    void adminId;
-    void ticketId;
+    await this.prisma.supportTicket.update({
+      where: { id: ticketId },
+      data: {
+        assignedAdminId: adminId,
+        status: 'IN_PROGRESS',
+      },
+    });
+
     return { success: true };
   }
 
@@ -87,10 +209,23 @@ export class SupportService {
     ticketId: string,
     dto: UpdateSupportTicketDto,
   ) {
-    await Promise.resolve();
-    void adminId;
-    void ticketId;
-    void dto;
-    return { success: true };
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    return this.prisma.supportTicket.update({
+      where: { id: ticketId },
+      data: {
+        subject: dto.subject,
+        title: dto.title,
+        category: dto.category,
+        priority: dto.priority,
+        status: dto.status,
+      },
+    });
   }
 }

@@ -31,7 +31,7 @@ export class AdminPaymentController {
   @ApiOperation({ summary: 'Admin Get Transaction Histories' })
   getTransactions(@Query() query: GetTransactionHistoryDto) {
     // Admin xem lịch sử giao dịch toàn sàn (có thể bỏ trống accountId)
-    return this.paymentService.getHistory(query);
+    return this.paymentService.adminGetHistory(query);
   }
 
   @Patch('withdraw/:transactionId/status')

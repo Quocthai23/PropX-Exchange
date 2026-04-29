@@ -5,10 +5,10 @@
   Logger,
 } from '@nestjs/common';
 
-type IpfsFileResult = {
+interface IpfsFileResult {
   cid: string;
   uri: string;
-};
+}
 
 @Injectable()
 export class IpfsService {

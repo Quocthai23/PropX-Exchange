@@ -1,11 +1,12 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { $Enums } from '@prisma/client';
 
-type OrderSide = 'BUY' | 'SELL';
-type OrderStatus = 'OPEN' | 'PARTIAL' | 'FILLED' | 'CANCELLED';
+type OrderSide = $Enums.OrderSide;
+type OrderStatus = $Enums.OrderStatus;
 
 interface OrderMatchingJobData {
   orderId: string;
@@ -82,7 +83,7 @@ export class OrderMatchingService {
         where: { id: orderId },
       });
 
-      if (!order || order.status !== 'OPEN') {
+      if (!order || order.status !== $Enums.OrderStatus.OPEN) {
         this.logger.warn(
           `Order ${orderId} is not in OPEN status. Skipping match.`,
         );
@@ -98,7 +99,7 @@ export class OrderMatchingService {
         where: {
           assetId,
           side: oppositeOrderSide,
-          status: 'OPEN',
+          status: $Enums.OrderStatus.OPEN,
           price: priceFilter,
           NOT: { userId }, // Don't match with same user
         },
@@ -126,8 +127,8 @@ export class OrderMatchingService {
         );
         const isOrderFilled = newOrderFilled.equals(quantityDec);
         const orderNewStatus: OrderStatus = isOrderFilled
-          ? 'FILLED'
-          : 'PARTIAL';
+          ? $Enums.OrderStatus.FILLED
+          : $Enums.OrderStatus.PARTIALLY_FILLED;
 
         const newMatchingOrderFilled = new Decimal(
           matchingOrder.filledQuantity,
@@ -136,81 +137,84 @@ export class OrderMatchingService {
           new Decimal(matchingOrder.quantity),
         );
         const matchingOrderNewStatus: OrderStatus = isMatchingOrderFilled
-          ? 'FILLED'
-          : 'PARTIAL';
+          ? $Enums.OrderStatus.FILLED
+          : $Enums.OrderStatus.PARTIALLY_FILLED;
 
         // Execute trade atomically
-        await this.prisma.$transaction([
-          // Update original order
-          this.prisma.order.update({
+        await this.prisma.$transaction(async (tx) => {
+          await tx.order.update({
             where: { id: orderId },
             data: {
               filledQuantity: newOrderFilled.toString(),
               status: orderNewStatus,
             },
-          }),
+          });
 
-          // Update matching order
-          this.prisma.order.update({
+          await tx.order.update({
             where: { id: matchingOrder.id },
             data: {
               filledQuantity: newMatchingOrderFilled.toString(),
               status: matchingOrderNewStatus,
             },
-          }),
+          });
 
-          // Persist a transaction record for this matched trade leg
-          this.prisma.transaction.create({
+          await tx.transaction.create({
             data: {
               userId,
-              type: 'TRADE_MATCH',
+              type:
+                side === $Enums.OrderSide.BUY
+                  ? $Enums.TransactionType.TRADE_BUY
+                  : $Enums.TransactionType.TRADE_SELL,
               amount: matchableQuantity.times(priceDec).toString(),
               fee: '0',
-              status: 'COMPLETED',
+              status: $Enums.TransactionStatus.COMPLETED,
             },
-          }),
+          });
 
-          // Update buyer's asset balance
-          ...(side === 'BUY'
-            ? [
-                this.prisma.balance.upsert({
-                  where: { userId_assetId: { userId, assetId } },
-                  create: {
-                    userId,
-                    assetId,
-                    available: matchableQuantity.toString(),
-                    locked: new Decimal(0).toString(),
-                  },
-                  update: {
-                    available: {
-                      increment: matchableQuantity.toString(),
-                    },
-                  },
-                }),
-              ]
-            : []),
+          if (side === $Enums.OrderSide.BUY) {
+            await tx.balance.upsert({
+              where: { userId_assetId: { userId, assetId } },
+              create: {
+                userId,
+                assetId,
+                available: matchableQuantity.toString(),
+                locked: new Decimal(0).toString(),
+              },
+              update: {
+                available: {
+                  increment: matchableQuantity.toString(),
+                },
+              },
+            });
+          }
 
-          // Update seller's USDT balance (collateral return)
-          // Note: USDT balance has assetId = null (not a specific asset)
-          ...(side === 'SELL'
-            ? [
-                this.prisma.balance.upsert({
-                  where: { userId_assetId: { userId, assetId: '' } },
-                  create: {
-                    userId,
-                    assetId: '',
-                    available: matchableQuantity.times(priceDec).toString(),
-                    locked: new Decimal(0).toString(),
+          if (side === $Enums.OrderSide.SELL) {
+            const cashBalance = await tx.balance.findFirst({
+              where: { userId, assetId: null },
+              select: { id: true },
+            });
+
+            if (cashBalance) {
+              await tx.balance.update({
+                where: { id: cashBalance.id },
+                data: {
+                  available: {
+                    increment: matchableQuantity.times(priceDec).toString(),
                   },
-                  update: {
-                    available: {
-                      increment: matchableQuantity.times(priceDec).toString(),
-                    },
-                  },
-                }),
-              ]
-            : []),
-        ]);
+                },
+              });
+            } else {
+              await tx.balance.create({
+                data: {
+                  userId,
+                  assetId: null,
+                  available: matchableQuantity.times(priceDec).toString(),
+                  locked: new Decimal(0).toString(),
+                },
+              });
+            }
+          }
+        });
 
         remainingQuantity = remainingQuantity.minus(matchableQuantity);
         tradeCount++;

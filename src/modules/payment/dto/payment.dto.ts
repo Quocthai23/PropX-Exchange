@@ -10,44 +10,43 @@ import {
   Min,
   Max,
   IsDateString,
-  IsEmail,
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { $Enums } from '@prisma/client';
 
-const ACCOUNT_ID_REGEX = /^(real|demo)_[0-9]{8}$/;
-const EMAIL_REGEX =
-  /^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\.)+[A-Za-z]{2,}$/;
 const AMOUNT_REGEX = /^-?\d+(\.\d+)?$/;
 
 export class DepositDemoDto {
-  @ApiProperty({ description: 'Account ID', pattern: ACCOUNT_ID_REGEX.source })
+  @ApiProperty({ description: 'Deposit amount' })
   @IsString()
-  @Matches(ACCOUNT_ID_REGEX)
-  accountId: string;
+  @Matches(AMOUNT_REGEX)
+  amount: string;
+
+  @ApiPropertyOptional({
+    description: 'Client-generated UUID to prevent duplicate submissions',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  idempotencyKey?: string;
 }
 
 export class CreateWalletDto {
-  @ApiProperty({ description: 'Account ID', pattern: ACCOUNT_ID_REGEX.source })
-  @IsString()
-  @Matches(ACCOUNT_ID_REGEX)
-  accountId: string;
-
-  @ApiProperty({ enum: ['EVM', 'SOL'], description: 'Wallet type' })
+  @ApiPropertyOptional({ enum: ['EVM', 'SOL'], description: 'Wallet type' })
+  @IsOptional()
   @IsEnum(['EVM', 'SOL'])
-  type: string;
+  type?: string;
 
-  @ApiProperty({ enum: ['1', '56', '97', '11155111'], description: 'Chain ID' })
+  @ApiPropertyOptional({
+    enum: ['1', '56', '97', '11155111'],
+    description: 'Chain ID',
+  })
+  @IsOptional()
   @IsEnum(['1', '56', '97', '11155111'])
-  chainId: string;
+  chainId?: string;
 }
 
 export class WithdrawV2Dto {
-  @ApiProperty({ description: 'Account ID', pattern: ACCOUNT_ID_REGEX.source })
-  @IsString()
-  @Matches(ACCOUNT_ID_REGEX)
-  accountId: string;
-
   @ApiProperty({ description: 'Withdrawal amount' })
   @IsString()
   @Matches(AMOUNT_REGEX)
@@ -56,7 +55,7 @@ export class WithdrawV2Dto {
   @ApiProperty({ description: 'Blockchain wallet address' })
   @IsString()
   @IsNotEmpty()
-  address: string;
+  destinationAddress: string;
 
   @ApiProperty({ enum: ['1', '56', '97', '11155111'], description: 'Chain ID' })
   @IsEnum(['1', '56', '97', '11155111'])
@@ -78,26 +77,15 @@ export class WithdrawV2Dto {
 }
 
 export class TransferV2Dto {
-  @ApiProperty({
-    description: 'Sender Account ID',
-    pattern: ACCOUNT_ID_REGEX.source,
-  })
-  @IsString()
-  @Matches(ACCOUNT_ID_REGEX)
-  fromAccountId: string;
-
   @ApiProperty({ description: 'Amount to transfer as a string' })
   @IsString()
   @Matches(AMOUNT_REGEX)
   amount: string;
 
-  @ApiProperty({
-    description: 'Recipient user email, used for validation only',
-    pattern: EMAIL_REGEX.source,
-  })
-  @IsEmail()
-  @Matches(EMAIL_REGEX)
-  toUserEmail: string;
+  @ApiPropertyOptional({ description: 'Asset ID' })
+  @IsOptional()
+  @IsString()
+  assetId?: string;
 
   @ApiProperty({
     description: 'Client-generated UUID to prevent duplicate submissions',
@@ -130,11 +118,21 @@ export class GetTransactionHistoryDto {
   @Min(0)
   skip?: number = 0;
 
-  @ApiPropertyOptional({ pattern: ACCOUNT_ID_REGEX.source })
+  @ApiPropertyOptional({
+    description: 'Transaction type',
+    enum: $Enums.TransactionType,
+  })
   @IsOptional()
-  @IsString()
-  @Matches(ACCOUNT_ID_REGEX)
-  accountId?: string;
+  @IsEnum($Enums.TransactionType)
+  type?: $Enums.TransactionType;
+
+  @ApiPropertyOptional({
+    description: 'Transaction status',
+    enum: $Enums.TransactionStatus,
+  })
+  @IsOptional()
+  @IsEnum($Enums.TransactionStatus)
+  status?: $Enums.TransactionStatus;
 
   @ApiPropertyOptional({ description: 'Start date (ISO format)' })
   @IsOptional()
@@ -149,21 +147,25 @@ export class GetTransactionHistoryDto {
 
 export class AdminUpdateWithdrawStatusDto {
   @ApiProperty({
-    description: 'New status (3 = COMPLETED, 5 = REJECTED)',
-    enum: [3, 5],
+    description: 'New status',
+    enum: ['COMPLETED', 'FAILED', 'CANCELLED'],
   })
-  @IsInt()
-  @IsEnum([3, 5])
-  status: number;
+  @IsEnum($Enums.TransactionStatus)
+  status: $Enums.TransactionStatus;
 
-  @ApiPropertyOptional({ description: 'Required if status is 3 (COMPLETED)' })
-  @ValidateIf((o: AdminUpdateWithdrawStatusDto) => o.status === 3)
+  @ApiPropertyOptional({ description: 'Required if status is COMPLETED' })
+  @ValidateIf((o: AdminUpdateWithdrawStatusDto) => o.status === 'COMPLETED')
   @IsString()
   @IsNotEmpty()
   transactionHash?: string;
 
-  @ApiPropertyOptional({ description: 'Required if status is 5 (REJECTED)' })
-  @ValidateIf((o: AdminUpdateWithdrawStatusDto) => o.status === 5)
+  @ApiPropertyOptional({
+    description: 'Required if status is FAILED or CANCELLED',
+  })
+  @ValidateIf(
+    (o: AdminUpdateWithdrawStatusDto) =>
+      o.status === 'FAILED' || o.status === 'CANCELLED',
+  )
   @IsString()
   @IsNotEmpty()
   rejectedReason?: string;

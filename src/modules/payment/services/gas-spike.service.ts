@@ -7,6 +7,7 @@ import {
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { BlockchainService } from '../../assets/services/blockchain.service';
+import { $Enums } from '@prisma/client';
 
 export interface GasSpeedUpRequest {
   transactionId: string;
@@ -266,7 +267,7 @@ export class GasSpikeService {
         await prismaTx.transaction.update({
           where: { id: tx.id },
           data: {
-            status: 'REFUNDED',
+            status: $Enums.TransactionStatus.CANCELLED,
             refundStatus: 'COMPLETED',
             refundTxHash,
           },
@@ -327,13 +328,13 @@ export class GasSpikeService {
     canSpeedUp: boolean;
     canRefund: boolean;
     recommendations: string[];
-    speedUpAttempts_: Array<{
+    speedUpAttempts_: {
       id: string;
       oldGasPrice: Decimal;
       newGasPrice: Decimal;
       status: string;
       createdAt: Date;
-    }>;
+    }[];
   }> {
     const tx = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
