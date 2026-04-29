@@ -3,7 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql" // Or postgresql depending on your project
+  // MariaDB is supported under Prisma's "mysql" connector; runtime uses driver adapter.
+  provider = "mysql"
 }
 
 enum UserRole {
