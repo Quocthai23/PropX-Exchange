@@ -1,3 +1,192 @@
+        // Đổi mật khẩu khi đã đăng nhập
+        async changePassword(userId: string, oldPassword: string, newPassword: string) {
+          const user = await this.prisma.user.findUnique({ where: { id: userId } });
+          if (!user || !user.password) throw new UnauthorizedException('User not found');
+          const bcrypt = require('bcryptjs');
+          const isMatch = await bcrypt.compare(oldPassword, user.password);
+          if (!isMatch) throw new UnauthorizedException('Old password is incorrect');
+          const hashedPassword = await bcrypt.hash(newPassword, 10);
+          await this.prisma.user.update({ where: { id: userId }, data: { password: hashedPassword } });
+        }
+
+        // Đặt lại mật khẩu qua email (quên mật khẩu)
+        async resetPassword(resetPasswordToken: string, newPassword: string) {
+          // Giả sử resetPasswordToken là accessToken trả về từ verifyOtp (hoặc một token xác thực email)
+          let payload: any;
+          try {
+            payload = await this.jwtService.verifyAsync(resetPasswordToken);
+          } catch {
+            throw new UnauthorizedException('Invalid or expired reset token');
+          }
+          const email = payload.email;
+          const user = await this.prisma.user.findUnique({ where: { email } });
+          if (!user) throw new UnauthorizedException('User not found');
+          const bcrypt = require('bcryptjs');
+          const hashedPassword = await bcrypt.hash(newPassword, 10);
+          await this.prisma.user.update({ where: { email }, data: { password: hashedPassword } });
+        }
+      // Tạo thử thách xác thực cho tác vụ nhạy cảm
+      async createChallenge(dto: any, user: any) {
+        // Tạo challengeId, lưu thông tin vào DB hoặc cache (ở đây demo lưu DB)
+        const challengeId = 'ch_' + Math.random().toString(36).substring(2, 10);
+        // Ví dụ: lưu vào bảng Challenge (nếu có), hoặc lưu tạm vào memory/cache
+        // Ở đây trả về requiredFactors cứng, thực tế có thể linh động theo user
+        // TODO: Lưu DB thực tế nếu có bảng
+        return {
+          challengeId,
+          purpose: dto.purpose,
+          requiredFactors: ['TOTP', 'EMAIL_OTP'],
+          expiresAt: new Date(Date.now() + 5 * 60000).toISOString(),
+        };
+      }
+
+      // Xác thực thử thách (TOTP, Email OTP)
+      async verifyChallenge(dto: any, user: any) {
+        // dto: { challengeId, factor, code }
+        // TODO: Lấy thông tin challenge từ DB/cache, kiểm tra hợp lệ
+        if (dto.factor === 'EMAIL_OTP') {
+          // Kiểm tra OTP email (giả sử code là OTP)
+          const email = user.email;
+          const otpRecord = await this.prisma.otp.findUnique({ where: { email } });
+          if (!otpRecord || otpRecord.code !== dto.code) {
+            throw new UnauthorizedException('Invalid OTP code.');
+          }
+          if (otpRecord.expiresAt < new Date()) {
+            throw new UnauthorizedException('OTP code has expired.');
+          }
+          await this.prisma.otp.delete({ where: { email } });
+          return { success: true, factor: 'EMAIL_OTP' };
+        } else if (dto.factor === 'TOTP') {
+          // Kiểm tra TOTP (giả sử user có secret lưu trong DB)
+          const speakeasy = require('speakeasy');
+          const userRecord = await this.prisma.user.findUnique({ where: { id: user.sub } });
+          if (!userRecord || !userRecord.totpSecret) {
+            throw new UnauthorizedException('TOTP not setup');
+          }
+          const verified = speakeasy.totp.verify({
+            secret: userRecord.totpSecret,
+            encoding: 'base32',
+            token: dto.code,
+            window: 1,
+          });
+          if (!verified) {
+            throw new UnauthorizedException('Invalid TOTP code');
+          }
+          return { success: true, factor: 'TOTP' };
+        } else {
+          throw new UnauthorizedException('Unsupported factor');
+        }
+      }
+    // Xác thực đăng nhập
+    async validateUser(email: string, password: string) {
+      const user = await this.prisma.user.findUnique({ where: { email } });
+      if (!user || !user.password) return null;
+      const bcrypt = require('bcryptjs');
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) return null;
+      return user;
+    }
+  // Xác thực registerToken (thường là accessToken trả về từ verifyOtp, chứa email)
+  async verifyRegisterToken(token: string): Promise<any> {
+    try {
+      // Có thể dùng jwtService.verifyAsync, tuỳ logic có thể kiểm tra thêm purpose
+      return await this.jwtService.verifyAsync(token);
+    } catch (e) {
+      throw new UnauthorizedException('Invalid or expired register token');
+    }
+  }
+
+  // Kiểm tra email đã tồn tại chưa
+  async checkEmailExists(email: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    return !!user;
+  }
+
+  // Kiểm tra username đã tồn tại chưa
+  async checkUsernameExists(username: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    return !!user;
+  }
+
+  // Tạo user mới
+  async createUser(data: {
+    email: string;
+    username?: string;
+    password: string;
+    referenceCode?: string;
+    avatar?: string;
+  }) {
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const wallet = ethers.Wallet.createRandom();
+    const encryptedPrivateKey = this.encryptionService.encrypt(wallet.privateKey);
+    return this.prisma.user.create({
+      data: {
+        email: data.email,
+        username: data.username,
+        password: hashedPassword,
+        referenceCode: data.referenceCode,
+        avatar: data.avatar,
+        walletAddress: wallet.address,
+        encryptedPrivateKey,
+      },
+    });
+  }
+
+  // Tạo thử thách xác thực cho tác vụ nhạy cảm
+  async createChallenge(dto: any, user: any) {
+    const challengeId = 'ch_' + Math.random().toString(36).substring(2, 10);
+    return {
+      challengeId,
+      purpose: dto.purpose,
+      requiredFactors: ['TOTP', 'EMAIL_OTP'],
+      expiresAt: new Date(Date.now() + 5 * 60000).toISOString(),
+    };
+  }
+
+  // Xác thực thử thách (TOTP, Email OTP)
+  async verifyChallenge(dto: any, user: any) {
+    if (dto.factor === 'EMAIL_OTP') {
+      const email = user.email;
+      const otpRecord = await this.prisma.otp.findUnique({ where: { email } });
+      if (!otpRecord || otpRecord.code !== dto.code) {
+        throw new UnauthorizedException('Invalid OTP code.');
+      }
+      if (otpRecord.expiresAt < new Date()) {
+        throw new UnauthorizedException('OTP code has expired.');
+      }
+      await this.prisma.otp.delete({ where: { email } });
+      return { success: true, factor: 'EMAIL_OTP' };
+    } else if (dto.factor === 'TOTP') {
+      const speakeasy = require('speakeasy');
+      const userRecord = await this.prisma.user.findUnique({ where: { id: user.sub } });
+      if (!userRecord || !userRecord.totpSecret) {
+        throw new UnauthorizedException('TOTP not setup');
+      }
+      const verified = speakeasy.totp.verify({
+        secret: userRecord.totpSecret,
+        encoding: 'base32',
+        token: dto.code,
+        window: 1,
+      });
+      if (!verified) {
+        throw new UnauthorizedException('Invalid TOTP code');
+      }
+      return { success: true, factor: 'TOTP' };
+    } else {
+      throw new UnauthorizedException('Unsupported factor');
+    }
+  }
+
+  // Xác thực đăng nhập
+  async validateUser(email: string, password: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || !user.password) return null;
+    const bcrypt = require('bcryptjs');
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return null;
+    return user;
+  }
 import {
   Injectable,
   UnauthorizedException,
@@ -51,7 +240,7 @@ export class AuthService {
     return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   }
 
-  private async issueTokenPair(user: {
+  async issueTokenPair(user: {
     id: string;
     walletAddress: string;
     role: string;
@@ -257,5 +446,57 @@ export class AuthService {
     } catch {
       // Ignore invalid/expired token during logout to keep endpoint idempotent.
     }
+  }
+
+  // Xác thực registerToken (thường là accessToken trả về từ verifyOtp, chứa email)
+  async verifyRegisterToken(token: string): Promise<any> {
+    try {
+      // Có thể dùng jwtService.verifyAsync, tuỳ logic có thể kiểm tra thêm purpose
+      return await this.jwtService.verifyAsync(token);
+    } catch (e) {
+      throw new UnauthorizedException('Invalid or expired register token');
+    }
+  }
+
+  // Kiểm tra email đã tồn tại chưa
+  async checkEmailExists(email: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    return !!user;
+  }
+
+  // Kiểm tra username đã tồn tại chưa
+  async checkUsernameExists(username: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    return !!user;
+  }
+
+  // Tạo user mới
+  async createUser(data: {
+    email: string;
+    username?: string;
+    password: string;
+    referenceCode?: string;
+    avatar?: string;
+  }) {
+    // Hash password
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    // Tạo ví mới cho user
+    const wallet = ethers.Wallet.createRandom();
+    const encryptedPrivateKey = this.encryptionService.encrypt(wallet.privateKey);
+
+    // Lưu user vào DB
+    return this.prisma.user.create({
+      data: {
+        email: data.email,
+        username: data.username,
+        password: hashedPassword,
+        referenceCode: data.referenceCode,
+        avatar: data.avatar,
+        walletAddress: wallet.address,
+        encryptedPrivateKey,
+      },
+    });
   }
 }

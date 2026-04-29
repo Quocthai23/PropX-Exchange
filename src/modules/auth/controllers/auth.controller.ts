@@ -106,13 +106,58 @@ export class AuthController {
     status: 200,
     description: 'Returns Tokens or ChallengeRequiredResponse',
   })
-  register(
+  async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    void res;
-    // Implementation goes here
-    return { message: 'Register flow', data: dto };
+    // 1. Xác thực registerToken (giả sử là accessToken trả về từ verifyOtp)
+    let payload: any;
+    try {
+      payload = await this.authService.verifyRegisterToken(dto.registerToken);
+    } catch (e) {
+      throw new UnauthorizedException('Invalid or expired register token');
+    }
+
+    // 2. Kiểm tra email đã tồn tại chưa
+    const email = payload.email;
+    const existed = await this.authService.checkEmailExists(email);
+    if (existed) {
+      throw new UnauthorizedException('Email already registered');
+    }
+
+    // 3. Kiểm tra username (nếu có)
+    if (dto.username) {
+      const usernameExisted = await this.authService.checkUsernameExists(dto.username);
+      if (usernameExisted) {
+        throw new UnauthorizedException('Username already taken');
+      }
+    }
+
+    // 4. Tạo user mới
+    const user = await this.authService.createUser({
+      email,
+      username: dto.username,
+      password: dto.password,
+      referenceCode: dto.referenceCode,
+      avatar: dto.avatar,
+    });
+
+    // 5. Phát hành token đăng nhập
+    const tokens = await this.authService.issueTokenPair(user);
+
+    // 6. Set refresh token cookie
+    res.cookie('refresh_token', tokens.refreshToken, this.getRefreshCookieConfig());
+
+    return {
+      accessToken: tokens.accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        walletAddress: user.walletAddress,
+        avatar: user.avatar,
+      },
+    };
   }
 
   @Post('login-with-social')
@@ -132,19 +177,36 @@ export class AuthController {
     status: 200,
     description: 'Returns Tokens or ChallengeRequiredResponse',
   })
-  login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    void res;
-    // Implement login flow, check MFA, etc.
-    return { message: 'Login flow', email: dto.email };
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    // 1. Kiểm tra user tồn tại
+    const user = await this.authService.validateUser(dto.email, dto.password);
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    // 2. Phát hành token
+    const tokens = await this.authService.issueTokenPair(user);
+
+    // 3. Set refresh token cookie
+    res.cookie('refresh_token', tokens.refreshToken, this.getRefreshCookieConfig());
+
+    return {
+      accessToken: tokens.accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        walletAddress: user.walletAddress,
+        avatar: user.avatar,
+      },
+    };
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password' })
-  resetPassword(@Body() dto: ResetPasswordDto) {
-    void dto;
-    // The service will validate the resetPasswordToken and update the password
-    // await this.authService.resetPassword(dto.resetPasswordToken, dto.newPassword);
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto.resetPasswordToken, dto.newPassword);
     return { success: true };
   }
 
@@ -169,24 +231,18 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Create an auth challenge for sensitive purposes' })
-  createChallenge(@Body() dto: AuthChallengeDto) {
-    // Return ChallengeRequiredResponse
-    return {
-      challengeId: 'ch_' + Math.random().toString(36).substring(7),
-      purpose: dto.purpose,
-      requiredFactors: ['TOTP', 'EMAIL_OTP'],
-      expiresAt: new Date(Date.now() + 5 * 60000).toISOString(),
-    };
+  async createChallenge(@Body() dto: AuthChallengeDto, @CurrentUser() user: JwtPayload) {
+    // Tạo thử thách xác thực (lưu DB hoặc cache, trả về challengeId, requiredFactors...)
+    return await this.authService.createChallenge(dto, user);
   }
 
   @Post('challenge/verify')
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify Challenge' })
-  verifyChallenge(@Body() dto: VerifyChallengeDto) {
-    void dto;
-    // Implement challenge verification
-    return { success: true };
+  async verifyChallenge(@Body() dto: VerifyChallengeDto, @CurrentUser() user: JwtPayload) {
+    // Xác thực thử thách (TOTP, Email OTP)
+    return await this.authService.verifyChallenge(dto, user);
   }
 
   @Post('refresh')
@@ -224,13 +280,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Change Password' })
-  changePassword(
+  async changePassword(
     @Body() dto: ChangePasswordDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    void dto;
-    void user;
-    // await this.authService.changePassword(user.sub, dto.oldPassword, dto.newPassword);
+    await this.authService.changePassword(user.sub, dto.oldPassword, dto.newPassword);
     return { success: true };
   }
 

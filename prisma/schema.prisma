@@ -12,6 +12,7 @@ model User {
   walletAddress       String   @unique
   encryptedPrivateKey String   @db.Text
   username            String?  @unique
+  avatar              String?
   role                String   @default("INVESTOR")
   kycStatus           String   @default("NONE")
   refreshTokenHash    String?  @db.Text

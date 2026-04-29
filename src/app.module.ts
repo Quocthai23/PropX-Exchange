@@ -24,6 +24,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PostsModule } from './modules/posts/posts.module';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { PositionsModule } from './modules/positions/positions.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { PositionsModule } from './modules/positions/positions.module';
     PostsModule,
     AccountsModule,
     PositionsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
