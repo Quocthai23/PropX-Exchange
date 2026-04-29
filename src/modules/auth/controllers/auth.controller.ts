@@ -1,3 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Controller,
   Get,
@@ -127,7 +133,9 @@ export class AuthController {
 
     // 3. Kiểm tra username (nếu có)
     if (dto.username) {
-      const usernameExisted = await this.authService.checkUsernameExists(dto.username);
+      const usernameExisted = await this.authService.checkUsernameExists(
+        dto.username,
+      );
       if (usernameExisted) {
         throw new UnauthorizedException('Username already taken');
       }
@@ -146,7 +154,11 @@ export class AuthController {
     const tokens = await this.authService.issueTokenPair(user);
 
     // 6. Set refresh token cookie
-    res.cookie('refresh_token', tokens.refreshToken, this.getRefreshCookieConfig());
+    res.cookie(
+      'refresh_token',
+      tokens.refreshToken,
+      this.getRefreshCookieConfig(),
+    );
 
     return {
       accessToken: tokens.accessToken,
@@ -177,7 +189,10 @@ export class AuthController {
     status: 200,
     description: 'Returns Tokens or ChallengeRequiredResponse',
   })
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     // 1. Kiểm tra user tồn tại
     const user = await this.authService.validateUser(dto.email, dto.password);
     if (!user) {
@@ -188,7 +203,11 @@ export class AuthController {
     const tokens = await this.authService.issueTokenPair(user);
 
     // 3. Set refresh token cookie
-    res.cookie('refresh_token', tokens.refreshToken, this.getRefreshCookieConfig());
+    res.cookie(
+      'refresh_token',
+      tokens.refreshToken,
+      this.getRefreshCookieConfig(),
+    );
 
     return {
       accessToken: tokens.accessToken,
@@ -206,7 +225,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    await this.authService.resetPassword(dto.resetPasswordToken, dto.newPassword);
+    await this.authService.resetPassword(
+      dto.resetPasswordToken,
+      dto.newPassword,
+    );
     return { success: true };
   }
 
@@ -231,7 +253,10 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Create an auth challenge for sensitive purposes' })
-  async createChallenge(@Body() dto: AuthChallengeDto, @CurrentUser() user: JwtPayload) {
+  async createChallenge(
+    @Body() dto: AuthChallengeDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
     // Tạo thử thách xác thực (lưu DB hoặc cache, trả về challengeId, requiredFactors...)
     return await this.authService.createChallenge(dto, user);
   }
@@ -240,7 +265,10 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify Challenge' })
-  async verifyChallenge(@Body() dto: VerifyChallengeDto, @CurrentUser() user: JwtPayload) {
+  async verifyChallenge(
+    @Body() dto: VerifyChallengeDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
     // Xác thực thử thách (TOTP, Email OTP)
     return await this.authService.verifyChallenge(dto, user);
   }
@@ -284,7 +312,11 @@ export class AuthController {
     @Body() dto: ChangePasswordDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    await this.authService.changePassword(user.sub, dto.oldPassword, dto.newPassword);
+    await this.authService.changePassword(
+      user.sub,
+      dto.oldPassword,
+      dto.newPassword,
+    );
     return { success: true };
   }
 

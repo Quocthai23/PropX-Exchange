@@ -1,4 +1,13 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UpdateProfileDto, UpdateReferralDto } from '../dto/update-user.dto';
@@ -38,23 +47,56 @@ export class UsersService {
         id: true,
         username: true,
         createdAt: true,
+        avatar: true,
+        gender: true,
+        bio: true,
+        coverAvatar: true,
+        displayName: true,
+        status: true,
       },
     });
     if (!user) throw new NotFoundException('user-not-found');
 
-    // Sử dụng currentUserId để giả lập check relation
-    const isFollowing = currentUserId ? false : false;
+    const [followerCount, followingCount, currentUserRelation] =
+      await Promise.all([
+        this.prisma.userRelation.count({
+          where: { toUserId: id, isFollowing: true },
+        }),
+        this.prisma.userRelation.count({
+          where: { fromUserId: id, isFollowing: true },
+        }),
+        currentUserId
+          ? this.prisma.userRelation.findUnique({
+              where: {
+                fromUserId_toUserId: {
+                  fromUserId: currentUserId,
+                  toUserId: id,
+                },
+              },
+            })
+          : null,
+      ]);
+
+    const isFollowing = currentUserRelation?.isFollowing || false;
+    const isBlocking = currentUserRelation?.isBlocking || false;
+
+    const isBlockedBy = currentUserId
+      ? !!(
+          await this.prisma.userRelation.findUnique({
+            where: {
+              fromUserId_toUserId: { fromUserId: id, toUserId: currentUserId },
+            },
+          })
+        )?.isBlocking
+      : false;
 
     return {
       ...user,
-      status: 1, // mock do schema.prisma chưa có
-      avatar: null, // mock
-      gender: null, // mock
-      followerCount: 0,
-      followingCount: 0,
+      followerCount,
+      followingCount,
       isFollowing,
-      isBlocking: false,
-      isBlockedBy: false,
+      isBlocking,
+      isBlockedBy,
     };
   }
 
@@ -62,9 +104,13 @@ export class UsersService {
     userId: string,
     dto: UpdateProfileDto,
   ): Promise<{ success: boolean }> {
-    const updateData: Record<string, string> = {};
-    // Hiện Prisma Schema chỉ có trường username, lọc các trường khác ra để không lỗi Prisma
+    const updateData: Record<string, any> = {};
     if (dto.username) updateData.username = dto.username;
+    if (dto.avatar !== undefined) updateData.avatar = dto.avatar;
+    if (dto.gender !== undefined) updateData.gender = dto.gender;
+    if (dto.bio !== undefined) updateData.bio = dto.bio;
+    if (dto.coverAvatar !== undefined) updateData.coverAvatar = dto.coverAvatar;
+    if (dto.displayName !== undefined) updateData.displayName = dto.displayName;
 
     if (Object.keys(updateData).length > 0) {
       await this.prisma.user.update({
@@ -78,21 +124,17 @@ export class UsersService {
   async getMyProfile(userId: string): Promise<Record<string, unknown>> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('user-not-found');
-    // Mock thêm các trường Schema chưa có mà Swagger yêu cầu
     return {
       ...user,
-      status: 1,
-      avatar: null,
-      gender: null,
-      referenceCode: 'MOCK-REF',
-      hasPassword: true,
-      enabledMfa: false,
+      hasPassword: !!user.passwordHash,
     };
   }
 
   async softDeleteAccount(userId: string): Promise<{ success: boolean }> {
-    // TODO: Schema.prisma hiện tại chưa có trường status, chờ Cập nhật DB
-    await Promise.resolve(userId);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { status: 'DELETED' },
+    });
     return { success: true };
   }
 
@@ -111,18 +153,65 @@ export class UsersService {
     skip: number,
     take: number,
   ): Promise<{ data: Record<string, unknown>[]; total: number }> {
-    // TODO: Query followings/followers
-    await Promise.resolve({ targetUserId, relationType, skip, take });
-    return { data: [], total: 0 };
+    let where: any = {};
+    let includeUser: 'fromUser' | 'toUser' = 'toUser';
+
+    if (relationType === 'followings') {
+      where = { fromUserId: targetUserId, isFollowing: true };
+      includeUser = 'toUser';
+    } else if (relationType === 'follower') {
+      where = { toUserId: targetUserId, isFollowing: true };
+      includeUser = 'fromUser';
+    } else if (relationType === 'block') {
+      where = { fromUserId: targetUserId, isBlocking: true };
+      includeUser = 'toUser';
+    }
+
+    const [relations, total] = await Promise.all([
+      this.prisma.userRelation.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          [includeUser]: {
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+              displayName: true,
+            },
+          },
+        },
+      }),
+      this.prisma.userRelation.count({ where }),
+    ]);
+
+    const data = relations.map((relation) => ({
+      ...(relation[includeUser] as Record<string, unknown>),
+    }));
+
+    return { data, total };
   }
 
   async toggleFavoriteAsset(
     userId: string,
     dto: ToggleFavoriteAssetDto,
   ): Promise<{ isFavorite: boolean }> {
-    // TODO: Add/remove to favorite logic
-    await Promise.resolve({ userId, dto });
-    return { isFavorite: true };
+    const existingFavorite = await this.prisma.favoriteAsset.findUnique({
+      where: { userId_assetId: { userId, assetId: dto.assetId } },
+    });
+
+    if (existingFavorite) {
+      await this.prisma.favoriteAsset.delete({
+        where: { id: existingFavorite.id },
+      });
+      return { isFavorite: false };
+    } else {
+      await this.prisma.favoriteAsset.create({
+        data: { userId, assetId: dto.assetId },
+      });
+      return { isFavorite: true };
+    }
   }
 
   async upsertRelation(
@@ -134,15 +223,78 @@ export class UsersService {
     isBlocking: boolean;
     isBlockedBy: boolean;
   }> {
-    await Promise.resolve({ currentUserId, targetUserId, dto });
-    return { isFollowing: true, isBlocking: false, isBlockedBy: false };
+    if (currentUserId === targetUserId) {
+      throw new BadRequestException('cannot-relate-to-self');
+    }
+
+    const existingRelation = await this.prisma.userRelation.findUnique({
+      where: {
+        fromUserId_toUserId: {
+          fromUserId: currentUserId,
+          toUserId: targetUserId,
+        },
+      },
+    });
+
+    const incomingRelation = await this.prisma.userRelation.findUnique({
+      where: {
+        fromUserId_toUserId: {
+          fromUserId: targetUserId,
+          toUserId: currentUserId,
+        },
+      },
+    });
+
+    const relationData: any = {};
+
+    switch (dto.action) {
+      case 'follow':
+        relationData.isFollowing = true;
+        relationData.isBlocking = false;
+        break;
+      case 'unfollow':
+        relationData.isFollowing = false;
+        break;
+      case 'block':
+        relationData.isBlocking = true;
+        relationData.isFollowing = false;
+        break;
+      case 'unblock':
+        relationData.isBlocking = false;
+        break;
+    }
+
+    let relation;
+    if (existingRelation) {
+      relation = await this.prisma.userRelation.update({
+        where: { id: existingRelation.id },
+        data: relationData,
+      });
+    } else {
+      relation = await this.prisma.userRelation.create({
+        data: {
+          fromUserId: currentUserId,
+          toUserId: targetUserId,
+          ...relationData,
+        },
+      });
+    }
+
+    return {
+      isFollowing: relation.isFollowing,
+      isBlocking: relation.isBlocking,
+      isBlockedBy: incomingRelation?.isBlocking || false,
+    };
   }
 
   async updateReferral(
     userId: string,
     dto: UpdateReferralDto,
   ): Promise<{ success: boolean }> {
-    await Promise.resolve({ userId, dto });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { referenceCode: dto.referenceCode },
+    });
     return { success: true };
   }
 

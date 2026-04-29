@@ -8,40 +8,44 @@ export class AssetsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getAssetCategories() {
-    await Promise.resolve();
-    // TODO: Fetch from actual Category table when added to schema
-    return [
-      {
-        marginMultiplier: '1.0',
-        code: 'RWA',
-        name: 'Real World Assets',
-        description: 'Tokenized Real Estate & Gold',
-      },
-      {
-        marginMultiplier: '0.5',
-        code: 'CRYPTO',
-        name: 'Cryptocurrency',
-        description: 'Digital Assets',
-      },
-    ];
+    const categories = await this.prisma.assetCategory.findMany({
+      where: { isActive: true },
+    });
+    return categories.map((cat) => ({
+      id: cat.id,
+      code: cat.name.toUpperCase().replace(/\s+/g, '_'),
+      name: cat.name,
+      description: cat.description,
+      marginMultiplier: '1.0',
+    }));
   }
 
   async getPublicAssets(userId?: string) {
-    await Promise.resolve(userId); // Xóa lỗi "defined but never used"
     const assets = await this.prisma.asset.findMany({
-      where: { isActive: true }, // Only show active assets to public
+      where: { isActive: true },
+      include: { category: true },
     });
 
-    // TODO: Fetch actual user favorites and map isFavorite boolean
+    let favoriteAssetIds: Set<string> = new Set();
+    if (userId) {
+      const favorites = await this.prisma.favoriteAsset.findMany({
+        where: { userId },
+        select: { assetId: true },
+      });
+      favoriteAssetIds = new Set(favorites.map((f) => f.assetId));
+    }
+
     return assets.map((asset) => ({
       ...asset,
-      isFavorite: false, // mock
+      isFavorite: favoriteAssetIds.has(asset.id),
       isHot: asset.isHot ?? false,
     }));
   }
 
   async getAdminAssets() {
-    return await this.prisma.asset.findMany();
+    return await this.prisma.asset.findMany({
+      include: { category: true },
+    });
   }
 
   async createAsset(dto: CreateAssetDto) {
@@ -49,9 +53,9 @@ export class AssetsService {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: {
         ...dto,
-        isActive: false, // Mặc định tài sản mới tạo chưa được public
-        tradingStatus: 'PENDING', // Đánh dấu trạng thái chờ duyệt
-      } as any, // Cast to any to bypass strict schema for precise decimals
+        isActive: false,
+        tradingStatus: 'OPEN',
+      } as any,
     });
     return { success: true, data: asset };
   }
@@ -63,8 +67,8 @@ export class AssetsService {
     await this.prisma.asset.update({
       where: { id },
       data: {
-        isActive: true, // Public tài sản ra cho user
-        tradingStatus: 'OPEN', // Cho phép giao dịch (khớp lệnh)
+        isActive: true,
+        tradingStatus: 'OPEN',
       },
     });
     return {
@@ -79,15 +83,13 @@ export class AssetsService {
 
     await this.prisma.asset.update({
       where: { id },
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      data: { ...dto } as any, // Cast to any to bypass schema limitations for now
+      data: { ...dto } as any,
     });
     return { success: true };
   }
 
   async reloadAssetConfig() {
     await Promise.resolve();
-    // TODO: Emit Redis Pub/Sub event to notify all trading-engine workers to reload configurations
     return { success: true };
   }
 }
