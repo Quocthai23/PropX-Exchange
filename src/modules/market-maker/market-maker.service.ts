@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { MarketDataService } from '../market-data/services/market-data.service';
 import Decimal from 'decimal.js';
-import { AppConfigService } from '../../config/app-config.service';
+import { AppConfigService } from '@/config/app-config.service';
 
 type DecimalValue = string | number | { toString(): string };
 

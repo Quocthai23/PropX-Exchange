@@ -1,20 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bull';
-import type { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import Decimal from 'decimal.js';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { $Enums } from '@prisma/client';
+import { PrismaService } from '@/prisma/prisma.service';
+import { TradingLedgerService } from './trading-ledger.service';
+import { MarketDataService } from '@/modules/market-data/services/market-data.service';
 
-type OrderSide = $Enums.OrderSide;
-type OrderStatus = $Enums.OrderStatus;
+type OrderStatus =
+  | 'PENDING'
+  | 'OPEN'
+  | 'PARTIALLY_FILLED'
+  | 'FILLED'
+  | 'CANCELLED'
+  | 'REJECTED';
 
 interface OrderMatchingJobData {
   orderId: string;
-  userId: string;
-  assetId: string;
-  side: OrderSide;
-  price: string;
-  quantity: string;
 }
 
 @Injectable()
@@ -23,6 +24,8 @@ export class OrderMatchingService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly tradingLedgerService: TradingLedgerService,
+    private readonly marketDataService: MarketDataService,
     @InjectQueue('order-matching') private orderMatchingQueue: Queue,
   ) {}
 
@@ -32,23 +35,12 @@ export class OrderMatchingService {
    */
   async queueOrder(
     orderId: string,
-    userId: string,
-    assetId: string,
-    side: OrderSide,
-    price: Decimal,
-    quantity: Decimal,
   ): Promise<{ jobId: string; queuedAt: Date }> {
     const job = await this.orderMatchingQueue.add(
       'match',
+      { orderId } as OrderMatchingJobData,
       {
-        orderId,
-        userId,
-        assetId,
-        side,
-        price: price.toString(),
-        quantity: quantity.toString(),
-      } as OrderMatchingJobData,
-      {
+        jobId: orderId,
         attempts: 3,
         backoff: {
           type: 'exponential',
@@ -62,7 +54,7 @@ export class OrderMatchingService {
     this.logger.log(`Order ${orderId} queued for matching. Job ID: ${job.id}`);
 
     return {
-      jobId: job.id.toString(),
+      jobId: String(job.id ?? orderId),
       queuedAt: new Date(),
     };
   }
@@ -72,76 +64,88 @@ export class OrderMatchingService {
    * Implements FIFO matching engine
    */
   async matchOrder(data: OrderMatchingJobData): Promise<{ matched: number }> {
-    const { orderId, userId, assetId, side: sideStr, price, quantity } = data;
-    const side = sideStr;
-    const priceDec = new Decimal(price);
-    const quantityDec = new Decimal(quantity);
+    const { orderId } = data;
+    const prisma = this.prisma as any;
 
     try {
       // Fetch the order
-      const order = await this.prisma.order.findUnique({
+      const order = await prisma.order.findUnique({
         where: { id: orderId },
       });
 
-      if (!order || order.status !== $Enums.OrderStatus.OPEN) {
+      if (!order || order.status !== 'OPEN') {
         this.logger.warn(
           `Order ${orderId} is not in OPEN status. Skipping match.`,
         );
         return { matched: 0 };
       }
 
+      const side = order.side;
+      const assetId = order.assetId;
+      const userId = order.userId;
+      const priceDec = new Decimal(order.price?.toString() ?? 0);
+      const quantityDec = new Decimal(order.quantity.toString());
       // Find matching orders from counterparty
       const oppositeOrderSide = side === 'BUY' ? 'SELL' : 'BUY';
       const priceFilter =
         side === 'BUY' ? { lte: priceDec } : { gte: priceDec };
 
-      const matchingOrders = await this.prisma.order.findMany({
+      const matchingOrders = await prisma.order.findMany({
         where: {
           assetId,
           side: oppositeOrderSide,
-          status: $Enums.OrderStatus.OPEN,
+          status: 'OPEN',
           price: priceFilter,
           NOT: { userId }, // Don't match with same user
         },
-        orderBy: {
-          createdAt: 'asc', // FIFO - match with oldest first
-        },
+        orderBy:
+          side === 'BUY'
+            ? [{ price: 'asc' }, { createdAt: 'asc' }] // Best ask first, then time
+            : [{ price: 'desc' }, { createdAt: 'asc' }], // Best bid first, then time
       });
 
       let remainingQuantity = quantityDec;
+      let currentOrderFilled = new Decimal(order.filledQuantity.toString());
       let tradeCount = 0;
+      const executedTrades: Array<{
+        assetId: string;
+        price: string;
+        quantity: string;
+        executedAt: Date;
+      }> = [];
 
-      // Process each matching order
-      for (const matchingOrder of matchingOrders) {
-        if (remainingQuantity.isZero()) break;
+      await prisma.$transaction(async (tx: any) => {
+        // Process all matches in a single DB transaction to reduce lock churn/deadlocks.
+        for (const matchingOrder of matchingOrders) {
+          if (remainingQuantity.isZero()) break;
 
-        const matchableQuantity = Decimal.min(
-          remainingQuantity,
-          new Decimal(matchingOrder.quantity).minus(
+          const matchingOrderRemaining = new Decimal(
+            matchingOrder.quantity,
+          ).minus(matchingOrder.filledQuantity);
+          if (matchingOrderRemaining.lte(0)) continue;
+
+          const matchableQuantity = Decimal.min(
+            remainingQuantity,
+            matchingOrderRemaining,
+          );
+          const matchPrice = new Decimal(matchingOrder.price?.toString() ?? 0);
+
+          const newOrderFilled = currentOrderFilled.plus(matchableQuantity);
+          const isOrderFilled = newOrderFilled.equals(quantityDec);
+          const orderNewStatus: OrderStatus = isOrderFilled
+            ? 'FILLED'
+            : 'PARTIALLY_FILLED';
+
+          const newMatchingOrderFilled = new Decimal(
             matchingOrder.filledQuantity,
-          ),
-        );
+          ).plus(matchableQuantity);
+          const isMatchingOrderFilled = newMatchingOrderFilled.equals(
+            new Decimal(matchingOrder.quantity),
+          );
+          const matchingOrderNewStatus: OrderStatus = isMatchingOrderFilled
+            ? 'FILLED'
+            : 'PARTIALLY_FILLED';
 
-        const newOrderFilled = new Decimal(order.filledQuantity).plus(
-          matchableQuantity,
-        );
-        const isOrderFilled = newOrderFilled.equals(quantityDec);
-        const orderNewStatus: OrderStatus = isOrderFilled
-          ? $Enums.OrderStatus.FILLED
-          : $Enums.OrderStatus.PARTIALLY_FILLED;
-
-        const newMatchingOrderFilled = new Decimal(
-          matchingOrder.filledQuantity,
-        ).plus(matchableQuantity);
-        const isMatchingOrderFilled = newMatchingOrderFilled.equals(
-          new Decimal(matchingOrder.quantity),
-        );
-        const matchingOrderNewStatus: OrderStatus = isMatchingOrderFilled
-          ? $Enums.OrderStatus.FILLED
-          : $Enums.OrderStatus.PARTIALLY_FILLED;
-
-        // Execute trade atomically
-        await this.prisma.$transaction(async (tx) => {
           await tx.order.update({
             where: { id: orderId },
             data: {
@@ -158,66 +162,65 @@ export class OrderMatchingService {
             },
           });
 
-          await tx.transaction.create({
+          await tx.trade.create({
             data: {
-              userId,
-              type:
-                side === $Enums.OrderSide.BUY
-                  ? $Enums.TransactionType.TRADE_BUY
-                  : $Enums.TransactionType.TRADE_SELL,
-              amount: matchableQuantity.times(priceDec).toString(),
-              fee: '0',
-              status: $Enums.TransactionStatus.COMPLETED,
+              assetId,
+              buyerId:
+                side === 'BUY' ? userId : matchingOrder.userId,
+              sellerId:
+                side === 'SELL' ? userId : matchingOrder.userId,
+              price: matchPrice,
+              quantity: matchableQuantity,
             },
           });
 
-          if (side === $Enums.OrderSide.BUY) {
-            await tx.balance.upsert({
-              where: { userId_assetId: { userId, assetId } },
-              create: {
-                userId,
-                assetId,
-                available: matchableQuantity.toString(),
-                locked: new Decimal(0).toString(),
-              },
-              update: {
-                available: {
-                  increment: matchableQuantity.toString(),
-                },
-              },
+          await tx.asset.update({
+            where: { id: assetId },
+            data: { tokenPrice: matchPrice },
+          });
+
+          executedTrades.push({
+            assetId,
+            price: matchPrice.toString(),
+            quantity: matchableQuantity.toString(),
+            executedAt: new Date(),
+          });
+
+          await this.tradingLedgerService.settleMatch({
+            tx,
+            buyerId:
+              side === 'BUY' ? userId : matchingOrder.userId,
+            sellerId:
+              side === 'SELL' ? userId : matchingOrder.userId,
+            assetId,
+            quantity: matchableQuantity,
+            price: matchPrice,
+          });
+
+          if (side === 'BUY' && matchPrice.lt(priceDec)) {
+            const refundAmount = matchableQuantity.times(
+              priceDec.minus(matchPrice),
+            );
+            await this.tradingLedgerService.refundBuyerPriceImprovement({
+              tx,
+              buyerId: userId,
+              amount: refundAmount,
             });
           }
 
-          if (side === $Enums.OrderSide.SELL) {
-            const cashBalance = await tx.balance.findFirst({
-              where: { userId, assetId: null },
-              select: { id: true },
-            });
+          remainingQuantity = remainingQuantity.minus(matchableQuantity);
+          currentOrderFilled = newOrderFilled;
+          tradeCount++;
+        }
+      });
 
-            if (cashBalance) {
-              await tx.balance.update({
-                where: { id: cashBalance.id },
-                data: {
-                  available: {
-                    increment: matchableQuantity.times(priceDec).toString(),
-                  },
-                },
-              });
-            } else {
-              await tx.balance.create({
-                data: {
-                  userId,
-                  assetId: null,
-                  available: matchableQuantity.times(priceDec).toString(),
-                  locked: new Decimal(0).toString(),
-                },
-              });
-            }
-          }
-        });
-
-        remainingQuantity = remainingQuantity.minus(matchableQuantity);
-        tradeCount++;
+      for (const trade of executedTrades) {
+        await this.marketDataService.recordTrade(
+          trade.assetId,
+          trade.price,
+          trade.quantity,
+          trade.executedAt,
+        );
       }
 
       this.logger.log(

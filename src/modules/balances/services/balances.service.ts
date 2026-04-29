@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -15,63 +16,72 @@ export class BalancesService {
       useAvailable?: boolean;
       useLocked?: boolean;
       description?: string;
+      tx?: Prisma.TransactionClient;
     },
   ) {
-    const { useAvailable = true, useLocked = false } = options || {};
+    const { useAvailable = true, useLocked = false, tx } = options || {};
 
     if (amount.lessThanOrEqualTo(0)) {
       throw new BadRequestException('Amount must be greater than zero');
     }
 
-    return this.prisma.$transaction(
-      async (tx) => {
-        let balance = await tx.balance.findFirst({
-          where: { userId, assetId },
-        });
+    const mutate = async (txClient: Prisma.TransactionClient) => {
+      let balance = await txClient.balance.findFirst({
+        where: { userId, assetId },
+      });
 
-        if (!balance) {
-          balance = await tx.balance.create({
-            data: {
-              userId,
-              assetId,
-              available: new Decimal(0),
-              locked: new Decimal(0),
-            },
-          });
-        }
-
-        let newAvailable = new Decimal(balance.available.toString());
-        let newLocked = new Decimal(balance.locked.toString());
-
-        if (type === 'credit') {
-          if (useAvailable) {
-            newAvailable = newAvailable.plus(amount);
-          }
-          if (useLocked) {
-            newLocked = newLocked.plus(amount);
-          }
-        } else if (type === 'debit') {
-          if (useAvailable) {
-            if (newAvailable.lessThan(amount)) {
-              throw new BadRequestException('Insufficient available balance');
-            }
-            newAvailable = newAvailable.minus(amount);
-          }
-          if (useLocked) {
-            if (newLocked.lessThan(amount)) {
-              throw new BadRequestException('Insufficient locked balance');
-            }
-            newLocked = newLocked.minus(amount);
-          }
-        }
-
-        return tx.balance.update({
-          where: { id: balance.id },
+      if (!balance) {
+        balance = await txClient.balance.create({
           data: {
-            available: newAvailable,
-            locked: newLocked,
+            userId,
+            assetId,
+            available: new Decimal(0),
+            locked: new Decimal(0),
           },
         });
+      }
+
+      let newAvailable = new Decimal(balance.available.toString());
+      let newLocked = new Decimal(balance.locked.toString());
+
+      if (type === 'credit') {
+        if (useAvailable) {
+          newAvailable = newAvailable.plus(amount);
+        }
+        if (useLocked) {
+          newLocked = newLocked.plus(amount);
+        }
+      } else if (type === 'debit') {
+        if (useAvailable) {
+          if (newAvailable.lessThan(amount)) {
+            throw new BadRequestException('Insufficient available balance');
+          }
+          newAvailable = newAvailable.minus(amount);
+        }
+        if (useLocked) {
+          if (newLocked.lessThan(amount)) {
+            throw new BadRequestException('Insufficient locked balance');
+          }
+          newLocked = newLocked.minus(amount);
+        }
+      }
+
+      return txClient.balance.update({
+        where: { id: balance.id },
+        data: {
+          available: newAvailable,
+          locked: newLocked,
+        },
+      });
+    };
+
+    if (tx) {
+      return mutate(tx);
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        return mutate(tx);
       },
       {
         isolationLevel: 'Serializable',
@@ -99,45 +109,54 @@ export class BalancesService {
     assetId: string | null,
     amount: Decimal,
     direction: 'available_to_locked' | 'locked_to_available',
+    tx?: Prisma.TransactionClient,
   ) {
     if (amount.lessThanOrEqualTo(0)) {
       throw new BadRequestException('Amount must be greater than zero');
     }
 
+    const mutate = async (txClient: Prisma.TransactionClient) => {
+      const balance = await txClient.balance.findFirst({
+        where: { userId, assetId },
+      });
+
+      if (!balance) {
+        throw new BadRequestException('Balance not found');
+      }
+
+      let newAvailable = new Decimal(balance.available.toString());
+      let newLocked = new Decimal(balance.locked.toString());
+
+      if (direction === 'available_to_locked') {
+        if (newAvailable.lessThan(amount)) {
+          throw new BadRequestException('Insufficient available balance');
+        }
+        newAvailable = newAvailable.minus(amount);
+        newLocked = newLocked.plus(amount);
+      } else {
+        if (newLocked.lessThan(amount)) {
+          throw new BadRequestException('Insufficient locked balance');
+        }
+        newLocked = newLocked.minus(amount);
+        newAvailable = newAvailable.plus(amount);
+      }
+
+      return txClient.balance.update({
+        where: { id: balance.id },
+        data: {
+          available: newAvailable,
+          locked: newLocked,
+        },
+      });
+    };
+
+    if (tx) {
+      return mutate(tx);
+    }
+
     return this.prisma.$transaction(
       async (tx) => {
-        const balance = await tx.balance.findFirst({
-          where: { userId, assetId },
-        });
-
-        if (!balance) {
-          throw new BadRequestException('Balance not found');
-        }
-
-        let newAvailable = new Decimal(balance.available.toString());
-        let newLocked = new Decimal(balance.locked.toString());
-
-        if (direction === 'available_to_locked') {
-          if (newAvailable.lessThan(amount)) {
-            throw new BadRequestException('Insufficient available balance');
-          }
-          newAvailable = newAvailable.minus(amount);
-          newLocked = newLocked.plus(amount);
-        } else {
-          if (newLocked.lessThan(amount)) {
-            throw new BadRequestException('Insufficient locked balance');
-          }
-          newLocked = newLocked.minus(amount);
-          newAvailable = newAvailable.plus(amount);
-        }
-
-        return tx.balance.update({
-          where: { id: balance.id },
-          data: {
-            available: newAvailable,
-            locked: newLocked,
-          },
-        });
+        return mutate(tx);
       },
       {
         isolationLevel: 'Serializable',

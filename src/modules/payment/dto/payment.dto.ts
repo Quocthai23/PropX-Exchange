@@ -87,6 +87,18 @@ export class TransferV2Dto {
   @IsString()
   assetId?: string;
 
+  @ApiPropertyOptional({ description: 'Receiver user ID' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  toUserId?: string;
+
+  @ApiPropertyOptional({ description: 'Receiver email' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  toEmail?: string;
+
   @ApiProperty({
     description: 'Client-generated UUID to prevent duplicate submissions',
   })

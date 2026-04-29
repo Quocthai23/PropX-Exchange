@@ -208,6 +208,80 @@ export class AuthService {
     };
   }
 
+  async loginWithSocial(provider: string, idToken: string) {
+    const decoded = this.jwtService.decode(idToken) as {
+      email?: string;
+      sub?: string;
+      name?: string;
+      picture?: string;
+    } | null;
+
+    if (!decoded) {
+      throw new UnauthorizedException('Invalid social token');
+    }
+
+    const socialSub = decoded.sub?.trim();
+    if (!socialSub) {
+      throw new UnauthorizedException('Social token subject is missing');
+    }
+
+    const normalizedProvider = provider.toLowerCase();
+    const email =
+      decoded.email?.toLowerCase().trim() ||
+      `${normalizedProvider}_${socialSub}@social.local`;
+
+    let user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        walletAddress: true,
+        avatar: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      const wallet = ethers.Wallet.createRandom();
+      const encryptedPrivateKey = this.encryptionService.encrypt(
+        wallet.privateKey,
+      );
+
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          username:
+            decoded.name?.trim() || `${normalizedProvider}_${socialSub}`,
+          avatar: decoded.picture,
+          walletAddress: wallet.address,
+          encryptedPrivateKey,
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          walletAddress: true,
+          avatar: true,
+          role: true,
+        },
+      });
+    }
+
+    const tokens = await this.issueTokenPair(user);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        walletAddress: user.walletAddress,
+        avatar: user.avatar,
+      },
+    };
+  }
+
   async refreshAccessToken(refreshToken: string): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -295,6 +369,30 @@ export class AuthService {
   async checkEmailExists(email: string): Promise<boolean> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     return !!user;
+  }
+
+  async checkReferenceCode(referenceCode: string): Promise<{
+    exists: boolean;
+    isValid: boolean;
+  }> {
+    const code = referenceCode.trim();
+    if (!code) {
+      return { exists: false, isValid: false };
+    }
+
+    const owner = await this.prisma.user.findUnique({
+      where: { referenceCode: code },
+      select: { id: true, status: true },
+    });
+
+    if (!owner) {
+      return { exists: false, isValid: false };
+    }
+
+    return {
+      exists: true,
+      isValid: owner.status === 'ACTIVE',
+    };
   }
 
   // Kiểm tra username đã tồn tại chưa

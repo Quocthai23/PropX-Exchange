@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersService } from './orders.service';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { BalancesService } from '../../balances/services/balances.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { OrderMatchingService } from './order-matching.service';
+import { TradingLedgerService } from './trading-ledger.service';
 import Decimal from 'decimal.js';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
@@ -26,12 +26,13 @@ const mockTx = {
   },
 };
 
-const mockBalancesService = {
-  updateBalance: jest.fn(),
-};
-
 const mockOrderMatchingService = {
   queueOrder: jest.fn(),
+};
+
+const mockTradingLedgerService = {
+  lockOrderFunds: jest.fn(),
+  unlockOrderRemainder: jest.fn(),
 };
 
 describe('OrdersService', () => {
@@ -42,13 +43,15 @@ describe('OrdersService', () => {
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: BalancesService, useValue: mockBalancesService },
         { provide: OrderMatchingService, useValue: mockOrderMatchingService },
+        { provide: TradingLedgerService, useValue: mockTradingLedgerService },
       ],
     }).compile();
 
     service = module.get<OrdersService>(OrdersService);
     jest.clearAllMocks();
+    mockTradingLedgerService.lockOrderFunds.mockResolvedValue({});
+    mockTradingLedgerService.unlockOrderRemainder.mockResolvedValue({});
   });
 
   describe('createOrder', () => {
@@ -114,8 +117,9 @@ describe('OrdersService', () => {
         isActive: true,
         tradingStatus: 'OPEN',
         tokenPrice: new Decimal(100),
+        referencePrice: new Decimal(100),
+        priceBandPercentage: new Decimal(0.1),
       });
-      mockBalancesService.updateBalance.mockResolvedValue({});
       mockPrisma.order.create.mockResolvedValue({
         id: 'new-order-id',
         status: 'OPEN',

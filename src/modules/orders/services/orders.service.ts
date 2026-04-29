@@ -3,9 +3,9 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { BalancesService } from '../../balances/services/balances.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { OrderMatchingService } from './order-matching.service';
+import { TradingLedgerService } from './trading-ledger.service';
 import {
   BulkCancelOrdersDto,
   UpdateOrderDto,
@@ -18,9 +18,31 @@ import Decimal from 'decimal.js';
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly balancesService: BalancesService,
     private readonly orderMatchingService: OrderMatchingService,
+    private readonly tradingLedgerService: TradingLedgerService,
   ) {}
+
+  private validatePriceBand(
+    orderPrice: Decimal,
+    referencePrice: Decimal | null,
+    bandPercentage: Decimal | null,
+  ) {
+    if (!referencePrice) {
+      throw new BadRequestException(
+        'Asset reference price (NAV) is not configured for trading',
+      );
+    }
+
+    const band = bandPercentage ?? new Decimal(0);
+    const lowerBound = referencePrice.mul(new Decimal(1).minus(band));
+    const upperBound = referencePrice.mul(new Decimal(1).plus(band));
+
+    if (orderPrice.lt(lowerBound) || orderPrice.gt(upperBound)) {
+      throw new BadRequestException(
+        `Order price must stay within circuit breaker band [${lowerBound.toFixed()}, ${upperBound.toFixed()}] around NAV`,
+      );
+    }
+  }
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     const { side, type, assetId, quantity, price, idempotencyKey } = dto;
@@ -48,41 +70,26 @@ export class OrdersService {
     const quantityDec = new Decimal(quantity);
     const priceDec =
       type === 'MARKET' ? asset.tokenPrice : new Decimal(price || 0);
-    const totalCost = quantityDec.times(priceDec);
+    if (type === 'LIMIT') {
+      this.validatePriceBand(
+        priceDec,
+        asset.referencePrice ? new Decimal(asset.referencePrice.toString()) : null,
+        asset.priceBandPercentage
+          ? new Decimal(asset.priceBandPercentage.toString())
+          : null,
+      );
+    }
 
     await this.prisma.$transaction(
-      async () => {
-        if (side === 'BUY') {
-          await this.balancesService.updateBalance(
-            userId,
-            null,
-            totalCost,
-            'debit',
-            { useAvailable: true },
-          );
-          await this.balancesService.updateBalance(
-            userId,
-            null,
-            totalCost,
-            'credit',
-            { useLocked: true },
-          );
-        } else if (side === 'SELL') {
-          await this.balancesService.updateBalance(
-            userId,
-            assetId,
-            quantityDec,
-            'debit',
-            { useAvailable: true },
-          );
-          await this.balancesService.updateBalance(
-            userId,
-            assetId,
-            quantityDec,
-            'credit',
-            { useLocked: true },
-          );
-        }
+      async (tx) => {
+        await this.tradingLedgerService.lockOrderFunds({
+          tx,
+          userId,
+          side,
+          assetId,
+          quantity: quantityDec,
+          price: priceDec,
+        });
       },
       { isolationLevel: 'Serializable' },
     );
@@ -101,14 +108,7 @@ export class OrdersService {
       },
     });
 
-    await this.orderMatchingService.queueOrder(
-      order.id,
-      userId,
-      assetId,
-      side as 'BUY' | 'SELL',
-      priceDec,
-      quantityDec,
-    );
+    await this.orderMatchingService.queueOrder(order.id);
 
     return { orderId: order.id, status: order.status };
   }
@@ -155,8 +155,50 @@ export class OrdersService {
     if (dto.cancel) {
       return this.cancelOrder(userId, orderId);
     }
+    if (!['PENDING', 'OPEN'].includes(order.status)) {
+      throw new BadRequestException('Only open/pending orders can be updated');
+    }
 
-    throw new BadRequestException('Update not implemented');
+    if (order.type === 'MARKET') {
+      throw new BadRequestException('Market order cannot be updated');
+    }
+
+    const hasPriceUpdate = dto.price !== undefined && dto.price !== null;
+    if (!hasPriceUpdate) {
+      throw new BadRequestException('No mutable fields provided');
+    }
+
+    const nextPrice = new Decimal(dto.price as string | number);
+    if (nextPrice.lte(0)) {
+      throw new BadRequestException('Price must be positive');
+    }
+    const asset = await this.prisma.asset.findUnique({
+      where: { id: order.assetId },
+      select: { referencePrice: true, priceBandPercentage: true },
+    });
+    if (!asset) {
+      throw new NotFoundException('Asset not found');
+    }
+
+    this.validatePriceBand(
+      nextPrice,
+      asset.referencePrice ? new Decimal(asset.referencePrice.toString()) : null,
+      asset.priceBandPercentage
+        ? new Decimal(asset.priceBandPercentage.toString())
+        : null,
+    );
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: { price: nextPrice },
+      select: { id: true, status: true, price: true },
+    });
+
+    return {
+      orderId: updated.id,
+      status: updated.status,
+      price: updated.price?.toString() ?? null,
+    };
   }
 
   async cancelOrder(userId: string, orderId: string) {
@@ -179,48 +221,21 @@ export class OrdersService {
     const remainingQuantity = new Decimal(order.quantity.toString()).minus(
       new Decimal(order.filledQuantity.toString()),
     );
-    const remainingValue = remainingQuantity.times(
-      new Decimal(order.price?.toString() || 0),
-    );
-
     await this.prisma.$transaction(
-      async () => {
-        await this.prisma.order.update({
+      async (tx) => {
+        await tx.order.update({
           where: { id: orderId },
           data: { status: 'CANCELLED' },
         });
 
-        if (order.side === 'BUY') {
-          await this.balancesService.updateBalance(
-            userId,
-            null,
-            remainingValue,
-            'debit',
-            { useLocked: true },
-          );
-          await this.balancesService.updateBalance(
-            userId,
-            null,
-            remainingValue,
-            'credit',
-            { useAvailable: true },
-          );
-        } else {
-          await this.balancesService.updateBalance(
-            userId,
-            order.assetId,
-            remainingQuantity,
-            'debit',
-            { useLocked: true },
-          );
-          await this.balancesService.updateBalance(
-            userId,
-            order.assetId,
-            remainingQuantity,
-            'credit',
-            { useAvailable: true },
-          );
-        }
+        await this.tradingLedgerService.unlockOrderRemainder({
+          tx,
+          userId,
+          side: order.side,
+          assetId: order.assetId,
+          remainingQuantity,
+          orderPrice: new Decimal(order.price?.toString() || 0),
+        });
       },
       { isolationLevel: 'Serializable' },
     );

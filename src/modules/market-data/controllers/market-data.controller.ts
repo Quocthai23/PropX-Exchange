@@ -1,11 +1,19 @@
 import { Controller, Get, Query, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiProperty } from '@nestjs/swagger';
 import {
   MarketDataService,
   CandlePoint,
 } from '../services/market-data.service';
 import { ExternalValuationService } from '../services/external-valuation.service';
 import { GetCandlesDto, GetValuationHistoryDto } from '../dto/market-data.dto';
+import { IsNotEmpty, IsString } from 'class-validator';
+
+class GetReferencePriceQueryDto {
+  @ApiProperty({ description: 'Unique identifier of the Asset' })
+  @IsString()
+  @IsNotEmpty()
+  assetId: string;
+}
 
 @ApiTags('3. Market Data (Charts)')
 @Controller('market-data')
@@ -29,6 +37,15 @@ export class MarketDataController {
       new Date(query.from),
       new Date(query.to),
     );
+  }
+
+  @Get('reference-price')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get NAV reference line and market price for chart overlays',
+  })
+  async getReferencePrice(@Query() query: GetReferencePriceQueryDto) {
+    return this.marketDataService.getReferencePriceAnchor(query.assetId);
   }
 
   @Get('valuation/history')

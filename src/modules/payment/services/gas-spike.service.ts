@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import Decimal from 'decimal.js';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { BlockchainService } from '../../assets/services/blockchain.service';
 import { $Enums } from '@prisma/client';
 

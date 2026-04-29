@@ -917,6 +917,47 @@
         ]
       }
     },
+    "/kyc/admin/proposals/{proposalId}/approve": {
+      "patch": {
+        "operationId": "KycController_approveProposal",
+        "parameters": [
+          {
+            "name": "proposalId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "tags": [
+          "Kyc"
+        ]
+      }
+    },
     "/notifications": {
       "get": {
         "description": "List notifications for the current authenticated user",
@@ -1196,6 +1237,408 @@
         "tags": [
           "Assets",
           "Assets"
+        ]
+      }
+    },
+    "/assets/{id}/onboarding/submit": {
+      "post": {
+        "operationId": "AssetsController_submitOnboarding",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitAssetOnboardingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit legal dossier for asset onboarding",
+        "tags": [
+          "Assets",
+          "Assets"
+        ]
+      }
+    },
+    "/admin/assets": {
+      "get": {
+        "operationId": "AdminAssetsController_getAdminAssets",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get list of assets with full asset configuration fields",
+        "tags": [
+          "Admin - Assets"
+        ]
+      },
+      "post": {
+        "operationId": "AdminAssetsController_createAsset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Create a new asset (Pending approval)",
+        "tags": [
+          "Admin - Assets"
+        ]
+      }
+    },
+    "/admin/assets/config/reload": {
+      "post": {
+        "operationId": "AdminAssetsController_reloadConfig",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Publish assets reload event to trading engine",
+        "tags": [
+          "Admin - Assets"
+        ]
+      }
+    },
+    "/admin/assets/{id}/approve": {
+      "patch": {
+        "operationId": "AdminAssetsController_approveAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Approve and activate an asset for trading",
+        "tags": [
+          "Admin - Assets"
+        ]
+      }
+    },
+    "/admin/assets/proposals/{proposalId}/approve": {
+      "patch": {
+        "operationId": "AdminAssetsController_approveMintProposal",
+        "parameters": [
+          {
+            "name": "proposalId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Approve multisig mint proposal; executes once threshold reached",
+        "tags": [
+          "Admin - Assets"
+        ]
+      }
+    },
+    "/admin/assets/{id}": {
+      "patch": {
+        "operationId": "AdminAssetsController_updateAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Upsert asset configuration",
+        "tags": [
+          "Admin - Assets"
+        ]
+      }
+    },
+    "/admin/assets/{id}/onboarding/review": {
+      "patch": {
+        "operationId": "AdminAssetsController_reviewOnboarding",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewAssetOnboardingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Review due diligence and custody transfer result",
+        "tags": [
+          "Admin - Assets"
         ]
       }
     },
@@ -1887,7 +2330,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -2063,6 +2513,201 @@
         "summary": "Create order",
         "tags": [
           "Orders"
+        ]
+      }
+    },
+    "/market-data/candles": {
+      "get": {
+        "operationId": "MarketDataController_getCandles",
+        "parameters": [
+          {
+            "name": "assetId",
+            "required": true,
+            "in": "query",
+            "description": "Unique identifier of the Asset",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resolution",
+            "required": true,
+            "in": "query",
+            "description": "Candlestick resolution/timeframe",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "1h",
+                "4h",
+                "1d",
+                "1w"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Start time in ISO8601 format",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "End time in ISO8601 format",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns array of OHLCV candles wrapped in data property"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Get OHLC candle data for Lightweight Charts",
+        "tags": [
+          "3. Market Data (Charts)"
+        ]
+      }
+    },
+    "/market-data/reference-price": {
+      "get": {
+        "operationId": "MarketDataController_getReferencePrice",
+        "parameters": [
+          {
+            "name": "assetId",
+            "required": true,
+            "in": "query",
+            "description": "Unique identifier of the Asset",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Get NAV reference line and market price for chart overlays",
+        "tags": [
+          "3. Market Data (Charts)"
+        ]
+      }
+    },
+    "/market-data/valuation/history": {
+      "get": {
+        "operationId": "MarketDataController_getValuationHistory",
+        "parameters": [
+          {
+            "name": "assetId",
+            "required": true,
+            "in": "query",
+            "description": "Unique identifier of the Asset",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaCode",
+            "required": false,
+            "in": "query",
+            "description": "Area code for specific regional valuation",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to take (max 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns valuation history data"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Get external valuation snapshots from crawl providers",
+        "tags": [
+          "3. Market Data (Charts)"
         ]
       }
     },
@@ -3413,6 +4058,53 @@
         ]
       }
     },
+    "/dividends/claim-proof/{distributionId}": {
+      "get": {
+        "operationId": "DividendsController_getClaimProof",
+        "parameters": [
+          {
+            "name": "distributionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get Merkle proof for on-chain dividend claim",
+        "tags": [
+          "Dividends"
+        ]
+      }
+    },
     "/dividends/claim/{distributionId}": {
       "post": {
         "operationId": "DividendsController_claimDividend",
@@ -3457,151 +4149,6 @@
         "summary": "Claim a dividend to USDT balance",
         "tags": [
           "Dividends"
-        ]
-      }
-    },
-    "/market-data/candles": {
-      "get": {
-        "operationId": "MarketDataController_getCandles",
-        "parameters": [
-          {
-            "name": "assetId",
-            "required": true,
-            "in": "query",
-            "description": "Unique identifier of the Asset",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "resolution",
-            "required": true,
-            "in": "query",
-            "description": "Candlestick resolution/timeframe",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "1m",
-                "5m",
-                "15m",
-                "1h",
-                "4h",
-                "1d",
-                "1w"
-              ]
-            }
-          },
-          {
-            "name": "from",
-            "required": true,
-            "in": "query",
-            "description": "Start time in ISO8601 format",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": true,
-            "in": "query",
-            "description": "End time in ISO8601 format",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Returns array of OHLCV candles wrapped in data property"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "summary": "Get OHLC candle data for Lightweight Charts",
-        "tags": [
-          "3. Market Data (Charts)"
-        ]
-      }
-    },
-    "/market-data/valuation/history": {
-      "get": {
-        "operationId": "MarketDataController_getValuationHistory",
-        "parameters": [
-          {
-            "name": "assetId",
-            "required": true,
-            "in": "query",
-            "description": "Unique identifier of the Asset",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "areaCode",
-            "required": false,
-            "in": "query",
-            "description": "Area code for specific regional valuation",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of items to take (max 100)",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 30,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Returns valuation history data"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "summary": "Get external valuation snapshots from crawl providers",
-        "tags": [
-          "3. Market Data (Charts)"
         ]
       }
     },
@@ -4373,773 +4920,6 @@
           "Posts"
         ]
       }
-    },
-    "/accounts/types": {
-      "get": {
-        "description": "Get list of active account types (public endpoint)",
-        "operationId": "AccountsController_getTypes",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "List account types",
-        "tags": [
-          "Accounts"
-        ]
-      }
-    },
-    "/accounts/balance": {
-      "get": {
-        "operationId": "AccountsController_getBalance",
-        "parameters": [
-          {
-            "name": "accountId",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "Get account balance details",
-        "tags": [
-          "Accounts"
-        ]
-      }
-    },
-    "/accounts": {
-      "get": {
-        "description": "Get all trading accounts of current user",
-        "operationId": "AccountsController_getAccounts",
-        "parameters": [
-          {
-            "name": "accountTypeId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "List user accounts",
-        "tags": [
-          "Accounts"
-        ]
-      }
-    },
-    "/accounts/{id}": {
-      "patch": {
-        "operationId": "AccountsController_updateAccount",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAccountDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "Update account name, avatar, leverage, and status",
-        "tags": [
-          "Accounts"
-        ]
-      }
-    },
-    "/admin/accounts/{id}/info": {
-      "get": {
-        "description": "Get detailed account info for an account (DB & Redis)",
-        "operationId": "AdminAccountsController_getInfo",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "Get account info",
-        "tags": [
-          "Admin - User"
-        ]
-      }
-    },
-    "/positions/stats": {
-      "get": {
-        "operationId": "PositionsController_getStats",
-        "parameters": [
-          {
-            "name": "accountId",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "Get statistics about positions and orders of the account",
-        "tags": [
-          "Positions"
-        ]
-      }
-    },
-    "/positions/bulk-close": {
-      "post": {
-        "operationId": "PositionsController_bulkClose",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BulkClosePositionsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "Bulk close positions",
-        "tags": [
-          "Positions"
-        ]
-      }
-    },
-    "/positions/{positionId}/close": {
-      "post": {
-        "operationId": "PositionsController_closePosition",
-        "parameters": [
-          {
-            "name": "positionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ClosePositionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "Close position",
-        "tags": [
-          "Positions"
-        ]
-      }
-    },
-    "/positions": {
-      "get": {
-        "operationId": "PositionsController_getPositions",
-        "parameters": [
-          {
-            "name": "take",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "skip",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 0,
-              "default": 0,
-              "type": "number"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "symbol",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "side",
-            "required": false,
-            "in": "query",
-            "description": "Order side: 0 for buy, 1 for sell",
-            "schema": {
-              "type": "number",
-              "enum": [
-                0,
-                1
-              ]
-            }
-          },
-          {
-            "name": "sortBy",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": "openedAt",
-              "type": "string",
-              "enum": [
-                "openedAt",
-                "closedAt",
-                "quantity",
-                "symbol",
-                "side",
-                "realizedPnl"
-              ]
-            }
-          },
-          {
-            "name": "sortDir",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": "desc",
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "description": "Array of position statuses",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          },
-          {
-            "name": "fromDate",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "toDate",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "accountId",
-            "required": true,
-            "in": "query",
-            "description": "Trading account ID",
-            "schema": {
-              "pattern": "^(real|demo)_[0-9]{8}$",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "List positions",
-        "tags": [
-          "Positions"
-        ]
-      }
-    },
-    "/positions/{positionId}": {
-      "put": {
-        "operationId": "PositionsController_updatePosition",
-        "parameters": [
-          {
-            "name": "positionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePositionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "Update position",
-        "tags": [
-          "Positions"
-        ]
-      }
-    },
-    "/admin/positions": {
-      "get": {
-        "description": "Get list of positions for an account with filters and pagination",
-        "operationId": "AdminPositionsController_getAdminPositions",
-        "parameters": [
-          {
-            "name": "take",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "skip",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 0,
-              "default": 0,
-              "type": "number"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "symbol",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "side",
-            "required": false,
-            "in": "query",
-            "description": "Order side: 0 for buy, 1 for sell",
-            "schema": {
-              "type": "number",
-              "enum": [
-                0,
-                1
-              ]
-            }
-          },
-          {
-            "name": "sortBy",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": "openedAt",
-              "type": "string",
-              "enum": [
-                "openedAt",
-                "closedAt",
-                "quantity",
-                "symbol",
-                "side",
-                "realizedPnl"
-              ]
-            }
-          },
-          {
-            "name": "sortDir",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": "desc",
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "description": "Array of position statuses",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          },
-          {
-            "name": "fromDate",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "toDate",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "accountId",
-            "required": false,
-            "in": "query",
-            "description": "Optional trading account ID",
-            "schema": {
-              "pattern": "^(real|demo)_[0-9]{8}$",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "summary": "Get positions",
-        "tags": [
-          "Admin - User"
-        ]
-      }
     }
   },
   "info": {
@@ -5382,6 +5162,244 @@
           "reason"
         ]
       },
+      "SubmitAssetOnboardingDto": {
+        "type": "object",
+        "properties": {
+          "legalDocumentUrls": {
+            "description": "Legal document URLs (title deed, legal docs, custody authorization)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ownerNote": {
+            "type": "string",
+            "description": "Optional note from asset owner"
+          }
+        },
+        "required": [
+          "legalDocumentUrls"
+        ]
+      },
+      "CreateAssetDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "On-chain token symbol (e.g., RWA-EST-01)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Asset name (e.g., Vinhome Landmark 81 Apartment)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed asset description"
+          },
+          "logo": {
+            "type": "string",
+            "description": "Logo or asset image URL"
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Asset category ID"
+          },
+          "totalSupply": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Total supply of this asset token",
+            "example": 10000
+          },
+          "tokenPrice": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Price per token (USDT)",
+            "example": 50
+          },
+          "expectedApy": {
+            "type": "number",
+            "description": "Expected annual yield (APY %)",
+            "example": 8.5
+          },
+          "isHot": {
+            "type": "boolean",
+            "description": "Whether this asset is highlighted as hot"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "categoryId",
+          "totalSupply",
+          "tokenPrice"
+        ]
+      },
+      "UpdateAssetDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "description": "Asset symbol (e.g. EURUSD)"
+          },
+          "priceSourceSymbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "description": "Price source symbol"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Asset display name"
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Asset category identifier"
+          },
+          "logo": {
+            "type": "string",
+            "format": "uri",
+            "description": "Asset logo URL"
+          },
+          "digit": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 20,
+            "description": "Decimal digits for price formatting"
+          },
+          "spread": {
+            "type": "string",
+            "description": "Asset spread type: floating or fixed",
+            "enum": [
+              "floating",
+              "fixed"
+            ]
+          },
+          "marginCurrency": {
+            "type": "string",
+            "description": "Currency used for margin"
+          },
+          "profitCurrency": {
+            "type": "string",
+            "description": "Currency used for profit and PnL"
+          },
+          "chartMode": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Chart mode: 0 = Bid Price, 1 = Ask Price"
+          },
+          "trade": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2,
+            "description": "Trade mode: 0 = Full Access, 1 = Only Buy, 2 = Only Sell"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the asset is tradable"
+          },
+          "referencePrice": {
+            "type": "string",
+            "description": "Reference price (NAV) maintained by admin/independent valuation report"
+          },
+          "priceBandPercentage": {
+            "type": "string",
+            "description": "Allowed order price band around NAV (e.g. 0.1 = +/-10%, 0.15 = +/-15%)"
+          },
+          "minTradeSize": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "maxTradeSize": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "volumeStep": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "pipSize": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "slippage": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "swapType": {
+            "type": "string"
+          },
+          "swapLong": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "swapShort": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "marginMultiplier": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "contractSize": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "tradingCommissionPerLot": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "ibCommissionPerLot": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "rebatePerLot": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "minSpread": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "spreadMultiplier": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "tpslSpreadMultiplier": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "swapRates": {
+            "type": "object",
+            "description": "Optional per-weekday swap rate configuration"
+          }
+        }
+      },
+      "ReviewAssetOnboardingDto": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "description": "Approve or reject due diligence result"
+          },
+          "spvEntity": {
+            "type": "string",
+            "minLength": 2,
+            "description": "SPV legal entity after custody transfer"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Review note"
+          }
+        },
+        "required": [
+          "approved"
+        ]
+      },
       "DepositDemoDto": {
         "type": "object",
         "properties": {
@@ -5472,6 +5490,14 @@
           "assetId": {
             "type": "string",
             "description": "Asset ID"
+          },
+          "toUserId": {
+            "type": "string",
+            "description": "Receiver user ID"
+          },
+          "toEmail": {
+            "type": "string",
+            "description": "Receiver email"
           },
           "idempotencyKey": {
             "type": "string",
@@ -6059,98 +6085,6 @@
         },
         "required": [
           "content"
-        ]
-      },
-      "UpdateAccountDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 100,
-            "pattern": "^[a-zA-Z0-9\\s_-]+$"
-          },
-          "avatar": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL to user avatar image"
-          },
-          "leverage": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 200,
-            "description": "Account leverage"
-          },
-          "status": {
-            "type": "number",
-            "description": "Account status, 0 = INACTIVE, 1 = ACTIVE, 2 = BANNED",
-            "enum": [
-              0,
-              1,
-              2
-            ]
-          }
-        }
-      },
-      "BulkClosePositionsDto": {
-        "type": "object",
-        "properties": {
-          "accountId": {
-            "type": "string",
-            "pattern": "^(real|demo)_[0-9]{8}$",
-            "description": "Trading account ID"
-          },
-          "positionIds": {
-            "minItems": 1,
-            "description": "Array of position IDs to close",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "accountId",
-          "positionIds"
-        ]
-      },
-      "ClosePositionDto": {
-        "type": "object",
-        "properties": {
-          "accountId": {
-            "type": "string",
-            "pattern": "^(real|demo)_[0-9]{8}$",
-            "description": "Trading account ID"
-          },
-          "quantity": {
-            "type": "object",
-            "description": "Close quantity (partial/full)"
-          }
-        },
-        "required": [
-          "accountId",
-          "quantity"
-        ]
-      },
-      "UpdatePositionDto": {
-        "type": "object",
-        "properties": {
-          "accountId": {
-            "type": "string",
-            "pattern": "^(real|demo)_[0-9]{8}$",
-            "description": "Trading account ID"
-          },
-          "stopLossPrice": {
-            "type": "object",
-            "description": "New stop loss price. Optional, set to null to remove"
-          },
-          "takeProfitPrice": {
-            "type": "object",
-            "description": "New take profit price. Optional, set to null to remove"
-          }
-        },
-        "required": [
-          "accountId"
         ]
       },
       "ValidationErrorItem": {

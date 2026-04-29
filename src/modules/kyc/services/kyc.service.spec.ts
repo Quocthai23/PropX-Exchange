@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { KycService } from './kyc.service';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 import { getQueueToken } from '@nestjs/bullmq';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BlockchainService } from './blockchain.service';
+import { MultiSigService } from '@/shared/services/multisig.service';
 
 const mockPrisma = {
   $transaction: jest.fn(),
@@ -30,6 +32,15 @@ const mockQueue = {
   add: jest.fn(),
 };
 
+const mockBlockchainService = {
+  addToWhitelist: jest.fn(),
+};
+
+const mockMultiSigService = {
+  createProposal: jest.fn(),
+  approve: jest.fn(),
+};
+
 describe('KycService', () => {
   let service: KycService;
 
@@ -40,11 +51,24 @@ describe('KycService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: getQueueToken('kyc-approval'), useValue: mockQueue },
+        { provide: BlockchainService, useValue: mockBlockchainService },
+        { provide: MultiSigService, useValue: mockMultiSigService },
       ],
     }).compile();
 
     service = module.get<KycService>(KycService);
     jest.clearAllMocks();
+    mockMultiSigService.createProposal.mockResolvedValue({
+      proposalId: 'proposal-1',
+    });
+    mockMultiSigService.approve.mockResolvedValue({
+      proposalId: 'proposal-1',
+      status: 'PENDING',
+      approvals: ['admin-id'],
+      requiredApprovals: 3,
+      payload: {},
+    });
+    mockBlockchainService.addToWhitelist.mockResolvedValue({ txHash: '0xabc' });
   });
 
   describe('submitKyc', () => {
@@ -105,23 +129,15 @@ describe('KycService', () => {
       );
     });
 
-    it('should approve KYC and create notification', async () => {
+    it('should move KYC to approving and create multisig proposal', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ walletAddress: '0x123' });
       mockPrisma.$transaction.mockResolvedValue([]);
-      mockNotificationsService.createNotification.mockResolvedValue({});
 
       const result = await service.approveKyc('user-id', 'admin-id');
 
-      expect(result).toEqual({
-        message: 'KYC approved successfully.',
-        status: 'APPROVED',
-      });
-      expect(mockNotificationsService.createNotification).toHaveBeenCalledWith({
-        userId: 'user-id',
-        type: 'KYC_APPROVED',
-        title: 'KYC Approved!',
-        content: expect.any(String),
-      });
+      expect(result.status).toEqual('APPROVING');
+      expect(result.proposalId).toEqual('proposal-1');
+      expect(mockMultiSigService.createProposal).toHaveBeenCalled();
     });
   });
 

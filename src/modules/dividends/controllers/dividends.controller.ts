@@ -27,6 +27,17 @@ export class DividendsController {
     return this.dividendsService.getClaimableDividends(user.sub);
   }
 
+  @Get('claim-proof/:distributionId')
+  @ApiOperation({
+    summary: 'Get Merkle proof for on-chain dividend claim',
+  })
+  getClaimProof(
+    @CurrentUser() user: JwtPayload,
+    @Param('distributionId', ParseUUIDPipe) distributionId: string,
+  ) {
+    return this.dividendsService.getClaimProof(user.sub, distributionId);
+  }
+
   @Post('claim/:distributionId')
   @ApiOperation({ summary: 'Claim a dividend to USDT balance' })
   claimDividend(

@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentService } from './payment.service';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { BalancesService } from '../../balances/services/balances.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { getQueueToken } from '@nestjs/bullmq';
 import { BadRequestException } from '@nestjs/common';
+import { PaymentLedgerService } from './payment-ledger.service';
+import { PaymentTransactionHistoryService } from './payment-transaction-history.service';
+import { EncryptionService } from '@/modules/auth/services/encryption.service';
 
 const mockPrisma = {
   $transaction: jest.fn((fn) => fn(mockTx)),
@@ -18,16 +20,29 @@ const mockPrisma = {
 
 const mockTx = {
   transaction: {
+    create: jest.fn(),
     update: jest.fn(),
   },
 };
 
-const mockBalancesService = {
-  updateBalance: jest.fn(),
+const mockPaymentLedgerService = {
+  creditDeposit: jest.fn(),
+  lockWithdrawalFunds: jest.fn(),
+  applyWithdrawalStatus: jest.fn(),
+  transferAvailableBalance: jest.fn(),
+};
+
+const mockPaymentTransactionHistoryService = {
+  getUserHistory: jest.fn(),
+  getAdminHistory: jest.fn(),
 };
 
 const mockQueue = {
   add: jest.fn(),
+};
+
+const mockEncryptionService = {
+  encrypt: jest.fn(),
 };
 
 describe('PaymentService', () => {
@@ -38,11 +53,16 @@ describe('PaymentService', () => {
       providers: [
         PaymentService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: BalancesService, useValue: mockBalancesService },
+        { provide: PaymentLedgerService, useValue: mockPaymentLedgerService },
+        {
+          provide: PaymentTransactionHistoryService,
+          useValue: mockPaymentTransactionHistoryService,
+        },
         {
           provide: getQueueToken('transaction-processing'),
           useValue: mockQueue,
         },
+        { provide: EncryptionService, useValue: mockEncryptionService },
       ],
     }).compile();
 
@@ -71,13 +91,13 @@ describe('PaymentService', () => {
 
       expect(result.transactionId).toEqual('existing-tx');
       expect(result.success).toEqual(true);
-      expect(mockBalancesService.updateBalance).not.toHaveBeenCalled();
-      expect(mockPrisma.transaction.create).not.toHaveBeenCalled();
+      expect(mockPaymentLedgerService.creditDeposit).not.toHaveBeenCalled();
+      expect(mockTx.transaction.create).not.toHaveBeenCalled();
     });
 
     it('should deposit demo successfully', async () => {
-      mockBalancesService.updateBalance.mockResolvedValue({});
-      mockPrisma.transaction.create.mockResolvedValue({ id: 'tx-id' });
+      mockPaymentLedgerService.creditDeposit.mockResolvedValue({});
+      mockTx.transaction.create.mockResolvedValue({ id: 'tx-id' });
 
       const result = await service.depositDemo('user-id', {
         amount: '100',

@@ -11,6 +11,7 @@ import { CorporateActionService } from './services/corporate-actions.service';
 import { KmsService } from '@/shared/services/kms.service';
 import { RedeemService } from './services/redeem.service';
 import { DailyPriceCron } from './jobs/daily-price.cron';
+import { MultiSigService } from '@/shared/services/multisig.service';
 
 @Module({
   controllers: [
@@ -28,6 +29,7 @@ import { DailyPriceCron } from './jobs/daily-price.cron';
     KmsService,
     RedeemService,
     DailyPriceCron,
+    MultiSigService,
   ],
   exports: [AssetsService, BlockchainService],
 })

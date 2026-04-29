@@ -78,4 +78,17 @@ export class KycController {
     }
     return this.kycService.rejectKyc(userId, dto.reason, user.sub);
   }
+
+  @Patch('admin/proposals/:proposalId/approve')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  approveProposal(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('proposalId') proposalId: string,
+  ) {
+    if (!user?.sub) {
+      throw new BadRequestException('Invalid authenticated user payload.');
+    }
+    return this.kycService.approveKycWhitelistProposal(proposalId, user.sub);
+  }
 }

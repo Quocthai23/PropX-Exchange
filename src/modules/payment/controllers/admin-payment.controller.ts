@@ -15,6 +15,8 @@ import { PaymentService } from '../services/payment.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../users/dto/roles.guard';
 import { Roles } from '../../users/dto/roles.decorator';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../../auth/types/jwt-payload.type';
 import {
   GetTransactionHistoryDto,
   AdminUpdateWithdrawStatusDto,
@@ -33,7 +35,6 @@ export class AdminPaymentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin Get Transaction Histories' })
   getTransactions(@Query() query: GetTransactionHistoryDto) {
-    // Admin xem lịch sử giao dịch toàn sàn (có thể bỏ trống accountId)
     return this.paymentService.adminGetHistory(query);
   }
 
@@ -52,7 +53,7 @@ export class AdminPaymentController {
   @ApiOperation({
     summary: 'Sweep Funds (Gom quỹ từ ví người dùng về ví tổng)',
   })
-  sweepFunds(@Body() dto: AdminSweepFundsDto) {
-    return this.paymentService.adminSweepFunds(dto);
+  sweepFunds(@CurrentUser() user: JwtPayload, @Body() dto: AdminSweepFundsDto) {
+    return this.paymentService.adminSweepFunds(user.sub, dto);
   }
 }

@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import Decimal from 'decimal.js';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { UpdateProfileDto, UpdateReferralDto } from '../dto/update-user.dto';
 import {
   ToggleFavoriteAssetDto,
@@ -12,6 +12,38 @@ import {
 } from '../dto/create-user.dto';
 
 type DecimalValue = string | number | { toString(): string };
+
+interface UsersPrisma {
+  user: {
+    findUnique(args: Record<string, unknown>): Promise<any>;
+    update(args: Record<string, unknown>): Promise<any>;
+    findMany(args: Record<string, unknown>): Promise<any[]>;
+  };
+  userRelation: {
+    count(args: Record<string, unknown>): Promise<number>;
+    findUnique(args: Record<string, unknown>): Promise<any>;
+    findMany(args: Record<string, unknown>): Promise<any[]>;
+    update(args: Record<string, unknown>): Promise<any>;
+    create(args: Record<string, unknown>): Promise<any>;
+  };
+  favoriteAsset: {
+    findUnique(args: Record<string, unknown>): Promise<any>;
+    delete(args: Record<string, unknown>): Promise<any>;
+    create(args: Record<string, unknown>): Promise<any>;
+  };
+  balance: {
+    findMany(args: Record<string, unknown>): Promise<any[]>;
+  };
+  transaction: {
+    findMany(args: Record<string, unknown>): Promise<any[]>;
+  };
+  asset: {
+    findMany(args: Record<string, unknown>): Promise<any[]>;
+  };
+  order: {
+    findFirst(args: Record<string, unknown>): Promise<any>;
+  };
+}
 
 export interface PortfolioPosition {
   assetId: string;
@@ -26,7 +58,11 @@ export interface PortfolioPosition {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly prisma: UsersPrisma;
+
+  constructor(prismaService: PrismaService) {
+    this.prisma = prismaService as unknown as UsersPrisma;
+  }
 
   healthCheck() {
     return { message: 'Users module is running.' };
@@ -99,7 +135,7 @@ export class UsersService {
     userId: string,
     dto: UpdateProfileDto,
   ): Promise<{ success: boolean }> {
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, unknown> = {};
     if (dto.username) updateData.username = dto.username;
     if (dto.avatar !== undefined) updateData.avatar = dto.avatar;
     if (dto.gender !== undefined) updateData.gender = dto.gender;
@@ -137,9 +173,41 @@ export class UsersService {
     userId: string,
     take: number,
   ): Promise<Record<string, unknown>[]> {
-    // TODO: Query active users sorted by follower count
-    await Promise.resolve({ userId, take }); // Xóa lỗi "has no 'await' expression"
-    return [];
+    const safeTake = Math.min(Math.max(take || 5, 1), 50);
+    const blockedRelations = await this.prisma.userRelation.findMany({
+      where: {
+        OR: [
+          { fromUserId: userId, isBlocking: true },
+          { toUserId: userId, isBlocking: true },
+          { fromUserId: userId, isFollowing: true },
+        ],
+      },
+      select: { fromUserId: true, toUserId: true },
+    });
+
+    const excluded = new Set<string>([userId]);
+    for (const relation of blockedRelations) {
+      excluded.add(relation.fromUserId);
+      excluded.add(relation.toUserId);
+    }
+
+    const candidates = await this.prisma.user.findMany({
+      where: {
+        status: 'ACTIVE',
+        id: { notIn: [...excluded] },
+      },
+      take: safeTake,
+      select: {
+        id: true,
+        username: true,
+        avatar: true,
+        displayName: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return candidates;
   }
 
   async getRelations(
@@ -148,7 +216,7 @@ export class UsersService {
     skip: number,
     take: number,
   ): Promise<{ data: Record<string, unknown>[]; total: number }> {
-    let where: any = {};
+    let where: Record<string, unknown> = {};
     let includeUser: 'fromUser' | 'toUser' = 'toUser';
 
     if (relationType === 'followings') {
@@ -240,7 +308,7 @@ export class UsersService {
       },
     });
 
-    const relationData: any = {};
+    const relationData: Record<string, unknown> = {};
 
     switch (dto.action) {
       case 'follow':
@@ -294,7 +362,7 @@ export class UsersService {
   }
 
   async getPortfolioOverview(userId: string) {
-    const [balances, cashflowTransactions] = await Promise.all([
+    const [balances, cashflowTransactions, dividendTransactions] = await Promise.all([
       this.prisma.balance.findMany({
         where: { userId },
         select: {
@@ -313,6 +381,14 @@ export class UsersService {
           type: true,
           amount: true,
         },
+      }),
+      this.prisma.transaction.findMany({
+        where: {
+          userId,
+          status: 'COMPLETED',
+          type: { in: ['DIVIDEND'] },
+        },
+        select: { amount: true },
       }),
     ]);
 
@@ -342,6 +418,7 @@ export class UsersService {
               symbol: true,
               name: true,
               tokenPrice: true,
+              referencePrice: true,
               expectedApy: true,
             },
           })
@@ -375,6 +452,7 @@ export class UsersService {
 
     const positions: PortfolioPosition[] = [];
     let totalRwaValue = new Decimal(0);
+    let totalRwaReferenceValue = new Decimal(0);
     let totalApyWeightedValue = new Decimal(0);
     let estimatedAnnualYield = new Decimal(0);
 
@@ -393,10 +471,15 @@ export class UsersService {
 
       const marketPrice = latestPriceMap.get(assetId) ?? new Decimal(0);
       const marketValue = quantity.mul(marketPrice);
+      const referencePrice = new Decimal(
+        this.toDecimalString(asset.referencePrice ?? marketPrice),
+      );
+      const referenceValue = quantity.mul(referencePrice);
       const apy = new Decimal(this.toDecimalString(asset.expectedApy ?? 0));
       const annualYieldForAsset = marketValue.mul(apy).div(100);
 
       totalRwaValue = totalRwaValue.plus(marketValue);
+      totalRwaReferenceValue = totalRwaReferenceValue.plus(referenceValue);
       totalApyWeightedValue = totalApyWeightedValue.plus(marketValue.mul(apy));
       estimatedAnnualYield = estimatedAnnualYield.plus(annualYieldForAsset);
 
@@ -428,17 +511,23 @@ export class UsersService {
     const weightedApy = totalRwaValue.gt(0)
       ? totalApyWeightedValue.div(totalRwaValue)
       : new Decimal(0);
+    const totalDividendsReceived = dividendTransactions.reduce(
+      (sum, tx) => sum.plus(this.toDecimalString(tx.amount)),
+      new Decimal(0),
+    );
 
     return {
       asOf: new Date().toISOString(),
       stablecoinBalance: stablecoinBalance.toFixed(8),
       rwaMarketValue: totalRwaValue.toFixed(8),
+      rwaReferenceValue: totalRwaReferenceValue.toFixed(8),
       totalPortfolioValue: totalPortfolioValue.toFixed(8),
       netDepositedCapital: netDepositedCapital.toFixed(8),
       pnl: pnl.toFixed(8),
       pnlPercent: pnlPercent.toFixed(4),
       estimatedApy: weightedApy.toFixed(4),
       estimatedAnnualYield: estimatedAnnualYield.toFixed(8),
+      totalDividendsReceived: totalDividendsReceived.toFixed(8),
       positions,
     };
   }

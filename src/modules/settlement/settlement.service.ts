@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import Decimal from 'decimal.js';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { BlockchainService } from '../assets/services/blockchain.service';
-import { AppConfigService } from '../../config/app-config.service';
+import { AppConfigService } from '@/config/app-config.service';
 
 interface SettlementTrade {
   id: string;

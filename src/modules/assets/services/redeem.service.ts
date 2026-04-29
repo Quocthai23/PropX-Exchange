@@ -8,6 +8,7 @@ import Decimal from 'decimal.js';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BlockchainService } from './blockchain.service';
 import { $Enums } from '@prisma/client';
+import { MultiSigService } from '@/shared/services/multisig.service';
 
 interface AssetRedeemView {
   id: string;
@@ -49,6 +50,7 @@ export class RedeemService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly blockchainService: BlockchainService,
+    private readonly multiSigService: MultiSigService,
   ) {}
 
   async requestRedeem(userId: string, assetId: string) {
@@ -163,30 +165,64 @@ export class RedeemService {
       });
     });
 
+    let burnProposalId: string | null = null;
     if (asset.contractAddress) {
-      try {
-        this.logger.log(
-          `Redeem requested for ${asset.symbol}. Ready to burn full supply on-chain.`,
-        );
-        // Placeholder integration point when burn endpoint is available.
-        // await this.blockchainService.burnToken(
-        //   asset.contractAddress,
-        //   userId,
-        //   asset.totalSupply.toString(),
-        // );
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        this.logger.error(
-          `Failed to submit burn transaction for asset ${asset.symbol}: ${errorMessage}`,
-        );
-      }
+      const proposal = await this.multiSigService.createProposal(userId, {
+        type: 'BURN_ASSET_TOKEN',
+        payload: {
+          assetId,
+          assetAddress: asset.contractAddress,
+          amount: asset.totalSupply.toString(),
+          requestedBy: userId,
+        },
+      });
+      burnProposalId = proposal.proposalId;
+      this.logger.log(
+        `Redeem requested for ${asset.symbol}. Burn proposal ${burnProposalId} created.`,
+      );
     }
 
     return {
       success: true,
       message:
         'Redeem request submitted. Admin will contact you to complete legal off-chain settlement.',
+      burnProposalId,
+    };
+  }
+
+  async approveBurnProposal(proposalId: string, adminId: string) {
+    const approval = await this.multiSigService.approve(proposalId, adminId);
+    if (approval.status !== 'EXECUTED') {
+      return {
+        proposalId,
+        status: approval.status,
+        approvals: approval.approvals.length,
+        requiredApprovals: approval.requiredApprovals,
+      };
+    }
+
+    const assetAddress = String(approval.payload.assetAddress ?? '');
+    const amount = BigInt(String(approval.payload.amount ?? '0'));
+    const assetId = String(approval.payload.assetId ?? '');
+    const txHash = await this.blockchainService.burnAssetToken({
+      assetAddress,
+      amount,
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        entity: 'ASSET',
+        entityId: assetId,
+        action: 'LIQUIDATED',
+        performedBy: adminId,
+        details: `Burn executed via multisig. txHash=${txHash}`,
+      },
+    });
+
+    return {
+      proposalId,
+      status: 'EXECUTED',
+      txHash,
     };
   }
 }

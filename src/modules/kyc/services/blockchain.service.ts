@@ -5,8 +5,8 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ethers } from 'ethers';
-import { KmsService } from '../../../shared/services/kms.service';
-import { AppConfigService } from '../../../config/app-config.service';
+import { KmsService } from '@/shared/services/kms.service';
+import { AppConfigService } from '@/config/app-config.service';
 
 const DEFAULT_ABI = [
   'function addToWhitelist(address wallet) external returns (bool)',

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import Decimal from 'decimal.js';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 
 type DecimalValue = string | number | { toString(): string };
 
@@ -16,6 +16,14 @@ export interface CandlePoint {
   low: number;
   close: number;
   value: number;
+}
+
+export interface ReferencePriceAnchor {
+  assetId: string;
+  referencePrice: number | null;
+  marketPrice: number | null;
+  bandUpper: number | null;
+  bandLower: number | null;
 }
 
 interface CandlestickRecord {
@@ -167,5 +175,46 @@ export class MarketDataService {
       close: Number(c.close),
       value: Number(c.volume),
     }));
+  }
+
+  async getReferencePriceAnchor(assetId: string): Promise<ReferencePriceAnchor> {
+    const asset = await this.prisma.asset.findUnique({
+      where: { id: assetId },
+      select: {
+        id: true,
+        tokenPrice: true,
+        referencePrice: true,
+        priceBandPercentage: true,
+      },
+    });
+
+    if (!asset) {
+      return {
+        assetId,
+        referencePrice: null,
+        marketPrice: null,
+        bandUpper: null,
+        bandLower: null,
+      };
+    }
+
+    const referencePrice = asset.referencePrice
+      ? new Decimal(asset.referencePrice.toString())
+      : null;
+    const band = new Decimal(asset.priceBandPercentage.toString());
+    const bandUpper = referencePrice
+      ? referencePrice.mul(new Decimal(1).plus(band))
+      : null;
+    const bandLower = referencePrice
+      ? referencePrice.mul(new Decimal(1).minus(band))
+      : null;
+
+    return {
+      assetId: asset.id,
+      marketPrice: Number(asset.tokenPrice),
+      referencePrice: referencePrice ? Number(referencePrice) : null,
+      bandUpper: bandUpper ? Number(bandUpper) : null,
+      bandLower: bandLower ? Number(bandLower) : null,
+    };
   }
 }

@@ -11,6 +11,7 @@ import {
   IsEnum,
   IsBoolean,
   Matches,
+  IsNumberString,
 } from 'class-validator';
 
 export class UpdateAssetDto {
@@ -88,16 +89,26 @@ export class UpdateAssetDto {
   @Max(2)
   trade?: number;
 
-  @ApiPropertyOptional({ description: 'Maximum allowed leverage' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  maxLeverage?: number;
-
   @ApiPropertyOptional({ description: 'Whether the asset is tradable' })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Reference price (NAV) maintained by admin/independent valuation report',
+  })
+  @IsOptional()
+  @IsNumberString()
+  referencePrice?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Allowed order price band around NAV (e.g. 0.1 = +/-10%, 0.15 = +/-15%)',
+  })
+  @IsOptional()
+  @IsNumberString()
+  priceBandPercentage?: string;
 
   // Financial/Trading configuration (Using strings for precise Decimals)
   @ApiPropertyOptional()

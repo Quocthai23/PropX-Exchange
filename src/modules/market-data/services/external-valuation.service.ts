@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { AppConfigService } from '../../../config/app-config.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import { AppConfigService } from '@/config/app-config.service';
 
 export interface ExternalValuationTarget {
   source: 'batdongsan' | 'chotot' | 'custom';

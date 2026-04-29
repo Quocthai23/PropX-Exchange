@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { KMSClient, DecryptCommand } from '@aws-sdk/client-kms';
-import { AppConfigService } from '../../config/app-config.service';
+import { AppConfigService } from '@/config/app-config.service';
 
 @Injectable()
 export class KmsService {

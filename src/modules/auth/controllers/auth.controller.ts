@@ -177,9 +177,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with social' })
   loginWithSocial(@Body() dto: LoginWithSocialDto) {
-    void dto;
-    // Handle social login integration
-    return { message: 'Social login flow' };
+    return this.authService.loginWithSocial(dto.provider, dto.idToken);
   }
 
   @Post('login')
@@ -237,17 +235,16 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Check email exists' })
   checkEmail(@Body() dto: CheckEmailDto) {
-    void dto;
-    // const exists = await this.authService.checkEmailExists(dto.email);
-    return { exists: false }; // Mock response
+    return this.authService
+      .checkEmailExists(dto.email)
+      .then((exists) => ({ exists }));
   }
 
   @Post('check-reference-code')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Check reference code' })
   checkReferenceCode(@Body() dto: CheckReferenceCodeDto) {
-    void dto;
-    return { exists: true, isValid: true };
+    return this.authService.checkReferenceCode(dto.referenceCode);
   }
 
   @Post('challenge')

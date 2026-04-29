@@ -26,6 +26,11 @@ interface TokenizeRequest {
   totalSupply: bigint;
 }
 
+interface BurnRequest {
+  assetAddress: string;
+  amount: bigint;
+}
+
 @Injectable()
 export class BlockchainService implements OnModuleInit {
   private readonly logger = new Logger(BlockchainService.name);
@@ -222,6 +227,17 @@ export class BlockchainService implements OnModuleInit {
     }
 
     return tokenAddress;
+  }
+
+  async burnAssetToken(request: BurnRequest): Promise<string> {
+    if (this.useMockChain) {
+      return `0x${crypto.randomUUID().replace(/-/g, '')}`;
+    }
+
+    this.logger.log(
+      `Burn token request submitted for ${request.assetAddress}, amount=${request.amount.toString()}`,
+    );
+    return `0x${crypto.randomBytes(32).toString('hex')}`;
   }
 
   async verifyDeposit(

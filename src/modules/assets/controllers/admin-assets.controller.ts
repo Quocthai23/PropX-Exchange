@@ -14,6 +14,9 @@ import { CreateAssetDto } from '../dto/create-asset.dto';
 import { UpdateAssetDto } from '../dto/asset.dto';
 import { RolesGuard } from '@/modules/users/dto/roles.guard';
 import { Roles } from '@/modules/users/dto/roles.decorator';
+import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
+import type { JwtPayload } from '@/modules/auth/types/jwt-payload.type';
+import { ReviewAssetOnboardingDto } from '../dto/asset-onboarding.dto';
 
 @ApiTags('Admin - Assets')
 @ApiBearerAuth('accessToken')
@@ -47,14 +50,41 @@ export class AdminAssetsController {
 
   @Patch(':id/approve')
   @ApiOperation({ summary: 'Approve and activate an asset for trading' })
-  async approveAsset(@Param('id') id: string) {
+  async approveAsset(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('id') id: string,
+  ) {
     // Duyệt tài sản để public ra thị trường
-    return await this.assetsService.approveAsset(id);
+    return await this.assetsService.approveAsset(id, user?.sub ?? 'SYSTEM');
+  }
+
+  @Patch('proposals/:proposalId/approve')
+  @ApiOperation({
+    summary: 'Approve multisig mint proposal; executes once threshold reached',
+  })
+  async approveMintProposal(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('proposalId') proposalId: string,
+  ) {
+    return this.assetsService.approveMintProposal(
+      proposalId,
+      user?.sub ?? 'SYSTEM',
+    );
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Upsert asset configuration' })
   async updateAsset(@Param('id') id: string, @Body() dto: UpdateAssetDto) {
     return await this.assetsService.updateAsset(id, dto);
+  }
+
+  @Patch(':id/onboarding/review')
+  @ApiOperation({ summary: 'Review due diligence and custody transfer result' })
+  async reviewOnboarding(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('id') id: string,
+    @Body() dto: ReviewAssetOnboardingDto,
+  ) {
+    return this.assetsService.reviewOnboarding(id, user?.sub ?? 'SYSTEM', dto);
   }
 }

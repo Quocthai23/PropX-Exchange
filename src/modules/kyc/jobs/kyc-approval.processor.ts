@@ -3,9 +3,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Process, Processor } from '@nestjs/bull';
-import type { Job } from 'bull';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Job } from 'bullmq';
+import { PrismaService } from '@/prisma/prisma.service';
 import { BlockchainService } from '../services/blockchain.service';
 
 interface KycApprovalJobData {
@@ -14,16 +14,20 @@ interface KycApprovalJobData {
 }
 
 @Processor('kyc-approval')
-export class KycApprovalProcessor {
+export class KycApprovalProcessor extends WorkerHost {
   private readonly logger = new Logger(KycApprovalProcessor.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly blockchainService: BlockchainService,
-  ) {}
+  ) {
+    super();
+  }
 
-  @Process('approve')
-  async handleKycApproval(job: Job<KycApprovalJobData>) {
+  async process(job: Job<KycApprovalJobData>) {
+    if (job.name !== 'approve') {
+      return;
+    }
     const { targetUserId, walletAddress } = job.data;
 
     try {
