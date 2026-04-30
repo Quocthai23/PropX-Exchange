@@ -14,9 +14,14 @@ import {
   GetMessagesQueryDto,
 } from '../dto/support.dto';
 
+import { SupportGateway } from '../gateways/support.gateway';
+
 @Injectable()
 export class SupportService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly supportGateway: SupportGateway,
+  ) {}
 
   async createTicket(userId: string, dto: CreateSupportTicketDto) {
     return this.prisma.$transaction(async (tx) => {
@@ -36,8 +41,14 @@ export class SupportService {
           ticketId: ticket.id,
           senderId: userId,
           content: dto.message,
+          attachments: dto.attachments ?? undefined,
         },
       });
+
+      this.supportGateway.broadcastNewMessage(
+        ticket.id,
+        Object.assign({}, dto, { id: ticket.id }),
+      );
 
       return ticket;
     });
@@ -52,17 +63,24 @@ export class SupportService {
       where.category = query.category;
     }
 
+    const take = query.take || 20;
     const [data, total] = await Promise.all([
       this.prisma.supportTicket.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: query.skip || 0,
-        take: query.take || 20,
+        take: take + 1,
+        ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
       }),
       this.prisma.supportTicket.count({ where }),
     ]);
 
-    return { data, total };
+    let nextCursor: string | null = null;
+    if (data.length > take) {
+      const nextItem = data.pop();
+      nextCursor = nextItem?.id ?? null;
+    }
+
+    return { data, total, nextCursor };
   }
 
   async getTicketDetail(userId: string, ticketId: string) {
@@ -127,18 +145,25 @@ export class SupportService {
       throw new ForbiddenException('Not ticket owner');
     }
 
+    const take = query.take || 50;
     const [data, total] = await Promise.all([
       this.prisma.ticketMessage.findMany({
         where: { ticketId },
         orderBy: { createdAt: 'asc' },
-        skip: query.skip || 0,
-        take: query.take || 50,
+        take: take + 1,
+        ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
         include: { sender: true },
       }),
       this.prisma.ticketMessage.count({ where: { ticketId } }),
     ]);
 
-    return { data, total, nextCursor: null };
+    let nextCursor: string | null = null;
+    if (data.length > take) {
+      const nextItem = data.pop();
+      nextCursor = nextItem?.id ?? null;
+    }
+
+    return { data, total, nextCursor };
   }
 
   async sendMessage(userId: string, ticketId: string, dto: SupportMessageDto) {
@@ -154,14 +179,19 @@ export class SupportService {
       throw new ForbiddenException('Not ticket owner');
     }
 
-    return this.prisma.ticketMessage.create({
+    const message = await this.prisma.ticketMessage.create({
       data: {
         ticketId,
         senderId: userId,
         content: dto.content,
+        attachments: dto.attachments ?? undefined,
       },
       include: { sender: true },
     });
+
+    this.supportGateway.broadcastNewMessage(ticketId, message);
+
+    return message;
   }
 
   // ================= ADMIN FUNCTIONS ================= //
@@ -178,18 +208,25 @@ export class SupportService {
       where.userId = query.userId;
     }
 
+    const take = query.take || 20;
     const [data, total] = await Promise.all([
       this.prisma.supportTicket.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: query.skip || 0,
-        take: query.take || 20,
+        take: take + 1,
+        ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
         include: { user: true },
       }),
       this.prisma.supportTicket.count({ where }),
     ]);
 
-    return { data, total };
+    let nextCursor: string | null = null;
+    if (data.length > take) {
+      const nextItem = data.pop();
+      nextCursor = nextItem?.id ?? null;
+    }
+
+    return { data, total, nextCursor };
   }
 
   async adminJoinTicket(adminId: string, ticketId: string) {

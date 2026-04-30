@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type, Transform } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -65,11 +65,10 @@ export class GetOrdersQueryDto {
   @Max(100)
   take?: number = 20;
 
+  @ApiPropertyOptional({ description: 'Cursor for pagination' })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  skip?: number = 0;
+  @IsString()
+  cursor?: string;
 
   @ApiPropertyOptional({
     description: 'Order side',
@@ -127,4 +126,12 @@ export class CreateOrderDto {
   @IsOptional()
   @IsUUID('4')
   idempotencyKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'Max total cost for MARKET BUY orders to lock funds safely.',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+(\.\d+)?$/)
+  maxTotalCost?: string;
 }

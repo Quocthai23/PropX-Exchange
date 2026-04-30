@@ -331,30 +331,16 @@ async function bootstrap() {
   app.useWebSocketAdapter(redisIoAdapter);
 
   const config = new DocumentBuilder()
-    .setTitle('RWA Backend API')
-    .setDescription(
-      'API documentation for the RWA graduation project - Real World Assets Platform',
-    )
+    .setTitle('Documentation')
+    .setDescription('Documentation for the backend API')
     .setVersion('1.0.0')
-    .setContact('RWA Team', '', 'support@rwa.com')
-    .setLicense('Proprietary', '')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        description: 'Enter JWT token',
-      },
-      'access-token',
+    .setContact(
+      'API Support',
+      'https://www.swagger.io/support',
+      'support@swagger.io',
     )
-    .addServer(`http://localhost:${configService.port}`, 'Local Development')
-    .addTag('Auth', 'Authentication endpoints')
-    .addTag('Users', 'User management endpoints')
-    .addTag('Assets', 'Asset management endpoints')
-    .addTag('Orders', 'Order management endpoints')
-    .addTag('KYC', 'Know Your Customer endpoints')
-    .addTag('Payment', 'Payment endpoints')
-    .addTag('Settlement', 'Settlement endpoints')
+    .addServer('https://mirroto-api.muskcoin.io/', 'Dev server')
+    .addServer('http://0.0.0.0:3000', 'Local server')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

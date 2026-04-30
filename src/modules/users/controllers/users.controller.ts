@@ -43,7 +43,7 @@ export class UsersController {
   }
 
   @Get('profile/:id')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get public user profile' })
   @ApiResponse({ status: 200, description: 'Response for status 200' })
@@ -55,7 +55,7 @@ export class UsersController {
   }
 
   @Post()
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update profile' })
@@ -68,7 +68,7 @@ export class UsersController {
   }
 
   @Get('me')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get profile' })
   @ApiResponse({ status: 200, description: 'Response for status 200' })
@@ -77,7 +77,7 @@ export class UsersController {
   }
 
   @Delete('me')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete account' })
   @ApiResponse({ status: 200, description: 'Response for status 200' })
@@ -86,7 +86,7 @@ export class UsersController {
   }
 
   @Get('suggestions')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Suggest users' })
   @ApiResponse({ status: 200, description: 'Response for status 200' })
@@ -98,7 +98,7 @@ export class UsersController {
   }
 
   @Get(':userId/relations')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get user relation list' })
   @ApiResponse({ status: 200, description: 'Response for status 200' })
@@ -115,7 +115,7 @@ export class UsersController {
   }
 
   @Post('favorites/assets')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Toggle favorite asset' })
@@ -128,7 +128,7 @@ export class UsersController {
   }
 
   @Put(':id/relation')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Upsert user relation' })
   @ApiResponse({ status: 200, description: 'Response for status 200' })
@@ -141,7 +141,7 @@ export class UsersController {
   }
 
   @Patch('referral')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update referral reference code' })
   @ApiResponse({ status: 200, description: 'Response for status 200' })
@@ -154,7 +154,7 @@ export class UsersController {
 
   @Get('portfolio/overview')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get portfolio overview' })
   async getPortfolioOverview(@CurrentUser() user: JwtPayload | undefined) {
     if (!user?.sub) {

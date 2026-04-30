@@ -15,7 +15,7 @@ import type { JwtPayload } from '../../auth/types/jwt-payload.type';
 @ApiTags('Dividends')
 @Controller('dividends')
 @UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('accessToken')
 export class DividendsController {
   constructor(private readonly dividendsService: DividendsService) {}
 

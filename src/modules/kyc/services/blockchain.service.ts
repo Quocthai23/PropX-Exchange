@@ -52,8 +52,6 @@ export class BlockchainService implements OnModuleInit {
     }
 
     try {
-      // Async initialization - get private key from KMS (or .env fallback)
-      const privateKey = await this.kmsService.getAdminPrivateKey();
       const contractAddress = this.config.identityRegistryAddress;
       const rawAbi = this.config.identityRegistryAbiJson;
 

@@ -22,7 +22,7 @@ import {
 } from '../dto/payment.dto';
 
 @ApiTags('Payment')
-@ApiBearerAuth()
+@ApiBearerAuth('accessToken')
 @UseGuards(JwtAuthGuard)
 @Controller('payment')
 export class PaymentController {

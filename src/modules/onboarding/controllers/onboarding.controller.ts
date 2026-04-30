@@ -7,7 +7,7 @@ import { CreateAssetOnboardingRequestDto } from '../dto/create-asset-onboarding-
 import { OnboardingService } from '../services/onboarding.service';
 
 @ApiTags('Asset Onboarding')
-@ApiBearerAuth()
+@ApiBearerAuth('accessToken')
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class OnboardingController {

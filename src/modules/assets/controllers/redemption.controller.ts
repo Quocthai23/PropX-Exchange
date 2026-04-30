@@ -21,7 +21,7 @@ export class RedemptionController {
   constructor(private readonly redeemService: RedeemService) {}
 
   @ApiTags('Asset Redemption')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @Post('assets/:id/redeem')
   @ApiOperation({

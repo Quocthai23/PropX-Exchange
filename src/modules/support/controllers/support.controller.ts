@@ -7,8 +7,17 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SupportService } from '../services/support.service';
 import {
   CreateSupportTicketDto,
@@ -83,5 +92,30 @@ export class SupportController {
     @Body() dto: SupportMessageDto,
   ) {
     return this.supportService.sendMessage(user.sub, id, dto);
+  }
+
+  @Post('upload')
+  @ApiOperation({ summary: 'Upload attachment file for support' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAttachment(@UploadedFile() file: any) {
+    if (!file) {
+      throw new Error('No file uploaded');
+    }
+    // In a real application, this should upload to AWS S3, Cloudflare R2, or MinIO.
+    // For now, return a mock/placeholder URL that the frontend can use.
+    const fileUrl = `https://r2.rwa-exchange.com/attachments/${Date.now()}-${file.originalname}`;
+    return { url: fileUrl };
   }
 }

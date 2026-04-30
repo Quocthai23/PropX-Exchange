@@ -21,7 +21,7 @@ export class DaoController {
   constructor(private readonly daoService: DaoService) {}
 
   @ApiTags('DAO Governance')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @Post('assets/:id/proposals')
   @ApiOperation({ summary: 'Create DAO proposal for an asset' })
@@ -34,7 +34,7 @@ export class DaoController {
   }
 
   @ApiTags('DAO Governance')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @Post('proposals/:id/vote')
   @ApiOperation({ summary: 'Vote on a proposal' })

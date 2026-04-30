@@ -220,6 +220,7 @@ model TicketMessage {
   senderId  String
   sender    User          @relation("TicketMessageSender", fields: [senderId], references: [id])
   content   String        @db.Text
+  attachments Json?
   createdAt DateTime      @default(now())
 
   @@index([ticketId, createdAt])

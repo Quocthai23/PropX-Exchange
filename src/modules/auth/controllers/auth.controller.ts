@@ -79,7 +79,7 @@ export class AuthController {
   }
 
   @Post('send-otp')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @Throttle({ short: { limit: 3, ttl: 300000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Send OTP' })
@@ -101,7 +101,7 @@ export class AuthController {
   }
 
   @Post('verify-otp')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verify OTP',
@@ -312,7 +312,7 @@ export class AuthController {
   }
 
   @Post('challenge')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Create an auth challenge for sensitive purposes' })
   async createChallenge(
@@ -324,7 +324,7 @@ export class AuthController {
   }
 
   @Post('challenge/verify')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify Challenge' })
   async verifyChallenge(
@@ -366,7 +366,7 @@ export class AuthController {
   }
 
   @Post('change-password')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Change Password' })
@@ -383,7 +383,7 @@ export class AuthController {
   }
 
   @Post('logout')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout' })
@@ -400,7 +400,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get user profile (Requires JWT Token)' })
   @ApiResponse({
     status: 200,

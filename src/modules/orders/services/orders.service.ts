@@ -72,51 +72,15 @@ export class OrdersService {
 
     if (type === 'MARKET') {
       if (side === 'BUY') {
-        const asks = await this.prisma.order.findMany({
-          where: { assetId, side: 'SELL', status: 'OPEN' },
-          orderBy: { price: 'asc' },
-        });
-        let remainingToBuy = quantityDec;
-        let totalCost = new Decimal(0);
-        for (const ask of asks) {
-          const askPrice = new Decimal(ask.price?.toString() || 0);
-          const askQty = new Decimal(ask.quantity.toString()).minus(
-            new Decimal(ask.filledQuantity.toString()),
-          );
-          const matchedQty = Decimal.min(remainingToBuy, askQty);
-          totalCost = totalCost.plus(matchedQty.mul(askPrice));
-          remainingToBuy = remainingToBuy.minus(matchedQty);
-          if (remainingToBuy.isZero()) break;
-        }
-        if (!remainingToBuy.isZero()) {
+        if (!dto.maxTotalCost) {
           throw new BadRequestException(
-            'Sổ lệnh quá mỏng, không đủ thanh khoản cho Market Order',
+            'maxTotalCost is required for MARKET BUY orders',
           );
         }
-        priceDec = totalCost.div(quantityDec);
+        const maxTotalCostDec = new Decimal(dto.maxTotalCost);
+        priceDec = maxTotalCostDec.div(quantityDec);
       } else {
-        const bids = await this.prisma.order.findMany({
-          where: { assetId, side: 'BUY', status: 'OPEN' },
-          orderBy: { price: 'desc' },
-        });
-        let remainingToSell = quantityDec;
-        let totalRevenue = new Decimal(0);
-        for (const bid of bids) {
-          const bidPrice = new Decimal(bid.price?.toString() || 0);
-          const bidQty = new Decimal(bid.quantity.toString()).minus(
-            new Decimal(bid.filledQuantity.toString()),
-          );
-          const matchedQty = Decimal.min(remainingToSell, bidQty);
-          totalRevenue = totalRevenue.plus(matchedQty.mul(bidPrice));
-          remainingToSell = remainingToSell.minus(matchedQty);
-          if (remainingToSell.isZero()) break;
-        }
-        if (!remainingToSell.isZero()) {
-          throw new BadRequestException(
-            'Sổ lệnh quá mỏng, không đủ thanh khoản cho Market Order',
-          );
-        }
-        priceDec = totalRevenue.div(quantityDec);
+        priceDec = new Decimal(0);
       }
     } else if (type === 'LIMIT') {
       this.validatePriceBand(
@@ -158,7 +122,7 @@ export class OrdersService {
       },
     });
 
-    await this.orderMatchingService.queueOrder(order.id);
+    await this.orderMatchingService.queueOrder(order.id, asset.id);
 
     return { orderId: order.id, status: order.status };
   }
@@ -175,18 +139,25 @@ export class OrdersService {
       where.side = query.side;
     }
 
+    const take = query.take || 20;
     const [data, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: query.skip || 0,
-        take: query.take || 20,
+        take: take + 1,
+        ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
         include: { asset: true },
       }),
       this.prisma.order.count({ where }),
     ]);
 
-    return { data, total, nextCursor: null };
+    let nextCursor: string | null = null;
+    if (data.length > take) {
+      const nextItem = data.pop();
+      nextCursor = nextItem?.id ?? null;
+    }
+
+    return { data, total, nextCursor };
   }
 
   async updateOrder(userId: string, orderId: string, dto: UpdateOrderDto) {

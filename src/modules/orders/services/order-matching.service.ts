@@ -1,10 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
+import { Queue, Worker } from 'bullmq';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/prisma/prisma.service';
 import { TradingLedgerService } from './trading-ledger.service';
 import { MarketDataService } from '@/modules/market-data/services/market-data.service';
+import { ConfigService } from '@nestjs/config';
 
 type OrderStatus =
   | 'PENDING'
@@ -19,15 +24,57 @@ interface OrderMatchingJobData {
 }
 
 @Injectable()
-export class OrderMatchingService {
+export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(OrderMatchingService.name);
+  private queues = new Map<string, Queue>();
+  private workers = new Map<string, Worker>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly tradingLedgerService: TradingLedgerService,
     private readonly marketDataService: MarketDataService,
-    @InjectQueue('order-matching') private orderMatchingQueue: Queue,
+    private readonly configService: ConfigService,
   ) {}
+
+  onModuleInit() {
+    this.logger.log('OrderMatchingService initialized');
+  }
+
+  async onModuleDestroy() {
+    for (const worker of this.workers.values()) {
+      await worker.close();
+    }
+    for (const queue of this.queues.values()) {
+      await queue.close();
+    }
+  }
+
+  private getRedisConnection() {
+    return {
+      host: this.configService.get<string>('REDIS_HOST'),
+      port: this.configService.get<number>('REDIS_PORT'),
+      password: this.configService.get<string>('REDIS_PASSWORD'),
+    };
+  }
+
+  private getOrCreateQueue(assetId: string): Queue {
+    let queue = this.queues.get(assetId);
+    if (!queue) {
+      const queueName = `matching:${assetId}`;
+      queue = new Queue(queueName, { connection: this.getRedisConnection() });
+      this.queues.set(assetId, queue);
+
+      const worker = new Worker(
+        queueName,
+        async (job) => {
+          await this.matchOrder(job.data);
+        },
+        { connection: this.getRedisConnection(), concurrency: 1 },
+      );
+      this.workers.set(assetId, worker);
+    }
+    return queue;
+  }
 
   /**
    * Queue a new order for matching
@@ -35,21 +82,19 @@ export class OrderMatchingService {
    */
   async queueOrder(
     orderId: string,
+    assetId: string,
   ): Promise<{ jobId: string; queuedAt: Date }> {
-    const job = await this.orderMatchingQueue.add(
-      'match',
-      { orderId } as OrderMatchingJobData,
-      {
-        jobId: orderId,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000,
-        },
-        removeOnComplete: true,
-        removeOnFail: false,
+    const queue = this.getOrCreateQueue(assetId);
+    const job = await queue.add('match', { orderId } as OrderMatchingJobData, {
+      jobId: orderId,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 1000,
       },
-    );
+      removeOnComplete: true,
+      removeOnFail: false,
+    });
 
     this.logger.log(`Order ${orderId} queued for matching. Job ID: ${job.id}`);
 
@@ -83,52 +128,24 @@ export class OrderMatchingService {
       const side = order.side;
       const assetId = order.assetId;
       const userId = order.userId;
-      const hasPendingDaoSnapshot =
-        (await prisma.daoProposal.count({
-          where: {
-            assetId,
-            status: 'ACTIVE',
-            snapshotDate: { lte: new Date() },
-            snapshots: { none: {} },
-          },
-        })) > 0;
-
-      if (hasPendingDaoSnapshot) {
-        await this.orderMatchingQueue.add(
-          'match',
-          { orderId } as OrderMatchingJobData,
-          {
-            jobId: `${orderId}-snapshot-retry-${Date.now()}`,
-            delay: 15_000,
-            attempts: 3,
-            backoff: {
-              type: 'exponential',
-              delay: 1000,
-            },
-            removeOnComplete: true,
-            removeOnFail: false,
-          },
-        );
-
-        this.logger.warn(
-          `Order ${orderId} re-queued because DAO snapshot is pending for asset ${assetId}.`,
-        );
-        return { matched: 0 };
-      }
 
       const priceDec = new Decimal(order.price?.toString() ?? 0);
       const quantityDec = new Decimal(order.quantity.toString());
       // Find matching orders from counterparty
       const oppositeOrderSide = side === 'BUY' ? 'SELL' : 'BUY';
       const priceFilter =
-        side === 'BUY' ? { lte: priceDec } : { gte: priceDec };
+        order.type === 'MARKET'
+          ? undefined
+          : side === 'BUY'
+            ? { lte: priceDec }
+            : { gte: priceDec };
 
       const matchingOrders = await prisma.order.findMany({
         where: {
           assetId,
           side: oppositeOrderSide,
           status: 'OPEN',
-          price: priceFilter,
+          ...(priceFilter ? { price: priceFilter } : {}),
           NOT: { userId }, // Don't match with same user
         },
         orderBy:
@@ -140,12 +157,18 @@ export class OrderMatchingService {
       let remainingQuantity = quantityDec;
       let currentOrderFilled = new Decimal(order.filledQuantity.toString());
       let tradeCount = 0;
-      const executedTrades: Array<{
+      const maxTotalCost =
+        order.type === 'MARKET' && side === 'BUY'
+          ? quantityDec.times(priceDec)
+          : undefined;
+      let totalSpent = new Decimal(0);
+
+      const executedTrades: {
         assetId: string;
         price: string;
         quantity: string;
         executedAt: Date;
-      }> = [];
+      }[] = [];
 
       await prisma.$transaction(async (tx: any) => {
         // Process all matches in a single DB transaction to reduce lock churn/deadlocks.
@@ -157,11 +180,20 @@ export class OrderMatchingService {
           ).minus(matchingOrder.filledQuantity);
           if (matchingOrderRemaining.lte(0)) continue;
 
-          const matchableQuantity = Decimal.min(
+          let matchableQuantity = Decimal.min(
             remainingQuantity,
             matchingOrderRemaining,
           );
           const matchPrice = new Decimal(matchingOrder.price?.toString() ?? 0);
+
+          if (order.type === 'MARKET' && side === 'BUY' && maxTotalCost) {
+            const cost = matchableQuantity.times(matchPrice);
+            if (totalSpent.plus(cost).gt(maxTotalCost)) {
+              const availableToSpend = maxTotalCost.minus(totalSpent);
+              matchableQuantity = availableToSpend.div(matchPrice);
+              if (matchableQuantity.lte(0)) break;
+            }
+          }
 
           const newOrderFilled = currentOrderFilled.plus(matchableQuantity);
           const isOrderFilled = newOrderFilled.equals(quantityDec);
@@ -226,7 +258,11 @@ export class OrderMatchingService {
             price: matchPrice,
           });
 
-          if (side === 'BUY' && matchPrice.lt(priceDec)) {
+          if (
+            order.type === 'LIMIT' &&
+            side === 'BUY' &&
+            matchPrice.lt(priceDec)
+          ) {
             const refundAmount = matchableQuantity.times(
               priceDec.minus(matchPrice),
             );
@@ -239,7 +275,46 @@ export class OrderMatchingService {
 
           remainingQuantity = remainingQuantity.minus(matchableQuantity);
           currentOrderFilled = newOrderFilled;
+          if (order.type === 'MARKET' && side === 'BUY') {
+            totalSpent = totalSpent.plus(matchableQuantity.times(matchPrice));
+          }
           tradeCount++;
+        }
+
+        if (order.type === 'MARKET' && remainingQuantity.gt(0)) {
+          await tx.order.update({
+            where: { id: orderId },
+            data: { status: 'CANCELLED' },
+          });
+
+          if (side === 'BUY' && maxTotalCost) {
+            const unusedLocked = maxTotalCost.minus(totalSpent);
+            if (unusedLocked.gt(0)) {
+              await this.tradingLedgerService.refundBuyerPriceImprovement({
+                tx,
+                buyerId: userId,
+                amount: unusedLocked,
+              });
+            }
+          } else if (side === 'SELL') {
+            await this.tradingLedgerService.unlockOrderRemainder({
+              tx,
+              userId,
+              side,
+              assetId,
+              remainingQuantity,
+              orderPrice: new Decimal(0),
+            });
+          }
+        } else if (order.type === 'MARKET' && side === 'BUY' && maxTotalCost) {
+          const unusedLocked = maxTotalCost.minus(totalSpent);
+          if (unusedLocked.gt(0)) {
+            await this.tradingLedgerService.refundBuyerPriceImprovement({
+              tx,
+              buyerId: userId,
+              amount: unusedLocked,
+            });
+          }
         }
       });
 
@@ -272,6 +347,10 @@ export class OrderMatchingService {
    * Get pending orders count in queue
    */
   async getPendingOrdersCount(): Promise<number> {
-    return this.orderMatchingQueue.count();
+    let count = 0;
+    for (const queue of this.queues.values()) {
+      count += await queue.count();
+    }
+    return count;
   }
 }

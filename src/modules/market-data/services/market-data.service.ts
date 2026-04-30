@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -157,7 +162,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       quantity,
       timestamp: timestamp.toISOString(),
     });
-    
+
     // Push trade to Redis queue for background DB sync
     await this.redisClient.rPush(this.REDIS_TRADE_QUEUE, tradeData);
 
@@ -165,7 +170,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     const openTime = new Date(timestamp);
     openTime.setSeconds(0, 0);
     const cacheKey = `${this.REDIS_OHLC_CACHE_PREFIX}${assetId}:1m:${openTime.getTime()}`;
-    
+
     const existingStr = await this.redisClient.get(cacheKey);
     if (existingStr) {
       const existing = JSON.parse(existingStr);
@@ -173,18 +178,24 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       existing.low = Decimal.min(existing.low, price).toString();
       existing.close = price;
       existing.volume = new Decimal(existing.volume).add(quantity).toString();
-      await this.redisClient.set(cacheKey, JSON.stringify(existing), { EX: 86400 }); // expire in 1 day
+      await this.redisClient.set(cacheKey, JSON.stringify(existing), {
+        EX: 86400,
+      }); // expire in 1 day
     } else {
-      await this.redisClient.set(cacheKey, JSON.stringify({
-        assetId,
-        resolution: '1m',
-        openTime: openTime.toISOString(),
-        open: price,
-        high: price,
-        low: price,
-        close: price,
-        volume: quantity,
-      }), { EX: 86400 });
+      await this.redisClient.set(
+        cacheKey,
+        JSON.stringify({
+          assetId,
+          resolution: '1m',
+          openTime: openTime.toISOString(),
+          open: price,
+          high: price,
+          low: price,
+          close: price,
+          volume: quantity,
+        }),
+        { EX: 86400 },
+      );
     }
   }
 
@@ -197,21 +208,27 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       const queueLength = await this.redisClient.lLen(this.REDIS_TRADE_QUEUE);
       if (queueLength === 0) return;
 
-      const tradesData = await this.redisClient.lPopCount(this.REDIS_TRADE_QUEUE, queueLength);
+      const tradesData = await this.redisClient.lPopCount(
+        this.REDIS_TRADE_QUEUE,
+        queueLength,
+      );
       if (!tradesData || tradesData.length === 0) return;
 
       const prisma = this.prisma as unknown as MarketDataPrisma;
-      
+
       // Group trades by assetId + openTime
-      const groupedTrades: Record<string, {
-        assetId: string;
-        openTime: Date;
-        open: string;
-        high: string;
-        low: string;
-        close: string;
-        volume: string;
-      }> = {};
+      const groupedTrades: Record<
+        string,
+        {
+          assetId: string;
+          openTime: Date;
+          open: string;
+          high: string;
+          low: string;
+          close: string;
+          volume: string;
+        }
+      > = {};
 
       for (const tradeStr of tradesData) {
         const trade = JSON.parse(tradeStr);
@@ -220,7 +237,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
         openTime.setSeconds(0, 0);
 
         const groupKey = `${trade.assetId}_${openTime.getTime()}`;
-        
+
         if (!groupedTrades[groupKey]) {
           groupedTrades[groupKey] = {
             assetId: trade.assetId,
@@ -236,7 +253,9 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
           current.high = Decimal.max(current.high, trade.price).toString();
           current.low = Decimal.min(current.low, trade.price).toString();
           current.close = trade.price;
-          current.volume = new Decimal(current.volume).add(trade.quantity).toString();
+          current.volume = new Decimal(current.volume)
+            .add(trade.quantity)
+            .toString();
         }
       }
 
@@ -275,15 +294,22 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
               },
             },
             data: {
-              high: Decimal.max(toDecimalValue(currentDb.high), group.high).toString(),
-              low: Decimal.min(toDecimalValue(currentDb.low), group.low).toString(),
+              high: Decimal.max(
+                toDecimalValue(currentDb.high),
+                group.high,
+              ).toString(),
+              low: Decimal.min(
+                toDecimalValue(currentDb.low),
+                group.low,
+              ).toString(),
               close: group.close,
-              volume: new Decimal(toDecimalValue(currentDb.volume)).add(group.volume).toString(),
+              volume: new Decimal(toDecimalValue(currentDb.volume))
+                .add(group.volume)
+                .toString(),
             },
           });
         }
       }
-
     } catch (error) {
       this.logger.error('Failed to sync trades to DB', error);
     } finally {
@@ -316,7 +342,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       close: Number(c.close),
       value: Number(c.volume),
     }));
-    
+
     // Supplement with latest from Redis cache if available
     const openTimeMs = new Date();
     openTimeMs.setSeconds(0, 0);
@@ -325,8 +351,8 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     if (cachedStr) {
       const cached = JSON.parse(cachedStr);
       const cachedTime = Math.floor(new Date(cached.openTime).getTime() / 1000);
-      
-      const existingIdx = results.findIndex(r => r.time === cachedTime);
+
+      const existingIdx = results.findIndex((r) => r.time === cachedTime);
       if (existingIdx !== -1) {
         results[existingIdx] = {
           time: cachedTime,
@@ -351,7 +377,9 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     return results;
   }
 
-  async getReferencePriceAnchor(assetId: string): Promise<ReferencePriceAnchor> {
+  async getReferencePriceAnchor(
+    assetId: string,
+  ): Promise<ReferencePriceAnchor> {
     const [asset, bestBidOrder, bestAskOrder, latestValuation] =
       await Promise.all([
         this.prisma.asset.findUnique({
@@ -423,8 +451,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       bestAskOrder?.price !== null && bestAskOrder?.price !== undefined
         ? new Decimal(bestAskOrder.price.toString())
         : null;
-    const midPrice =
-      bestBid && bestAsk ? bestBid.plus(bestAsk).div(2) : null;
+    const midPrice = bestBid && bestAsk ? bestBid.plus(bestAsk).div(2) : null;
     const lastTradePrice = asset.tokenPrice
       ? new Decimal(asset.tokenPrice.toString())
       : null;
@@ -456,4 +483,3 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     };
   }
 }
-

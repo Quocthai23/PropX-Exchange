@@ -20,15 +20,20 @@ export class BalancesService {
     assetId: string | null,
     amount: Decimal,
     type: 'credit' | 'debit',
-    transactionData: TransactionData,
     options?: {
       useAvailable?: boolean;
       useLocked?: boolean;
       description?: string;
       tx?: Prisma.TransactionClient;
+      transactionData?: TransactionData | null;
     },
   ) {
-    const { useAvailable = true, useLocked = false, tx } = options || {};
+    const {
+      useAvailable = true,
+      useLocked = false,
+      tx,
+      transactionData,
+    } = options || {};
 
     if (amount.lessThanOrEqualTo(0)) {
       throw new BadRequestException('Amount must be greater than zero');
@@ -82,17 +87,19 @@ export class BalancesService {
         data: updateData,
       });
 
-      await txClient.transaction.create({
-        data: {
-          userId,
-          type: transactionData.type,
-          amount,
-          fee: transactionData.fee || new Decimal(0),
-          status: transactionData.status,
-          idempotencyKey: transactionData.idempotencyKey,
-          txHash: transactionData.txHash,
-        },
-      });
+      if (transactionData) {
+        await txClient.transaction.create({
+          data: {
+            userId,
+            type: transactionData.type,
+            amount,
+            fee: transactionData.fee || new Decimal(0),
+            status: transactionData.status,
+            idempotencyKey: transactionData.idempotencyKey,
+            txHash: transactionData.txHash,
+          },
+        });
+      }
 
       return updatedBalance;
     };

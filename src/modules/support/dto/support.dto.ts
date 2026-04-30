@@ -65,6 +65,10 @@ export class CreateSupportTicketDto {
   @IsOptional()
   @IsString()
   priority?: string;
+
+  @ApiPropertyOptional({ description: 'Array of attachment URLs' })
+  @IsOptional()
+  attachments?: any;
 }
 
 export class UpdateSupportTicketDto {
@@ -118,6 +122,10 @@ export class SupportMessageDto {
   @Type(() => Number)
   @IsEnum([0, 1])
   messageType?: number = 0;
+
+  @ApiPropertyOptional({ description: 'Array of attachment URLs' })
+  @IsOptional()
+  attachments?: any;
 }
 
 export class GetSupportTicketsQueryDto {
@@ -129,12 +137,10 @@ export class GetSupportTicketsQueryDto {
   @Type(() => Number)
   take?: number = 20;
 
-  @ApiPropertyOptional({ default: 0, minimum: 0 })
+  @ApiPropertyOptional({ description: 'Cursor for cursor-based pagination' })
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  skip?: number = 0;
+  @IsString()
+  cursor?: string;
 
   @ApiPropertyOptional({ enum: $Enums.SupportTicketStatus })
   @IsOptional()

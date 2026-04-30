@@ -126,8 +126,11 @@ export class AwsKmsSigner extends AbstractSigner {
   }
 
   async signTypedData(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _domain: TypedDataDomain,
-    _types: Record<string, Array<TypedDataField>>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _types: Record<string, TypedDataField[]>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _value: Record<string, unknown>,
   ): Promise<string> {
     throw new Error(
@@ -150,9 +153,11 @@ export class AwsKmsSigner extends AbstractSigner {
       throw new Error('AWS KMS returned empty signature.');
     }
 
-    let { r, s } = parseKmsDerSignature(
+    const sig = parseKmsDerSignature(
       `0x${Buffer.from(result.Signature).toString('hex')}`,
     );
+    const r = sig.r;
+    let s = sig.s;
     if (s > SECP256K1_HALF_N) {
       s = SECP256K1_N - s;
     }

@@ -110,6 +110,10 @@ interface DividendsTransaction {
       where: { id: string };
       data: { status: string; claimedAt: Date };
     }): Promise<DividendClaimRecord>;
+    updateMany(args: {
+      where: { id: string; status: string };
+      data: { status: string; claimedAt: Date };
+    }): Promise<{ count: number }>;
   };
   balance: {
     findMany(args: {

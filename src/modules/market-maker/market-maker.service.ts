@@ -41,7 +41,6 @@ export class MarketMakerService implements OnModuleInit {
           passwordHash: 'none',
           role: 'ADMIN',
           kycStatus: 'APPROVED',
-          idNumber: 'BOT-001',
         },
       });
     }

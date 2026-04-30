@@ -15,10 +15,6 @@ interface MarketSubscriptionPayload {
   assetId: string;
 }
 
-interface UserSubscriptionPayload {
-  userId: string;
-}
-
 interface TradeRealtimePayload {
   assetId: string;
   price: string;

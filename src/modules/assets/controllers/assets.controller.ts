@@ -20,7 +20,7 @@ export class AssetsController {
 
   @ApiTags('Assets')
   @Get('assets')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'List all assets (public trading list)' })
   async getAssets(@CurrentUser() user: JwtPayload | undefined) {
@@ -30,7 +30,7 @@ export class AssetsController {
 
   @ApiTags('Assets')
   @Post('assets/:id/onboarding/submit')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Submit legal dossier for asset onboarding' })
   async submitOnboarding(

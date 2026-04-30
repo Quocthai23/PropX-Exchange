@@ -12,7 +12,7 @@ import type { JwtPayload } from '../../auth/types/jwt-payload.type';
 @Controller('admin/dividends')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
-@ApiBearerAuth()
+@ApiBearerAuth('accessToken')
 export class AdminDividendsController {
   constructor(private readonly dividendsService: DividendsService) {}
 
