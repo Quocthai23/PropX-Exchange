@@ -4,9 +4,11 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/prisma/prisma.service';
-import { $Enums } from '@prisma/client';
+import { DividendsService } from '@/modules/dividends/services/dividends.service';
 
 interface CorporateActionCreateData {
   assetId: string;
@@ -25,7 +27,15 @@ interface CorporateActionDelegate {
 export class CorporateActionService {
   private readonly logger = new Logger(CorporateActionService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly dividendsService: DividendsService,
+    @InjectQueue('asset-blockchain') private readonly assetQueue: Queue,
+  ) {}
+
+  private get db(): any {
+    return this.prisma as any;
+  }
 
   private async tryRecordCorporateAction(data: {
     assetId: string;
@@ -57,13 +67,13 @@ export class CorporateActionService {
   async distributeYield(
     assetId: string,
     totalDividend: string,
-  ): Promise<number> {
+  ): Promise<{ distributionId: string; status: string }> {
     const totalDividendDec = new Decimal(totalDividend);
     if (totalDividendDec.lte(0)) {
       throw new BadRequestException('Total dividend must be greater than 0.');
     }
 
-    const asset = await this.prisma.asset.findUnique({
+    const asset = await this.db.asset.findUnique({
       where: { id: assetId },
       select: { id: true },
     });
@@ -71,86 +81,19 @@ export class CorporateActionService {
       throw new NotFoundException('Asset not found.');
     }
 
-    // 1. Get all users currently holding this asset
-    const holdings = await this.prisma.balance.findMany({
-      where: {
-        assetId,
-        available: { gt: '0' },
-      },
+    const distribution = await this.dividendsService.createDistribution('SYSTEM', {
+      assetId,
+      totalAmount: Number(totalDividendDec.toString()),
     });
-
-    if (holdings.length === 0) {
-      throw new BadRequestException('No users holding this asset');
-    }
-
-    // 2. Calculate the total supply currently held
-    const totalSupplyHeld = holdings.reduce(
-      (sum, holding) => sum.plus(holding.available),
-      new Decimal(0),
-    );
-
-    let payoutCount = 0;
-
-    // 3. Distribute funds proportionally to each user
-    for (const holding of holdings) {
-      const userShareRatio = new Decimal(holding.available).div(
-        totalSupplyHeld,
-      );
-      const userPayoutAmount = totalDividendDec.times(userShareRatio);
-
-      if (userPayoutAmount.lte(0)) continue;
-
-      // Execute atomic transaction for each user
-      await this.prisma.$transaction(async (tx) => {
-        const cashBalance = await tx.balance.findFirst({
-          where: { userId: holding.userId, assetId: null },
-        });
-
-        if (cashBalance) {
-          await tx.balance.update({
-            where: { id: cashBalance.id },
-            data: {
-              available: {
-                increment: userPayoutAmount.toString(),
-              },
-            },
-          });
-        } else {
-          await tx.balance.create({
-            data: {
-              userId: holding.userId,
-              assetId: null,
-              available: userPayoutAmount.toString(),
-              locked: '0',
-            },
-          });
-        }
-
-        await tx.transaction.create({
-          data: {
-            userId: holding.userId,
-            type: $Enums.TransactionType.DIVIDEND,
-            amount: userPayoutAmount.toString(),
-            fee: '0',
-            status: $Enums.TransactionStatus.COMPLETED,
-          },
-        });
-      });
-
-      payoutCount++;
-    }
 
     await this.tryRecordCorporateAction({
       assetId,
       type: 'DIVIDEND',
       amount: totalDividendDec.toString(),
-      status: 'COMPLETED',
+      status: 'PENDING',
     });
-
-    this.logger.log(
-      `Distributed ${totalDividend} yield for asset ${assetId} to ${payoutCount} users.`,
-    );
-    return payoutCount;
+    this.logger.log(`Created pull-based dividend distribution ${distribution.id}.`);
+    return { distributionId: distribution.id, status: 'PENDING_SNAPSHOT' };
   }
 
   /**
@@ -169,7 +112,7 @@ export class CorporateActionService {
       );
     }
 
-    const asset = await this.prisma.asset.findUnique({
+    const asset = await this.db.asset.findUnique({
       where: { id: assetId },
       select: { id: true },
     });
@@ -181,91 +124,37 @@ export class CorporateActionService {
       `Starting liquidation for asset ${assetId} at price ${liquidationPrice}`,
     );
 
-    const holdings = await this.prisma.balance.findMany({
+    const holdings = await this.db.balance.findMany({
       where: {
         assetId,
         OR: [{ available: { gt: '0' } }, { locked: { gt: '0' } }],
       },
     });
 
-    for (const holding of holdings) {
-      const totalHeld = new Decimal(holding.available).plus(holding.locked);
-      if (totalHeld.lte(0)) {
-        continue;
-      }
-
-      const payoutAmount = totalHeld.mul(liquidationPriceDec);
-
-      await this.prisma.$transaction(async (tx) => {
-        const cashBalance = await tx.balance.findFirst({
-          where: { userId: holding.userId, assetId: null },
-        });
-
-        if (cashBalance) {
-          await tx.balance.update({
-            where: { id: cashBalance.id },
-            data: {
-              available: {
-                increment: payoutAmount.toString(),
-              },
-            },
-          });
-        } else {
-          await tx.balance.create({
-            data: {
-              userId: holding.userId,
-              assetId: null,
-              available: payoutAmount.toString(),
-              locked: '0',
-            },
-          });
-        }
-
-        await tx.balance.update({
-          where: { id: holding.id },
-          data: {
-            available: '0',
-            locked: '0',
-          },
-        });
-
-        await tx.transaction.create({
-          data: {
-            userId: holding.userId,
-            type: $Enums.TransactionType.TRANSFER,
-            amount: payoutAmount.toString(),
-            fee: '0',
-            status: $Enums.TransactionStatus.COMPLETED,
-          },
-        });
-      });
+    const totalHeld = holdings.reduce(
+      (sum, holding) => sum.plus(holding.available).plus(holding.locked),
+      new Decimal(0),
+    );
+    const burnAmount = totalHeld.toString();
+    if (totalHeld.lte(0)) {
+      throw new BadRequestException('No holdings found for liquidation.');
     }
-
-    await this.prisma.$transaction([
-      this.prisma.order.updateMany({
-        where: {
-          assetId,
-          status: {
-            in: [
-              $Enums.OrderStatus.PENDING,
-              $Enums.OrderStatus.OPEN,
-              $Enums.OrderStatus.PARTIALLY_FILLED,
-            ],
-          },
-        },
-        data: { status: $Enums.OrderStatus.CANCELLED },
-      }),
-      this.prisma.asset.update({
-        where: { id: assetId },
-        data: { isActive: false },
-      }),
-    ]);
+    const burnTxHash = await this.assetQueue.add(
+      'liquidation-burn',
+      {
+        assetId,
+        liquidationPrice: liquidationPriceDec.toString(),
+        burnAmount,
+      },
+      { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+    );
 
     await this.tryRecordCorporateAction({
       assetId,
       type: 'LIQUIDATION',
       amount: liquidationPriceDec.toString(),
-      status: 'COMPLETED',
+      status: 'PENDING',
     });
+    this.logger.log(`Liquidation queued for ${assetId}. job=${burnTxHash.id}`);
   }
 }

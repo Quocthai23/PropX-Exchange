@@ -100,6 +100,14 @@ export class AppConfigService {
     return this.configService.get('CHAIN_ADMIN_PRIVATE_KEY_ENCRYPTED');
   }
 
+  get chainKmsKeyId(): string | undefined {
+    return this.configService.get('CHAIN_KMS_KEY_ID');
+  }
+
+  get chainKmsSignerAddress(): string | undefined {
+    return this.configService.get('CHAIN_KMS_SIGNER_ADDRESS');
+  }
+
   get pinataJwt(): string | undefined {
     return this.configService.get('PINATA_JWT');
   }

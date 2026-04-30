@@ -3,6 +3,9 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { CreateAssetDto } from '../dto/create-asset.dto';
 import { UpdateAssetDto } from '../dto/asset.dto';
 import Decimal from 'decimal.js';
+import { parseUnits } from 'ethers';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { BlockchainService } from './blockchain.service';
 import { MultiSigService } from '@/shared/services/multisig.service';
 import {
@@ -16,6 +19,7 @@ export class AssetsService {
     private readonly prisma: PrismaService,
     private readonly blockchainService: BlockchainService,
     private readonly multiSigService: MultiSigService,
+    @InjectQueue('asset-blockchain') private readonly assetQueue: Queue,
   ) {}
 
   async getAssetCategories() {
@@ -148,27 +152,36 @@ export class AssetsService {
     const tokenizeHash = await this.blockchainService.sendTokenizeTx({
       name: asset.name,
       symbol: asset.symbol,
-      totalSupply: BigInt(new Decimal(asset.totalSupply.toString()).toFixed(0)),
+      totalSupply: parseUnits(asset.totalSupply.toString(), 18),
     });
-    const contractAddress =
-      await this.blockchainService.waitForTokenizeReceipt(tokenizeHash);
-
-    await this.prisma.asset.update({
-      where: { id },
-      data: {
-        isActive: true,
-        tradingStatus: 'OPEN',
-        txHash: tokenizeHash,
-        contractAddress,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.asset.update({
+        where: { id },
+        data: { txHash: tokenizeHash, isActive: false, tradingStatus: 'PAUSED' },
+      });
+      await tx.transaction.create({
+        data: {
+          userId: adminId,
+          type: 'MINT',
+          amount: asset.totalSupply,
+          fee: '0',
+          status: 'PENDING',
+          txHash: tokenizeHash,
+        } as any,
+      });
     });
+    await this.assetQueue.add(
+      'finalize-mint',
+      { assetId: id, txHash: tokenizeHash },
+      { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+    );
 
     return {
       success: true,
-      message: 'Asset approved, minted and listed for trading.',
+      message: 'Da gui lenh mint len blockchain, trang thai: PENDING.',
       proposalId: proposal.proposalId,
       txHash: tokenizeHash,
-      contractAddress,
+      status: 'PENDING',
     };
   }
 
@@ -191,27 +204,39 @@ export class AssetsService {
     const tokenizeHash = await this.blockchainService.sendTokenizeTx({
       name: asset.name,
       symbol: asset.symbol,
-      totalSupply: BigInt(new Decimal(asset.totalSupply.toString()).toFixed(0)),
+      totalSupply: parseUnits(asset.totalSupply.toString(), 18),
     });
-    const contractAddress =
-      await this.blockchainService.waitForTokenizeReceipt(tokenizeHash);
-
-    await this.prisma.asset.update({
-      where: { id: asset.id },
-      data: {
-        isActive: true,
-        tradingStatus: 'OPEN',
+    await this.prisma.$transaction(async (tx) => {
+      await tx.asset.update({
+        where: { id: asset.id },
+        data: { txHash: tokenizeHash, isActive: false, tradingStatus: 'PAUSED' },
+      });
+      await tx.transaction.create({
+        data: {
+          userId: adminId,
+          type: 'MINT',
+          amount: asset.totalSupply,
+          fee: '0',
+          status: 'PENDING',
+          txHash: tokenizeHash,
+        } as any,
+      });
+    });
+    await this.assetQueue.add(
+      'finalize-mint',
+      {
+        assetId: asset.id,
         txHash: tokenizeHash,
-        contractAddress,
       },
-    });
+      { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+    );
 
     return {
       success: true,
-      status: 'EXECUTED',
+      status: 'PENDING',
       proposalId,
       txHash: tokenizeHash,
-      contractAddress,
+      message: 'Da gui lenh mint len blockchain, trang thai: PENDING.',
     };
   }
 

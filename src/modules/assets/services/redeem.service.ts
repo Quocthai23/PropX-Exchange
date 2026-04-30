@@ -11,6 +11,8 @@ import { BlockchainService } from './blockchain.service';
 import { $Enums } from '@prisma/client';
 import { MultiSigService } from '@/shared/services/multisig.service';
 import { AdminUpdateRedemptionDto } from '../dto/redeem-asset.dto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 const DEFAULT_ASSET_TOKEN_DECIMALS = 18;
 
@@ -55,6 +57,7 @@ export class RedeemService {
     private readonly prisma: PrismaService,
     private readonly blockchainService: BlockchainService,
     private readonly multiSigService: MultiSigService,
+    @InjectQueue('asset-blockchain') private readonly assetQueue: Queue,
   ) {}
 
   async requestRedeem(userId: string, assetId: string) {
@@ -266,7 +269,7 @@ export class RedeemService {
       await tx.assetRedemptionRequest.update({
         where: { id: redemptionId },
         data: {
-          status: $Enums.RedemptionStatus.COMPLETED,
+          status: $Enums.RedemptionStatus.PROCESSING_LEGAL,
           burnTxHash,
         },
       });
@@ -277,7 +280,7 @@ export class RedeemService {
           type: $Enums.TransactionType.BURN,
           amount: new Decimal(req.tokenQuantity as any),
           fee: new Decimal(0),
-          status: $Enums.TransactionStatus.COMPLETED,
+          status: $Enums.TransactionStatus.PENDING,
           txHash: burnTxHash,
           confirmations: 0,
         } as any,
@@ -287,7 +290,7 @@ export class RedeemService {
         where: { id: req.assetId },
         data: {
           isActive: false,
-          tradingStatus: $Enums.AssetTradingStatus.CLOSED,
+          tradingStatus: $Enums.AssetTradingStatus.PAUSED,
         },
       });
 
@@ -297,11 +300,25 @@ export class RedeemService {
           entityId: redemptionId,
           action: 'COMPLETED',
           performedBy: adminId,
-          details: `Burn completed. txHash=${burnTxHash}`,
+          details: `Burn submitted. txHash=${burnTxHash}`,
         },
       });
     });
 
-    return { success: true, burnTxHash };
+    await this.assetQueue.add(
+      'finalize-redemption-burn',
+      {
+        redemptionId,
+        txHash: burnTxHash,
+      },
+      { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+    );
+
+    return {
+      success: true,
+      burnTxHash,
+      status: 'PENDING',
+      message: 'Da gui lenh burn len blockchain, trang thai: PENDING.',
+    };
   }
 }

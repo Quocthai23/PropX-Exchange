@@ -36,6 +36,9 @@ interface UsersPrisma {
   };
   transaction: {
     findMany(args: Record<string, unknown>): Promise<any[]>;
+    aggregate(args: Record<string, unknown>): Promise<{
+      _sum: { amount: DecimalValue | null };
+    }>;
   };
   asset: {
     findMany(args: Record<string, unknown>): Promise<any[]>;
@@ -362,7 +365,7 @@ export class UsersService {
   }
 
   async getPortfolioOverview(userId: string) {
-    const [balances, cashflowTransactions, dividendTransactions] = await Promise.all([
+    const [balances, dividendAggregate] = await Promise.all([
       this.prisma.balance.findMany({
         where: { userId },
         select: {
@@ -371,24 +374,13 @@ export class UsersService {
           locked: true,
         },
       }),
-      this.prisma.transaction.findMany({
+      this.prisma.transaction.aggregate({
         where: {
           userId,
           status: 'COMPLETED',
-          type: { in: ['DEPOSIT', 'WITHDRAW'] },
+          type: 'DIVIDEND',
         },
-        select: {
-          type: true,
-          amount: true,
-        },
-      }),
-      this.prisma.transaction.findMany({
-        where: {
-          userId,
-          status: 'COMPLETED',
-          type: { in: ['DIVIDEND'] },
-        },
-        select: { amount: true },
+        _sum: { amount: true },
       }),
     ]);
 
@@ -495,12 +487,32 @@ export class UsersService {
       });
     }
 
-    const netDepositedCapital = cashflowTransactions.reduce((sum, tx) => {
-      const amount = new Decimal(this.toDecimalString(tx.amount));
-      if (tx.type === 'DEPOSIT') return sum.plus(amount);
-      if (tx.type === 'WITHDRAW') return sum.minus(amount);
-      return sum;
-    }, new Decimal(0));
+    const [depositAggregate, withdrawAggregate] = await Promise.all([
+      this.prisma.transaction.aggregate({
+        where: {
+          userId,
+          status: 'COMPLETED',
+          type: 'DEPOSIT',
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.transaction.aggregate({
+        where: {
+          userId,
+          status: 'COMPLETED',
+          type: 'WITHDRAW',
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const totalDepositAmount = new Decimal(
+      this.toDecimalString(depositAggregate._sum.amount ?? 0),
+    );
+    const totalWithdrawAmount = new Decimal(
+      this.toDecimalString(withdrawAggregate._sum.amount ?? 0),
+    );
+    const netDepositedCapital = totalDepositAmount.minus(totalWithdrawAmount);
 
     const totalPortfolioValue = stablecoinBalance.plus(totalRwaValue);
     const pnl = totalPortfolioValue.minus(netDepositedCapital);
@@ -511,9 +523,8 @@ export class UsersService {
     const weightedApy = totalRwaValue.gt(0)
       ? totalApyWeightedValue.div(totalRwaValue)
       : new Decimal(0);
-    const totalDividendsReceived = dividendTransactions.reduce(
-      (sum, tx) => sum.plus(this.toDecimalString(tx.amount)),
-      new Decimal(0),
+    const totalDividendsReceived = new Decimal(
+      this.toDecimalString(dividendAggregate._sum.amount ?? 0),
     );
 
     return {

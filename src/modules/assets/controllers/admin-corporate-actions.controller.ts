@@ -20,13 +20,14 @@ export class AdminCorporateActionsController {
     @Param('id') assetId: string,
     @Body('totalAmount') totalAmount: string,
   ) {
-    const usersPaid = await this.corporateActionService.distributeYield(
+    const result = await this.corporateActionService.distributeYield(
       assetId,
       totalAmount,
     );
     return {
       success: true,
-      message: `Dividend distributed to ${usersPaid} users.`,
+      message: 'Da tao dot co tuc theo co che snapshot + claim.',
+      ...result,
     };
   }
 
@@ -36,6 +37,10 @@ export class AdminCorporateActionsController {
     @Body('liquidationPrice') liquidationPrice: string,
   ) {
     await this.corporateActionService.liquidateAsset(assetId, liquidationPrice);
-    return { success: true, message: 'Asset liquidated successfully.' };
+    return {
+      success: true,
+      message: 'Da gui lenh thanh ly len blockchain, trang thai: PENDING.',
+      status: 'PENDING',
+    };
   }
 }

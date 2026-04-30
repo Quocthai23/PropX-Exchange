@@ -144,7 +144,9 @@ model User {
   referrals               User[]                   @relation("UserReferrals")
   passwordHash            String?                  @db.Text
   enabledMfa              Boolean                  @default(false)
+  mfaSecret               String?                  @db.Text
   status                  UserStatus               @default(ACTIVE)
+  deviceSessions          DeviceSession[]
   favoriteAssets          FavoriteAsset[]
   outgoingRelations       UserRelation[]           @relation("OutgoingRelations")
   incomingRelations       UserRelation[]           @relation("IncomingRelations")
@@ -218,6 +220,23 @@ model Otp {
   code      String
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model DeviceSession {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId            String
+  refreshTokenHash    String   @db.Text
+  refreshTokenExpiresAt DateTime
+  userAgent           String?
+  ipAddress           String?
+  lastSeenAt          DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, deviceId])
+  @@index([userId, refreshTokenExpiresAt])
 }
 
 model KycRecord {

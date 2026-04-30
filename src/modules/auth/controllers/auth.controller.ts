@@ -32,6 +32,8 @@ import {
   CheckReferenceCodeDto,
   VerifyChallengeDto,
   ChangePasswordDto,
+  VerifySignatureDto,
+  Web3NonceDto,
 } from '../dto/auth.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
@@ -55,6 +57,24 @@ export class AuthController {
       secure: this.config.isProduction,
       sameSite: 'strict' as const,
       maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+  }
+
+  private getDeviceContext(req: Request): {
+    deviceId?: string;
+    userAgent?: string;
+    ipAddress?: string;
+  } {
+    const rawDeviceId = req.headers['x-device-id'];
+    const rawUserAgent = req.headers['user-agent'];
+    const deviceId =
+      typeof rawDeviceId === 'string' && rawDeviceId.trim() !== ''
+        ? rawDeviceId
+        : undefined;
+    return {
+      deviceId,
+      userAgent: typeof rawUserAgent === 'string' ? rawUserAgent : undefined,
+      ipAddress: req.ip,
     };
   }
 
@@ -102,8 +122,7 @@ export class AuthController {
       throw new UnauthorizedException('Email is required for this action.');
     }
     // This service call should return a short-lived, single-purpose token
-    const result = await this.authService.verifyOtp(email, dto.otp);
-    return { token: result.accessToken };
+    return this.authService.verifyOtp(email, dto.otp, dto.purpose);
   }
 
   @Post('register')
@@ -115,6 +134,7 @@ export class AuthController {
   })
   async register(
     @Body() dto: RegisterDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     // 1. Xác thực registerToken (giả sử là accessToken trả về từ verifyOtp)
@@ -152,7 +172,10 @@ export class AuthController {
     });
 
     // 5. Phát hành token đăng nhập
-    const tokens = await this.authService.issueTokenPair(user);
+    const tokens = await this.authService.issueTokenPair(
+      user,
+      this.getDeviceContext(req),
+    );
 
     // 6. Set refresh token cookie
     res.cookie(
@@ -176,8 +199,45 @@ export class AuthController {
   @Post('login-with-social')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with social' })
-  loginWithSocial(@Body() dto: LoginWithSocialDto) {
-    return this.authService.loginWithSocial(dto.provider, dto.idToken);
+  loginWithSocial(@Body() dto: LoginWithSocialDto, @Req() req: Request) {
+    return this.authService.loginWithSocial(
+      dto.provider,
+      dto.idToken,
+      this.getDeviceContext(req),
+    );
+  }
+
+  @Post('web3/nonce')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Generate nonce for SIWE flow' })
+  getWeb3Nonce(@Body() dto: Web3NonceDto) {
+    return this.authService.createWeb3Nonce(dto.walletAddress);
+  }
+
+  @Post('verify-signature')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login/Register by wallet signature (SIWE)' })
+  async verifySignature(
+    @Body() dto: VerifySignatureDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.verifySignature(
+      dto.message,
+      dto.signature,
+      dto.nonce,
+      dto.walletAddress,
+      this.getDeviceContext(req),
+    );
+    res.cookie(
+      'refresh_token',
+      result.refreshToken,
+      this.getRefreshCookieConfig(),
+    );
+    return {
+      accessToken: result.accessToken,
+      user: result.user,
+    };
   }
 
   @Post('login')
@@ -190,6 +250,7 @@ export class AuthController {
   })
   async login(
     @Body() dto: LoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     // 1. Kiểm tra user tồn tại
@@ -199,7 +260,10 @@ export class AuthController {
     }
 
     // 2. Phát hành token
-    const tokens = await this.authService.issueTokenPair(user);
+    const tokens = await this.authService.issueTokenPair(
+      user,
+      this.getDeviceContext(req),
+    );
 
     // 3. Set refresh token cookie
     res.cookie(

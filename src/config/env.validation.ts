@@ -21,6 +21,8 @@ export interface ValidatedEnv {
   AWS_SECRET_ACCESS_KEY?: string;
   CHAIN_ADMIN_PRIVATE_KEY?: string;
   CHAIN_ADMIN_PRIVATE_KEY_ENCRYPTED?: string;
+  CHAIN_KMS_KEY_ID?: string;
+  CHAIN_KMS_SIGNER_ADDRESS?: string;
   PINATA_JWT?: string;
   EXTERNAL_VALUATION_TARGETS_JSON?: string;
   USE_MOCK_CHAIN?: string;
@@ -102,6 +104,10 @@ export function validateEnv(config: Record<string, unknown>): ValidatedEnv {
         : undefined,
     CHAIN_ADMIN_PRIVATE_KEY_ENCRYPTED:
       config.CHAIN_ADMIN_PRIVATE_KEY_ENCRYPTED as string | undefined,
+    CHAIN_KMS_KEY_ID: config.CHAIN_KMS_KEY_ID as string | undefined,
+    CHAIN_KMS_SIGNER_ADDRESS: config.CHAIN_KMS_SIGNER_ADDRESS as
+      | string
+      | undefined,
     PINATA_JWT: config.PINATA_JWT as string | undefined,
     EXTERNAL_VALUATION_TARGETS_JSON:
       typeof config.EXTERNAL_VALUATION_TARGETS_JSON === 'string'

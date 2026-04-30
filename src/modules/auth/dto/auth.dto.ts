@@ -9,6 +9,7 @@ import {
   MaxLength,
   IsOptional,
   IsEnum,
+  IsEthereumAddress,
 } from 'class-validator';
 
 const EMAIL_REGEX =
@@ -211,4 +212,37 @@ export class VerifyChallengeDto {
   @IsString()
   @MinLength(1)
   code: string;
+}
+
+export class VerifySignatureDto {
+  @ApiProperty({ minLength: 1 })
+  @IsString()
+  @MinLength(1)
+  message: string;
+
+  @ApiProperty({ minLength: 1 })
+  @IsString()
+  @MinLength(1)
+  signature: string;
+
+  @ApiProperty({ minLength: 1 })
+  @IsString()
+  @MinLength(1)
+  nonce: string;
+
+  @ApiPropertyOptional({
+    description: 'Wallet address to cross-check ownership',
+  })
+  @IsOptional()
+  @IsString()
+  @IsEthereumAddress()
+  walletAddress?: string;
+}
+
+export class Web3NonceDto {
+  @ApiPropertyOptional({ description: 'Optional wallet address' })
+  @IsOptional()
+  @IsString()
+  @IsEthereumAddress()
+  walletAddress?: string;
 }

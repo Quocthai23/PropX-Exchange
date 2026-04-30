@@ -13,12 +13,14 @@ import {
   Interface,
   InterfaceAbi,
   JsonRpcProvider,
+  Signer,
   Wallet,
   formatUnits,
   parseUnits,
 } from 'ethers';
 import { KmsService } from '@/shared/services/kms.service';
 import { AppConfigService } from '@/config/app-config.service';
+import { AwsKmsSigner } from '@/shared/services/aws-kms-signer.service';
 
 interface TokenizeRequest {
   name: string;
@@ -31,6 +33,12 @@ interface BurnRequest {
   amount: bigint;
 }
 
+interface DynamicFeeOverrides {
+  gasPrice?: bigint;
+  maxFeePerGas?: bigint;
+  maxPriorityFeePerGas?: bigint;
+}
+
 @Injectable()
 export class BlockchainService implements OnModuleInit {
   private readonly logger = new Logger(BlockchainService.name);
@@ -38,7 +46,7 @@ export class BlockchainService implements OnModuleInit {
   private readonly confirmationByChainId: Record<string, number>;
 
   private provider?: JsonRpcProvider;
-  private signer?: Wallet;
+  private signer?: Signer;
 
   private readonly tokenFactoryAddress?: string;
   private readonly tokenFactoryAbi?: InterfaceAbi;
@@ -46,6 +54,9 @@ export class BlockchainService implements OnModuleInit {
   private readonly usdtTokenAddress?: string;
   private readonly usdtTokenAbi: InterfaceAbi = [
     'function transfer(address to, uint256 amount) external returns (bool)',
+  ];
+  private readonly assetTokenAbi: InterfaceAbi = [
+    'function burn(uint256 amount) external',
   ];
 
   private readonly depositReceiver?: string;
@@ -128,10 +139,26 @@ export class BlockchainService implements OnModuleInit {
     const rpcUrl = this.config.chainRpcUrl;
     if (!rpcUrl) throw new Error('CHAIN_RPC_URL is required.');
 
-    const adminKey = await this.kmsService.getAdminPrivateKey();
-
     this.provider = new JsonRpcProvider(rpcUrl);
-    this.signer = new Wallet(adminKey, this.provider);
+    if (this.config.useAwsKms) {
+      const kmsClient = this.kmsService.getClient();
+      const kmsKeyId = this.config.chainKmsKeyId;
+      const signerAddress = this.config.chainKmsSignerAddress;
+      if (!kmsClient || !kmsKeyId || !signerAddress) {
+        throw new Error(
+          'CHAIN_KMS_KEY_ID and CHAIN_KMS_SIGNER_ADDRESS are required when USE_AWS_KMS=true.',
+        );
+      }
+      this.signer = new AwsKmsSigner(
+        kmsClient,
+        kmsKeyId,
+        signerAddress,
+        this.provider,
+      );
+    } else {
+      const adminKey = await this.kmsService.getAdminPrivateKey();
+      this.signer = new Wallet(adminKey, this.provider);
+    }
     this.logger.log('Blockchain and signer wallet initialized successfully.');
   }
 
@@ -142,11 +169,30 @@ export class BlockchainService implements OnModuleInit {
     return this.provider;
   }
 
-  private getSigner(): Wallet {
+  private getSigner(): Signer {
     if (!this.signer) {
       throw new Error('Blockchain signer is not configured.');
     }
     return this.signer;
+  }
+
+  private async getDynamicFeeOverrides(): Promise<DynamicFeeOverrides> {
+    if (this.useMockChain) return {};
+
+    const provider = this.getProvider();
+    const feeData = await provider.getFeeData();
+    if (feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
+      return {
+        maxFeePerGas: feeData.maxFeePerGas,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+      };
+    }
+
+    if (feeData.gasPrice) {
+      return { gasPrice: feeData.gasPrice };
+    }
+
+    return {};
   }
 
   async sendTokenizeTx(request: TokenizeRequest): Promise<string> {
@@ -171,6 +217,7 @@ export class BlockchainService implements OnModuleInit {
         name: string,
         symbol: string,
         totalSupply: bigint,
+        overrides?: DynamicFeeOverrides,
       ) => Promise<ContractTransactionResponse>;
     };
 
@@ -178,6 +225,7 @@ export class BlockchainService implements OnModuleInit {
       request.name,
       request.symbol,
       request.totalSupply,
+      await this.getDynamicFeeOverrides(),
     );
 
     return tx.hash;
@@ -234,10 +282,25 @@ export class BlockchainService implements OnModuleInit {
       return `0x${crypto.randomUUID().replace(/-/g, '')}`;
     }
 
-    this.logger.log(
-      `Burn token request submitted for ${request.assetAddress}, amount=${request.amount.toString()}`,
+    const signer = this.getSigner();
+    const assetToken = new Contract(
+      request.assetAddress,
+      this.assetTokenAbi,
+      signer,
+    ) as unknown as BaseContract & {
+      burn: (
+        amount: bigint,
+        overrides?: DynamicFeeOverrides,
+      ) => Promise<ContractTransactionResponse>;
+    };
+    const tx = await assetToken.burn(
+      request.amount,
+      await this.getDynamicFeeOverrides(),
     );
-    return `0x${crypto.randomBytes(32).toString('hex')}`;
+    this.logger.log(
+      `Burn token tx submitted for ${request.assetAddress}, amount=${request.amount.toString()}, tx=${tx.hash}`,
+    );
+    return tx.hash;
   }
 
   async verifyDeposit(
@@ -294,19 +357,16 @@ export class BlockchainService implements OnModuleInit {
         transfer: (
           to: string,
           rawAmount: bigint,
+          overrides?: DynamicFeeOverrides,
         ) => Promise<ContractTransactionResponse>;
       };
 
       const rawAmount = parseUnits(amount.toFixed(6), 6);
-      const tx = await usdt.transfer(walletAddress, rawAmount);
-      const receipt = await tx.wait(this.requiredConfirmations);
-
-      if (!receipt || receipt.status !== 1) {
-        throw new InternalServerErrorException(
-          'Withdrawal transaction failed.',
-        );
-      }
-
+      const tx = await usdt.transfer(
+        walletAddress,
+        rawAmount,
+        await this.getDynamicFeeOverrides(),
+      );
       return tx.hash;
     } catch {
       throw new InternalServerErrorException(
@@ -325,6 +385,15 @@ export class BlockchainService implements OnModuleInit {
 
     const currentBlock = await provider.getBlockNumber();
     return currentBlock - receipt.blockNumber + 1;
+  }
+
+  async isTransactionSuccessful(txHash: string): Promise<boolean | null> {
+    if (this.useMockChain) return true;
+
+    const provider = this.getProvider();
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt) return null;
+    return receipt.status === 1;
   }
 
   async getRequiredConfirmations(): Promise<number> {
@@ -382,7 +451,8 @@ export class BlockchainService implements OnModuleInit {
 
     try {
       const rawAmount = parseUnits(amount.toFixed(6), 6);
-      const nonce = await provider.getTransactionCount(signer.address);
+      const signerAddress = await signer.getAddress();
+      const nonce = await provider.getTransactionCount(signerAddress);
 
       // Create the encoded transfer data
       const iface = new Interface(this.usdtTokenAbi);
@@ -392,19 +462,20 @@ export class BlockchainService implements OnModuleInit {
       ]);
 
       // Send transaction with higher gas price
+      const dynamicFee = await this.getDynamicFeeOverrides();
       const signedTx = await signer.signTransaction({
         to: this.usdtTokenAddress,
         data: data,
-        gasPrice: BigInt(newGasPrice.toFixed(0)),
         nonce: nonce,
+        ...(dynamicFee.maxFeePerGas && dynamicFee.maxPriorityFeePerGas
+          ? {
+              maxFeePerGas: BigInt(newGasPrice.toFixed(0)),
+              maxPriorityFeePerGas: dynamicFee.maxPriorityFeePerGas,
+            }
+          : { gasPrice: BigInt(newGasPrice.toFixed(0)) }),
       });
 
       const response = await provider.broadcastTransaction(signedTx);
-      const receipt = await response.wait(this.requiredConfirmations);
-
-      if (!receipt || receipt.status !== 1) {
-        throw new InternalServerErrorException('Speed-up transaction failed.');
-      }
 
       this.logger.log(
         `Speed-up transaction sent. Original: ${originalTxHash}, New: ${response.hash}`,
@@ -446,19 +517,20 @@ export class BlockchainService implements OnModuleInit {
       const baseGasPrice = feeData.gasPrice || BigInt(0);
       const newGasPrice = baseGasPrice * BigInt(2); // Use 2x gas price to ensure replacement
 
+      const signerAddress = await signer.getAddress();
+      const dynamicFee = await this.getDynamicFeeOverrides();
       const tx = await signer.sendTransaction({
-        to: signer.address, // Send to self
+        to: signerAddress, // Send to self
         value: BigInt(0),
         nonce: originalTx.nonce,
-        gasPrice: newGasPrice,
         gasLimit: BigInt(21000), // Minimal gas for simple transfer
+        ...(dynamicFee.maxFeePerGas && dynamicFee.maxPriorityFeePerGas
+          ? {
+              maxFeePerGas: dynamicFee.maxFeePerGas * BigInt(2),
+              maxPriorityFeePerGas: dynamicFee.maxPriorityFeePerGas * BigInt(2),
+            }
+          : { gasPrice: newGasPrice }),
       });
-
-      const receipt = await tx.wait();
-
-      if (!receipt || receipt.status !== 1) {
-        throw new InternalServerErrorException('Refund transaction failed.');
-      }
 
       this.logger.log(
         `Refund transaction sent for ${originalTxHash}. Replacement txHash: ${tx.hash}`,

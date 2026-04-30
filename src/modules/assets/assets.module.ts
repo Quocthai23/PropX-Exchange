@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AssetsService } from './services/assets.service';
 import { AssetsController } from './controllers/assets.controller';
@@ -13,8 +14,21 @@ import { RedeemService } from './services/redeem.service';
 import { DailyPriceCron } from './jobs/daily-price.cron';
 import { MultiSigService } from '@/shared/services/multisig.service';
 import { RedemptionController } from './controllers/redemption.controller';
+import { AssetBlockchainProcessor } from './jobs/asset-blockchain.processor';
+import { DividendsModule } from '@/modules/dividends/dividends.module';
 
 @Module({
+  imports: [
+    BullModule.registerQueue({
+      name: 'asset-blockchain',
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: true,
+      },
+    }),
+    DividendsModule,
+  ],
   controllers: [
     AssetsController,
     AdminAssetsController,
@@ -31,6 +45,7 @@ import { RedemptionController } from './controllers/redemption.controller';
     KmsService,
     RedeemService,
     DailyPriceCron,
+    AssetBlockchainProcessor,
     MultiSigService,
   ],
   exports: [AssetsService, BlockchainService, IpfsService],

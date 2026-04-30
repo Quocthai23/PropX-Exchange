@@ -104,4 +104,8 @@ export class KmsService {
     this.cachedDecryptedKey = null;
     this.logger.log('Cached private key cleared');
   }
+
+  getClient(): KMSClient | null {
+    return this.kmsClient;
+  }
 }
