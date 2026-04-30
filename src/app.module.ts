@@ -28,6 +28,7 @@ import { validateEnv, type ValidatedEnv } from '@/config/env.validation';
 import { AppConfigModule } from '@/config/app-config.module';
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module';
 import { DaoModule } from '@/modules/dao/dao.module';
+import { CommissionsModule } from '@/modules/commissions/commissions.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { DaoModule } from '@/modules/dao/dao.module';
     NotificationsModule,
     OnboardingModule,
     DaoModule,
+    CommissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

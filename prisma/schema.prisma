@@ -56,6 +56,7 @@ enum TransactionType {
   MINT // When issuing new RWA tokens
   BURN // When burning tokens for redemption
   DIVIDEND_CLAIM
+  COMMISSION
 }
 
 enum TransactionStatus {
@@ -141,6 +142,8 @@ model User {
   postLikes               PostLike[]
   comments                Comment[]
   postBookmarks           PostBookmark[]
+  commissionRewards       CommissionReward[]           @relation("UserCommissionRewards")
+  sourceCommissionRewards CommissionReward[]           @relation("SourceCommissionRewards")
 
   // New fields for profile
   gender                  String?
@@ -760,4 +763,37 @@ model UserReadGlobalNotification {
   readAt               DateTime           @default(now())
 
   @@id([userId, globalNotificationId])
+}
+
+enum CommissionEvent {
+  TRADE
+  PROFIT_SHARE
+  YIELD
+}
+
+model CommissionConfig {
+  id             String          @id @default(uuid())
+  eventType      CommissionEvent @unique
+  commissionRate Decimal         // e.g., 0.20 for 20%
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model CommissionReward {
+  id               String          @id @default(uuid())
+  userId           String          // Người được nhận thưởng (A)
+  user             User            @relation("UserCommissionRewards", fields: [userId], references: [id], onDelete: Cascade)
+  sourceUserId     String          // Người tạo ra sự kiện (B)
+  sourceUser       User            @relation("SourceCommissionRewards", fields: [sourceUserId], references: [id])
+  eventType        CommissionEvent
+  amount           Decimal         // Số tiền thưởng nhận được
+  currency         String          @default("USDT")
+  sourceTxId       String?         // ID của giao dịch gốc
+  status           String          @default("PENDING") // PENDING, PAID
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([userId, status])
+  @@index([sourceUserId])
 }

@@ -11,6 +11,8 @@ import { BalancesService } from '../../balances/services/balances.service';
 import { CreateDistributionDto } from '../dto/create-distribution.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { CommissionsService } from '../../commissions/commissions.service';
+import { CommissionEvent } from '@prisma/client';
 
 type DecimalValue = string | number | { toString(): string };
 
@@ -207,6 +209,7 @@ export class DividendsService {
   constructor(
     private prisma: PrismaService,
     private readonly balancesService: BalancesService,
+    private readonly commissionsService: CommissionsService,
     @InjectQueue('merkle-tree') private readonly merkleTreeQueue: Queue,
   ) {}
 
@@ -420,6 +423,15 @@ export class DividendsService {
           fee: '0',
           status: 'COMPLETED',
         },
+      });
+
+      // Trigger YIELD commission
+      await this.commissionsService.triggerCommission({
+        eventType: CommissionEvent.YIELD,
+        sourceUserId: userId,
+        amount: Number(toDecimalValue(claim.amount)),
+        sourceTxId: claim.id,
+        currency: 'USDT',
       });
 
       return { message: 'Dividend claimed successfully', amount: claim.amount };

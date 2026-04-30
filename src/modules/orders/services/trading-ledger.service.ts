@@ -2,12 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { $Enums, Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { BalancesService } from '@/modules/balances/services/balances.service';
+import { CommissionsService } from '@/modules/commissions/commissions.service';
+import { CommissionEvent } from '@prisma/client';
 
 type TxClient = Prisma.TransactionClient;
 
 @Injectable()
 export class TradingLedgerService {
-  constructor(private readonly balancesService: BalancesService) {}
+  constructor(
+    private readonly balancesService: BalancesService,
+    private readonly commissionsService: CommissionsService,
+  ) {}
 
   /**
    * Invariant: placing an order always locks funds first.
@@ -142,6 +147,22 @@ export class TradingLedgerService {
         },
       ],
     });
+
+    // Trigger TRADE commissions for both buyer and seller using volume (quoteAmount)
+    await Promise.all([
+      this.commissionsService.triggerCommission({
+        eventType: CommissionEvent.TRADE,
+        sourceUserId: buyerId,
+        amount: quoteAmount.toNumber(),
+        sourceTxId: `${buyerId}_${assetId}_${Date.now()}`,
+      }),
+      this.commissionsService.triggerCommission({
+        eventType: CommissionEvent.TRADE,
+        sourceUserId: sellerId,
+        amount: quoteAmount.toNumber(),
+        sourceTxId: `${sellerId}_${assetId}_${Date.now()}`,
+      })
+    ]);
   }
 
   async refundBuyerPriceImprovement(params: {

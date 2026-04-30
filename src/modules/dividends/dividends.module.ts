@@ -8,10 +8,12 @@ import { MerkleTreeProcessor } from './jobs/merkle-tree.processor';
 import { PrismaService } from '@/prisma/prisma.service';
 import { RolesGuard } from '../users/dto/roles.guard';
 import { BalancesModule } from '../balances/balances.module';
+import { CommissionsModule } from '../commissions/commissions.module';
 
 @Module({
   imports: [
     BalancesModule,
+    CommissionsModule,
     BullModule.registerQueue({
       name: 'merkle-tree',
     }),

@@ -6,9 +6,10 @@ import { TradingLedgerService } from './services/trading-ledger.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BalancesModule } from '../balances/balances.module';
 import { MarketDataModule } from '../market-data/market-data.module';
+import { CommissionsModule } from '../commissions/commissions.module';
 
 @Module({
-  imports: [BalancesModule, MarketDataModule],
+  imports: [BalancesModule, MarketDataModule, CommissionsModule],
   controllers: [OrdersController],
   providers: [
     OrdersService,
