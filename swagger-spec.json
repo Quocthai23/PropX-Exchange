@@ -147,7 +147,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -244,7 +251,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Get public user profile",
@@ -292,7 +299,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Update profile",
@@ -330,7 +337,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Get profile",
@@ -366,7 +373,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Delete account",
@@ -428,7 +435,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Suggest users",
@@ -512,7 +519,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Get user relation list",
@@ -560,7 +567,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Toggle favorite asset",
@@ -617,7 +624,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Upsert user relation",
@@ -665,7 +672,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Update referral reference code",
@@ -703,7 +710,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Get portfolio overview",
@@ -803,7 +810,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
                 }
               }
             }
@@ -1237,7 +1247,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "List all assets (public trading list)",
@@ -1295,7 +1305,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Submit legal dossier for asset onboarding",
@@ -1779,7 +1789,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Request full asset redemption (requires 100% supply)",
@@ -1934,6 +1944,416 @@
         ]
       }
     },
+    "/admin/dividends/distribute": {
+      "post": {
+        "operationId": "AdminDividendsController_createDistribution",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDistributionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Admin: Create a new dividend distribution with snapshot logic",
+        "tags": [
+          "Admin - Dividends"
+        ]
+      }
+    },
+    "/dividends/claimable": {
+      "get": {
+        "operationId": "DividendsController_getClaimableDividends",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get list of unclaimed dividends (claimable)",
+        "tags": [
+          "Dividends"
+        ]
+      }
+    },
+    "/dividends/claim-proof/{distributionId}": {
+      "get": {
+        "operationId": "DividendsController_getClaimProof",
+        "parameters": [
+          {
+            "name": "distributionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get Merkle proof for on-chain dividend claim",
+        "tags": [
+          "Dividends"
+        ]
+      }
+    },
+    "/dividends/claim/{distributionId}": {
+      "post": {
+        "operationId": "DividendsController_claimDividend",
+        "parameters": [
+          {
+            "name": "distributionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Claim a dividend to USDT balance",
+        "tags": [
+          "Dividends"
+        ]
+      }
+    },
+    "/commissions/config": {
+      "get": {
+        "operationId": "CommissionsController_getConfigs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Return all commission configs."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get all commission configs (Admin Only)",
+        "tags": [
+          "Commissions"
+        ]
+      }
+    },
+    "/commissions/config/{eventType}": {
+      "put": {
+        "operationId": "CommissionsController_updateConfig",
+        "parameters": [
+          {
+            "name": "eventType",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "TRADE",
+                "PROFIT_SHARE",
+                "YIELD"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCommissionConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Return the updated commission config."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Update a commission config (Admin Only)",
+        "tags": [
+          "Commissions"
+        ]
+      }
+    },
+    "/commissions/rewards": {
+      "get": {
+        "operationId": "CommissionsController_getUserRewards",
+        "parameters": [
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "description": "Number of records to skip",
+            "schema": {
+              "minimum": 0,
+              "example": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "description": "Number of records to take",
+            "schema": {
+              "minimum": 1,
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "description": "Filter by event type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TRADE",
+                "PROFIT_SHARE",
+                "YIELD"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return user rewards with pagination."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get current user commission rewards",
+        "tags": [
+          "Commissions"
+        ]
+      }
+    },
+    "/commissions/stats": {
+      "get": {
+        "operationId": "CommissionsController_getUserStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Return user commission stats."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Get current user commission stats",
+        "tags": [
+          "Commissions"
+        ]
+      }
+    },
     "/payment/deposit-demo": {
       "post": {
         "operationId": "PaymentController_depositDemo",
@@ -1973,7 +2393,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Deposit (demo account)",
@@ -2021,7 +2441,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Create or Get User Wallet",
@@ -2069,7 +2489,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Create Withdrawal Request V2",
@@ -2117,7 +2537,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Transfer Funds V2",
@@ -2168,7 +2588,8 @@
                 "FEE",
                 "MINT",
                 "BURN",
-                "DIVIDEND_CLAIM"
+                "DIVIDEND_CLAIM",
+                "COMMISSION"
               ]
             }
           },
@@ -2232,7 +2653,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Get Transaction Histories",
@@ -2283,7 +2704,8 @@
                 "FEE",
                 "MINT",
                 "BURN",
-                "DIVIDEND_CLAIM"
+                "DIVIDEND_CLAIM",
+                "COMMISSION"
               ]
             }
           },
@@ -2592,6 +3014,15 @@
             }
           },
           {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Cursor for pagination",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "side",
             "required": false,
             "in": "query",
@@ -2628,16 +3059,6 @@
             "description": "Asset ID",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "skip",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 0,
-              "default": 0,
-              "type": "number"
             }
           }
         ],
@@ -2979,13 +3400,12 @@
             }
           },
           {
-            "name": "skip",
+            "name": "cursor",
             "required": false,
             "in": "query",
+            "description": "Cursor for cursor-based pagination",
             "schema": {
-              "minimum": 0,
-              "default": 0,
-              "type": "number"
+              "type": "string"
             }
           },
           {
@@ -3326,6 +3746,60 @@
         ]
       }
     },
+    "/support-tickets/upload": {
+      "post": {
+        "operationId": "SupportController_uploadAttachment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Upload attachment file for support",
+        "tags": [
+          "Support"
+        ]
+      }
+    },
     "/admin/support": {
       "get": {
         "operationId": "AdminSupportController_adminGetTickets",
@@ -3342,13 +3816,12 @@
             }
           },
           {
-            "name": "skip",
+            "name": "cursor",
             "required": false,
             "in": "query",
+            "description": "Cursor for cursor-based pagination",
             "schema": {
-              "minimum": 0,
-              "default": 0,
-              "type": "number"
+              "type": "string"
             }
           },
           {
@@ -3592,7 +4065,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Send OTP",
@@ -3641,7 +4114,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Verify OTP",
@@ -3731,6 +4204,92 @@
           }
         },
         "summary": "Login with social",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/web3/nonce": {
+      "post": {
+        "operationId": "AuthController_getWeb3Nonce",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Web3NonceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Generate nonce for SIWE flow",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/verify-signature": {
+      "post": {
+        "operationId": "AuthController_verifySignature",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifySignatureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Login/Register by wallet signature (SIWE)",
         "tags": [
           "Auth"
         ]
@@ -3947,7 +4506,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Create an auth challenge for sensitive purposes",
@@ -3995,7 +4554,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Verify Challenge",
@@ -4076,7 +4635,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Change Password",
@@ -4114,7 +4673,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Logout",
@@ -4152,209 +4711,12 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Get user profile (Requires JWT Token)",
         "tags": [
           "Auth"
-        ]
-      }
-    },
-    "/admin/dividends/distribute": {
-      "post": {
-        "operationId": "AdminDividendsController_createDistribution",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDistributionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Admin: Create a new dividend distribution with snapshot logic",
-        "tags": [
-          "Admin - Dividends"
-        ]
-      }
-    },
-    "/dividends/claimable": {
-      "get": {
-        "operationId": "DividendsController_getClaimableDividends",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get list of unclaimed dividends (claimable)",
-        "tags": [
-          "Dividends"
-        ]
-      }
-    },
-    "/dividends/claim-proof/{distributionId}": {
-      "get": {
-        "operationId": "DividendsController_getClaimProof",
-        "parameters": [
-          {
-            "name": "distributionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get Merkle proof for on-chain dividend claim",
-        "tags": [
-          "Dividends"
-        ]
-      }
-    },
-    "/dividends/claim/{distributionId}": {
-      "post": {
-        "operationId": "DividendsController_claimDividend",
-        "parameters": [
-          {
-            "name": "distributionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Claim a dividend to USDT balance",
-        "tags": [
-          "Dividends"
         ]
       }
     },
@@ -5166,7 +5528,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Create an asset onboarding request",
@@ -5375,7 +5737,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Create DAO proposal for an asset",
@@ -5433,7 +5795,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "accessToken": []
           }
         ],
         "summary": "Vote on a proposal",
@@ -5493,79 +5855,27 @@
     }
   },
   "info": {
-    "title": "RWA Backend API",
-    "description": "API documentation for the RWA graduation project - Real World Assets Platform",
+    "title": "Documentation",
+    "description": "Documentation for the backend API",
     "version": "1.0.0",
     "contact": {
-      "name": "RWA Team",
-      "url": "",
-      "email": "support@rwa.com"
-    },
-    "license": {
-      "name": "Proprietary",
-      "url": ""
+      "name": "API Support",
+      "url": "https://www.swagger.io/support",
+      "email": "support@swagger.io"
     }
   },
-  "tags": [
-    {
-      "name": "Auth",
-      "description": "Authentication endpoints"
-    },
-    {
-      "name": "Users",
-      "description": "User management endpoints"
-    },
-    {
-      "name": "Assets",
-      "description": "Asset management endpoints"
-    },
-    {
-      "name": "Orders",
-      "description": "Order management endpoints"
-    },
-    {
-      "name": "KYC",
-      "description": "Know Your Customer endpoints"
-    },
-    {
-      "name": "Payment",
-      "description": "Payment endpoints"
-    },
-    {
-      "name": "Settlement",
-      "description": "Settlement endpoints"
-    }
-  ],
+  "tags": [],
   "servers": [
     {
-      "url": "http://localhost:3000",
-      "description": "Local Development"
+      "url": "https://mirroto-api.muskcoin.io/",
+      "description": "Dev server"
+    },
+    {
+      "url": "http://0.0.0.0:3000",
+      "description": "Local server"
     }
   ],
   "components": {
-    "securitySchemes": {
-      "access-token": {
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "type": "http",
-        "description": "Enter JWT token"
-      },
-      "accessToken": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      },
-      "refreshToken": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      },
-      "apiKey": {
-        "type": "apiKey",
-        "name": "apiKey",
-        "in": "header"
-      }
-    },
     "schemas": {
       "SyncNewsDto": {
         "type": "object",
@@ -5994,6 +6304,44 @@
           "status"
         ]
       },
+      "CreateDistributionDto": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "description": "RWA asset ID"
+          },
+          "totalAmount": {
+            "type": "number",
+            "minimum": 0.01,
+            "description": "Total USDT to distribute (e.g., 10000)"
+          },
+          "snapshotDate": {
+            "type": "string",
+            "description": "Snapshot date/time. Defaults to immediate execution if omitted."
+          }
+        },
+        "required": [
+          "assetId",
+          "totalAmount"
+        ]
+      },
+      "UpdateCommissionConfigDto": {
+        "type": "object",
+        "properties": {
+          "commissionRate": {
+            "type": "number",
+            "minimum": 0,
+            "description": "The commission rate, e.g., 0.20 for 20%",
+            "example": 0.2
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Is the commission event active",
+            "example": true
+          }
+        }
+      },
       "DepositDemoDto": {
         "type": "object",
         "properties": {
@@ -6250,6 +6598,11 @@
             "type": "string",
             "format": "uuid",
             "description": "Client-generated UUID to prevent duplicate submissions"
+          },
+          "maxTotalCost": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Max total cost for MARKET BUY orders to lock funds safely."
           }
         },
         "required": [
@@ -6293,6 +6646,10 @@
           "priority": {
             "type": "string",
             "description": "Optional priority (free-form string)"
+          },
+          "attachments": {
+            "type": "object",
+            "description": "Array of attachment URLs"
           }
         },
         "required": [
@@ -6348,6 +6705,10 @@
               0,
               1
             ]
+          },
+          "attachments": {
+            "type": "object",
+            "description": "Array of attachment URLs"
           }
         },
         "required": [
@@ -6463,6 +6824,41 @@
         "required": [
           "provider",
           "idToken"
+        ]
+      },
+      "Web3NonceDto": {
+        "type": "object",
+        "properties": {
+          "walletAddress": {
+            "type": "string",
+            "description": "Optional wallet address"
+          }
+        }
+      },
+      "VerifySignatureDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nonce": {
+            "type": "string",
+            "minLength": 1
+          },
+          "walletAddress": {
+            "type": "string",
+            "description": "Wallet address to cross-check ownership"
+          }
+        },
+        "required": [
+          "message",
+          "signature",
+          "nonce"
         ]
       },
       "LoginDto": {
@@ -6596,28 +6992,6 @@
           "newPassword"
         ]
       },
-      "CreateDistributionDto": {
-        "type": "object",
-        "properties": {
-          "assetId": {
-            "type": "string",
-            "description": "RWA asset ID"
-          },
-          "totalAmount": {
-            "type": "number",
-            "minimum": 0.01,
-            "description": "Total USDT to distribute (e.g., 10000)"
-          },
-          "snapshotDate": {
-            "type": "string",
-            "description": "Snapshot date/time. Defaults to immediate execution if omitted."
-          }
-        },
-        "required": [
-          "assetId",
-          "totalAmount"
-        ]
-      },
       "MediaLinkDto": {
         "type": "object",
         "properties": {
@@ -6735,6 +7109,7 @@
               "APPRAISING",
               "APPROVED",
               "REJECTED",
+              "PROCESSING",
               "TOKENIZED"
             ]
           },
@@ -7079,6 +7454,23 @@
             }
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "accessToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "refreshToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "apiKey": {
+        "type": "apiKey",
+        "name": "apiKey",
+        "in": "header"
       }
     }
   }

@@ -26,5 +26,6 @@ import { CommissionsModule } from '../commissions/commissions.module';
     DividendSnapshotCron,
     MerkleTreeProcessor,
   ],
+  exports: [DividendsService],
 })
 export class DividendsModule {}
