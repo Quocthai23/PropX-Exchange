@@ -2,6 +2,7 @@ export interface ValidatedEnv {
   NODE_ENV: string;
   PORT: number;
   DATABASE_URL?: string;
+  REDIS_URL?: string;
   REDIS_HOST: string;
   REDIS_PORT: number;
   REDIS_PASSWORD?: string;
@@ -77,6 +78,7 @@ export function validateEnv(config: Record<string, unknown>): ValidatedEnv {
     NODE_ENV: nodeEnv,
     PORT: asInt(config.PORT, 3000),
     DATABASE_URL: config.DATABASE_URL as string | undefined,
+    REDIS_URL: config.REDIS_URL as string | undefined,
     REDIS_HOST: (config.REDIS_HOST as string | undefined) ?? 'localhost',
     REDIS_PORT: asInt(config.REDIS_PORT, 6379),
     REDIS_PASSWORD: config.REDIS_PASSWORD as string | undefined,

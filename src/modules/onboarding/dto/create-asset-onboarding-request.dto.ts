@@ -13,7 +13,10 @@ export class CreateAssetOnboardingRequestDto {
   @IsNotEmpty()
   title: string;
 
-  @ApiProperty({ description: 'Asset description', example: '2PN, full nội thất...' })
+  @ApiProperty({
+    description: 'Asset description',
+    example: '2PN, full nội thất...',
+  })
   @IsString()
   @IsNotEmpty()
   description: string;
@@ -23,17 +26,22 @@ export class CreateAssetOnboardingRequestDto {
   @IsString()
   location?: string;
 
-  @ApiProperty({ description: 'Expected appraisal value', example: '3500000000' })
+  @ApiProperty({
+    description: 'Expected appraisal value',
+    example: '3500000000',
+  })
   @IsString()
-  @Matches(/^\d+(\.\d+)?$/, { message: 'estimatedValue must be a decimal string' })
+  @Matches(/^\d+(\.\d+)?$/, {
+    message: 'estimatedValue must be a decimal string',
+  })
   estimatedValue: string;
 
   @ApiProperty({
-    description: 'Array of URLs for legal document images (title deed, IDs, etc.)',
+    description:
+      'Array of URLs for legal document images (title deed, IDs, etc.)',
     type: [String],
   })
   @IsArray()
   @IsString({ each: true })
   legalDocuments: string[];
 }
-

@@ -63,8 +63,17 @@ export class SettlementService {
 
     // 1. Fetch up to 100 matched off-chain trades that are still unsettled.
     const settlementPrisma = this.prisma as PrismaService & SettlementPrisma;
+    const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
     const pendingTrades = await settlementPrisma.trade.findMany({
-      where: { settlementStatus: 'PENDING' },
+      where: {
+        OR: [
+          { settlementStatus: 'PENDING' },
+          {
+            settlementStatus: 'PROCESSING',
+            updatedAt: { lt: thirtyMinsAgo },
+          },
+        ],
+      },
       include: {
         asset: true,
         buyer: true,

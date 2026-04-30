@@ -38,6 +38,10 @@ export class AssetsController {
     @Param('id') assetId: string,
     @Body() dto: SubmitAssetOnboardingDto,
   ) {
-    return this.assetsService.submitOnboarding(user?.sub ?? 'SYSTEM', assetId, dto);
+    return this.assetsService.submitOnboarding(
+      user?.sub ?? 'SYSTEM',
+      assetId,
+      dto,
+    );
   }
 }

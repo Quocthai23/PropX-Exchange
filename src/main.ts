@@ -17,6 +17,7 @@ import type { LoggerService } from '@nestjs/common';
 import { RequestLoggingInterceptor } from './shared/interceptors/request-logging.interceptor';
 import { ApiExceptionFilter } from './shared/filters/api-exception.filter';
 import { AppConfigService } from './config/app-config.service';
+import { RedisIoAdapter } from './shared/adapters/redis-io.adapter';
 
 interface SwaggerOperation {
   responses?: Record<string, unknown>;
@@ -320,6 +321,14 @@ async function bootstrap() {
       stopAtFirstError: false,
     }),
   );
+
+  const redisHost = configService.redisHost;
+  const redisPort = configService.redisPort;
+  const redisPassword = configService.redisPassword;
+  const redisUrl = `redis://${redisHost}:${redisPort}`;
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis(redisUrl, redisPassword);
+  app.useWebSocketAdapter(redisIoAdapter);
 
   const config = new DocumentBuilder()
     .setTitle('RWA Backend API')

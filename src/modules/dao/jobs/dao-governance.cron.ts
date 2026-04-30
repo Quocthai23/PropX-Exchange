@@ -13,4 +13,3 @@ export class DaoGovernanceCron {
     await this.daoService.finalizeProposals(now);
   }
 }
-

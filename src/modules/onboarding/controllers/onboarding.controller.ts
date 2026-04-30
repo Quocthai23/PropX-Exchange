@@ -22,4 +22,3 @@ export class OnboardingController {
     return this.onboardingService.createRequest(user?.sub ?? 'SYSTEM', dto);
   }
 }
-

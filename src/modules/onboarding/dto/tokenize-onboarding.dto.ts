@@ -50,4 +50,3 @@ export class TokenizeOnboardingDto {
   @IsString()
   auditReportUrl?: string;
 }
-

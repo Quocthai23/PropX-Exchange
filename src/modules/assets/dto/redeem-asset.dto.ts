@@ -8,7 +8,8 @@ export class AdminUpdateRedemptionDto {
   status: RedemptionStatus;
 
   @ApiPropertyOptional({
-    description: 'Legal transfer documents (URLs, signed contracts, handover docs)',
+    description:
+      'Legal transfer documents (URLs, signed contracts, handover docs)',
     type: [String],
   })
   @IsOptional()
@@ -16,4 +17,3 @@ export class AdminUpdateRedemptionDto {
   @IsString({ each: true })
   legalTransferDocs?: string[];
 }
-

@@ -13,14 +13,23 @@ import { $Enums } from '@prisma/client';
 export class DaoService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createProposal(userId: string, assetId: string, dto: CreateProposalDto) {
-    const asset = await this.prisma.asset.findUnique({ where: { id: assetId } });
+  async createProposal(
+    userId: string,
+    assetId: string,
+    dto: CreateProposalDto,
+  ) {
+    const asset = await this.prisma.asset.findUnique({
+      where: { id: assetId },
+    });
     if (!asset) throw new NotFoundException('asset-not-found');
 
     const snapshotDate = new Date(dto.snapshotDate);
     const endDate = new Date(dto.endDate);
 
-    if (!(snapshotDate instanceof Date) || Number.isNaN(snapshotDate.valueOf())) {
+    if (
+      !(snapshotDate instanceof Date) ||
+      Number.isNaN(snapshotDate.valueOf())
+    ) {
       throw new BadRequestException('invalid-snapshotDate');
     }
     if (!(endDate instanceof Date) || Number.isNaN(endDate.valueOf())) {
@@ -152,36 +161,26 @@ export class DaoService {
     });
 
     for (const proposal of candidates) {
-      const asset = await this.prisma.asset.findUnique({
-        where: { id: proposal.assetId },
-        select: { id: true, isActive: true, tradingStatus: true },
-      });
-      if (!asset) continue;
+      let cursorId: string | undefined;
+      let totalHolders = 0;
 
-      const shouldResumeTrading =
-        asset.isActive && asset.tradingStatus === $Enums.AssetTradingStatus.OPEN;
-
-      try {
-        if (shouldResumeTrading) {
-          await this.prisma.asset.update({
-            where: { id: asset.id },
-            data: { tradingStatus: $Enums.AssetTradingStatus.PAUSED },
-          });
-        }
-
+      while (true) {
         const balances = await this.prisma.balance.findMany({
           where: {
             assetId: proposal.assetId,
             OR: [{ available: { gt: 0 } }, { locked: { gt: 0 } }],
           },
-          select: { userId: true, available: true, locked: true },
-          take: 20000,
+          orderBy: { id: 'asc' },
+          take: 500,
+          ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+          select: { id: true, userId: true, available: true, locked: true },
         });
 
-        if (!balances.length) {
-          // still create a marker snapshot row for SYSTEM? we skip; vote will fail (no holders)
-          continue;
+        if (balances.length === 0) {
+          break;
         }
+
+        cursorId = balances[balances.length - 1].id;
 
         const rows = balances.map((b) => ({
           proposalId: proposal.id,
@@ -197,23 +196,18 @@ export class DaoService {
           skipDuplicates: true,
         });
 
-        await this.prisma.auditLog.create({
-          data: {
-            entity: 'DAO_PROPOSAL',
-            entityId: proposal.id,
-            action: 'SNAPSHOT_TAKEN',
-            performedBy: 'SYSTEM',
-            details: `Snapshot created for ${rows.length} holders.`,
-          },
-        });
-      } finally {
-        if (shouldResumeTrading) {
-          await this.prisma.asset.update({
-            where: { id: asset.id },
-            data: { tradingStatus: $Enums.AssetTradingStatus.OPEN },
-          });
-        }
+        totalHolders += rows.length;
       }
+
+      await this.prisma.auditLog.create({
+        data: {
+          entity: 'DAO_PROPOSAL',
+          entityId: proposal.id,
+          action: 'SNAPSHOT_TAKEN',
+          performedBy: 'SYSTEM',
+          details: `Snapshot created for ${totalHolders} holders.`,
+        },
+      });
     }
   }
 
@@ -234,23 +228,25 @@ export class DaoService {
       });
       if (!proposal) continue;
 
-      const votes = await this.prisma.proposalVote.findMany({
+      const forAggregate = await this.prisma.proposalVote.aggregate({
+        _sum: { votingPower: true },
+        where: { proposalId: id, isFor: true },
+      });
+      const totalAggregate = await this.prisma.proposalVote.aggregate({
+        _sum: { votingPower: true },
         where: { proposalId: id },
-        select: { isFor: true, votingPower: true },
-        take: 20000,
       });
 
-      const forPower = votes
-        .filter((v) => v.isFor)
-        .reduce((acc, v) => acc.add(new Decimal(v.votingPower as any)), new Decimal(0));
-      const totalPower = votes.reduce(
-        (acc, v) => acc.add(new Decimal(v.votingPower as any)),
-        new Decimal(0),
-      );
+      const forPower = forAggregate._sum.votingPower
+        ? new Decimal(forAggregate._sum.votingPower as any)
+        : new Decimal(0);
+      const totalPower = totalAggregate._sum.votingPower
+        ? new Decimal(totalAggregate._sum.votingPower as any)
+        : new Decimal(0);
 
-      const quorumThreshold = new Decimal(proposal.asset.totalSupply as any).times(
-        new Decimal(0.2),
-      );
+      const quorumThreshold = new Decimal(
+        proposal.asset.totalSupply as any,
+      ).times(new Decimal(0.2));
       const passed =
         totalPower.greaterThanOrEqualTo(quorumThreshold) &&
         totalPower.gt(0) &&
@@ -259,7 +255,9 @@ export class DaoService {
       const updated = await this.prisma.daoProposal.update({
         where: { id },
         data: {
-          status: passed ? $Enums.ProposalStatus.PASSED : $Enums.ProposalStatus.REJECTED,
+          status: passed
+            ? $Enums.ProposalStatus.PASSED
+            : $Enums.ProposalStatus.REJECTED,
         },
       });
 
@@ -281,4 +279,3 @@ export class DaoService {
     }
   }
 }
-

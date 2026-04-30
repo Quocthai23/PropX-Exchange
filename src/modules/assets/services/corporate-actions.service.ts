@@ -81,10 +81,13 @@ export class CorporateActionService {
       throw new NotFoundException('Asset not found.');
     }
 
-    const distribution = await this.dividendsService.createDistribution('SYSTEM', {
-      assetId,
-      totalAmount: Number(totalDividendDec.toString()),
-    });
+    const distribution = await this.dividendsService.createDistribution(
+      'SYSTEM',
+      {
+        assetId,
+        totalAmount: Number(totalDividendDec.toString()),
+      },
+    );
 
     await this.tryRecordCorporateAction({
       assetId,
@@ -92,7 +95,9 @@ export class CorporateActionService {
       amount: totalDividendDec.toString(),
       status: 'PENDING',
     });
-    this.logger.log(`Created pull-based dividend distribution ${distribution.id}.`);
+    this.logger.log(
+      `Created pull-based dividend distribution ${distribution.id}.`,
+    );
     return { distributionId: distribution.id, status: 'PENDING_SNAPSHOT' };
   }
 

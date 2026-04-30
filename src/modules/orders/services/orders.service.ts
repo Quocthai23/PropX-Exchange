@@ -68,12 +68,62 @@ export class OrdersService {
     }
 
     const quantityDec = new Decimal(quantity);
-    const priceDec =
-      type === 'MARKET' ? asset.tokenPrice : new Decimal(price || 0);
-    if (type === 'LIMIT') {
+    let priceDec = new Decimal(price || 0);
+
+    if (type === 'MARKET') {
+      if (side === 'BUY') {
+        const asks = await this.prisma.order.findMany({
+          where: { assetId, side: 'SELL', status: 'OPEN' },
+          orderBy: { price: 'asc' },
+        });
+        let remainingToBuy = quantityDec;
+        let totalCost = new Decimal(0);
+        for (const ask of asks) {
+          const askPrice = new Decimal(ask.price?.toString() || 0);
+          const askQty = new Decimal(ask.quantity.toString()).minus(
+            new Decimal(ask.filledQuantity.toString()),
+          );
+          const matchedQty = Decimal.min(remainingToBuy, askQty);
+          totalCost = totalCost.plus(matchedQty.mul(askPrice));
+          remainingToBuy = remainingToBuy.minus(matchedQty);
+          if (remainingToBuy.isZero()) break;
+        }
+        if (!remainingToBuy.isZero()) {
+          throw new BadRequestException(
+            'Sổ lệnh quá mỏng, không đủ thanh khoản cho Market Order',
+          );
+        }
+        priceDec = totalCost.div(quantityDec);
+      } else {
+        const bids = await this.prisma.order.findMany({
+          where: { assetId, side: 'BUY', status: 'OPEN' },
+          orderBy: { price: 'desc' },
+        });
+        let remainingToSell = quantityDec;
+        let totalRevenue = new Decimal(0);
+        for (const bid of bids) {
+          const bidPrice = new Decimal(bid.price?.toString() || 0);
+          const bidQty = new Decimal(bid.quantity.toString()).minus(
+            new Decimal(bid.filledQuantity.toString()),
+          );
+          const matchedQty = Decimal.min(remainingToSell, bidQty);
+          totalRevenue = totalRevenue.plus(matchedQty.mul(bidPrice));
+          remainingToSell = remainingToSell.minus(matchedQty);
+          if (remainingToSell.isZero()) break;
+        }
+        if (!remainingToSell.isZero()) {
+          throw new BadRequestException(
+            'Sổ lệnh quá mỏng, không đủ thanh khoản cho Market Order',
+          );
+        }
+        priceDec = totalRevenue.div(quantityDec);
+      }
+    } else if (type === 'LIMIT') {
       this.validatePriceBand(
         priceDec,
-        asset.referencePrice ? new Decimal(asset.referencePrice.toString()) : null,
+        asset.referencePrice
+          ? new Decimal(asset.referencePrice.toString())
+          : null,
         asset.priceBandPercentage
           ? new Decimal(asset.priceBandPercentage.toString())
           : null,
@@ -182,7 +232,9 @@ export class OrdersService {
 
     this.validatePriceBand(
       nextPrice,
-      asset.referencePrice ? new Decimal(asset.referencePrice.toString()) : null,
+      asset.referencePrice
+        ? new Decimal(asset.referencePrice.toString())
+        : null,
       asset.priceBandPercentage
         ? new Decimal(asset.priceBandPercentage.toString())
         : null,

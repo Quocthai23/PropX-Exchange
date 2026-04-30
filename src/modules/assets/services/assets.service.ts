@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateAssetDto } from '../dto/create-asset.dto';
 import { UpdateAssetDto } from '../dto/asset.dto';
@@ -79,7 +83,9 @@ export class AssetsService {
     assetId: string,
     dto: SubmitAssetOnboardingDto,
   ) {
-    const asset = await this.prisma.asset.findUnique({ where: { id: assetId } });
+    const asset = await this.prisma.asset.findUnique({
+      where: { id: assetId },
+    });
     if (!asset) throw new NotFoundException('asset-not-found');
 
     await this.prisma.auditLog.create({
@@ -95,8 +101,14 @@ export class AssetsService {
     return { success: true, status: 'UNDER_DUE_DILIGENCE' };
   }
 
-  async reviewOnboarding(assetId: string, adminId: string, dto: ReviewAssetOnboardingDto) {
-    const asset = await this.prisma.asset.findUnique({ where: { id: assetId } });
+  async reviewOnboarding(
+    assetId: string,
+    adminId: string,
+    dto: ReviewAssetOnboardingDto,
+  ) {
+    const asset = await this.prisma.asset.findUnique({
+      where: { id: assetId },
+    });
     if (!asset) throw new NotFoundException('asset-not-found');
 
     await this.prisma.$transaction([
@@ -104,7 +116,9 @@ export class AssetsService {
         data: {
           entity: 'ASSET',
           entityId: assetId,
-          action: dto.approved ? 'DUE_DILIGENCE_APPROVED' : 'DUE_DILIGENCE_REJECTED',
+          action: dto.approved
+            ? 'DUE_DILIGENCE_APPROVED'
+            : 'DUE_DILIGENCE_REJECTED',
           performedBy: adminId,
           details: JSON.stringify(dto),
         },
@@ -138,7 +152,10 @@ export class AssetsService {
       },
     });
 
-    const approval = await this.multiSigService.approve(proposal.proposalId, adminId);
+    const approval = await this.multiSigService.approve(
+      proposal.proposalId,
+      adminId,
+    );
     if (approval.status !== 'EXECUTED') {
       return {
         success: true,
@@ -157,7 +174,11 @@ export class AssetsService {
     await this.prisma.$transaction(async (tx) => {
       await tx.asset.update({
         where: { id },
-        data: { txHash: tokenizeHash, isActive: false, tradingStatus: 'PAUSED' },
+        data: {
+          txHash: tokenizeHash,
+          isActive: false,
+          tradingStatus: 'PAUSED',
+        },
       });
       await tx.transaction.create({
         data: {
@@ -198,7 +219,9 @@ export class AssetsService {
     }
 
     const assetId = String(approval.payload.assetId ?? '');
-    const asset = await this.prisma.asset.findUnique({ where: { id: assetId } });
+    const asset = await this.prisma.asset.findUnique({
+      where: { id: assetId },
+    });
     if (!asset) throw new NotFoundException('asset-not-found');
 
     const tokenizeHash = await this.blockchainService.sendTokenizeTx({
@@ -209,7 +232,11 @@ export class AssetsService {
     await this.prisma.$transaction(async (tx) => {
       await tx.asset.update({
         where: { id: asset.id },
-        data: { txHash: tokenizeHash, isActive: false, tradingStatus: 'PAUSED' },
+        data: {
+          txHash: tokenizeHash,
+          isActive: false,
+          tradingStatus: 'PAUSED',
+        },
       });
       await tx.transaction.create({
         data: {

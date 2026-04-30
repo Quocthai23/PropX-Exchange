@@ -24,7 +24,9 @@ export class RedemptionController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('assets/:id/redeem')
-  @ApiOperation({ summary: 'Request full asset redemption (requires 100% supply)' })
+  @ApiOperation({
+    summary: 'Request full asset redemption (requires 100% supply)',
+  })
   async requestRedeem(
     @CurrentUser() user: JwtPayload | undefined,
     @Param('id') assetId: string,
@@ -70,7 +72,9 @@ export class RedemptionController {
     @CurrentUser() user: JwtPayload | undefined,
     @Param('id') redemptionId: string,
   ) {
-    return this.redeemService.completeRedemption(redemptionId, user?.sub ?? 'SYSTEM');
+    return this.redeemService.completeRedemption(
+      redemptionId,
+      user?.sub ?? 'SYSTEM',
+    );
   }
 }
-

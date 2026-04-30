@@ -2,9 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { GetNotificationsQueryDto } from '../dto/notifications.dto';
 
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectQueue('notifications') private readonly notificationsQueue: Queue,
+  ) {}
 
   async createNotification(data: {
     userId: string;
@@ -13,9 +19,18 @@ export class NotificationsService {
     content?: string;
     metadata?: any;
   }) {
-    return this.prisma.notification.create({
-      data,
-    });
+    await this.notificationsQueue.add('send-notification', data);
+    return { queued: true };
+  }
+
+  async broadcastNotification(data: {
+    userIds: string[];
+    type: string;
+    title: string;
+    content?: string;
+  }) {
+    await this.notificationsQueue.add('broadcast-notification', data);
+    return { queued: true };
   }
 
   async getNotifications(userId: string, query: GetNotificationsQueryDto) {

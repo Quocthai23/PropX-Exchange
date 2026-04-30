@@ -8,6 +8,8 @@ import { parseUnits } from 'ethers';
 import { PrismaService } from '@/prisma/prisma.service';
 import { IpfsService } from '@/modules/assets/services/ipfs.service';
 import { BlockchainService } from '@/modules/assets/services/blockchain.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { CreateAssetOnboardingRequestDto } from '../dto/create-asset-onboarding-request.dto';
 import { AdminUpdateOnboardingStatusDto } from '../dto/admin-update-onboarding-status.dto';
 import { TokenizeOnboardingDto } from '../dto/tokenize-onboarding.dto';
@@ -21,6 +23,8 @@ export class OnboardingService {
     private readonly prisma: PrismaService,
     private readonly ipfsService: IpfsService,
     private readonly blockchainService: BlockchainService,
+    @InjectQueue('asset-blockchain')
+    private readonly assetBlockchainQueue: Queue,
   ) {}
 
   async createRequest(userId: string, dto: CreateAssetOnboardingRequestDto) {
@@ -52,7 +56,9 @@ export class OnboardingService {
   async listAdminRequests() {
     const data = await this.prisma.assetOnboardingRequest.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { user: { select: { id: true, email: true, walletAddress: true } } },
+      include: {
+        user: { select: { id: true, email: true, walletAddress: true } },
+      },
     });
     return { data, total: data.length };
   }
@@ -99,7 +105,11 @@ export class OnboardingService {
     return { success: true, data: updated };
   }
 
-  async tokenize(onboardingId: string, adminId: string, dto: TokenizeOnboardingDto) {
+  async tokenize(
+    onboardingId: string,
+    adminId: string,
+    dto: TokenizeOnboardingDto,
+  ) {
     const req = await this.prisma.assetOnboardingRequest.findUnique({
       where: { id: onboardingId },
       include: { user: { select: { id: true, walletAddress: true } } },
@@ -141,8 +151,6 @@ export class OnboardingService {
         DEFAULT_ASSET_TOKEN_DECIMALS,
       ),
     });
-    const contractAddress =
-      await this.blockchainService.waitForTokenizeReceipt(tokenizeHash);
 
     const totalSupplyDec = new Decimal(dto.totalSupply);
     const tokenPriceDec = new Decimal(dto.tokenPrice);
@@ -156,10 +164,10 @@ export class OnboardingService {
           categoryId: dto.categoryId,
           totalSupply: totalSupplyDec,
           tokenPrice: tokenPriceDec,
-          isActive: true,
-          tradingStatus: $Enums.AssetTradingStatus.OPEN,
+          isActive: false,
+          tradingStatus: $Enums.AssetTradingStatus.PAUSED,
           txHash: tokenizeHash,
-          contractAddress,
+          contractAddress: null,
           tokenStandard: dto.tokenStandard ?? null,
           spvName: dto.spvName ?? null,
           legalDocsIpfs: pinned.cid,
@@ -173,7 +181,7 @@ export class OnboardingService {
           type: $Enums.TransactionType.MINT,
           amount: totalSupplyDec,
           fee: new Decimal(0),
-          status: $Enums.TransactionStatus.COMPLETED,
+          status: $Enums.TransactionStatus.PENDING,
           txHash: tokenizeHash,
           confirmations: 0,
         } as any,
@@ -182,35 +190,27 @@ export class OnboardingService {
       const updatedReq = await tx.assetOnboardingRequest.update({
         where: { id: req.id },
         data: {
-          status: $Enums.OnboardingStatus.TOKENIZED,
+          status: $Enums.OnboardingStatus.PROCESSING,
           updatedAt: new Date(),
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          entity: 'ASSET_ONBOARDING_REQUEST',
-          entityId: req.id,
-          action: 'TOKENIZED',
-          performedBy: adminId,
-          details: JSON.stringify({
-            txHash: tokenizeHash,
-            contractAddress,
-            assetId: asset.id,
-          }),
         },
       });
 
       return { asset, updatedReq };
     });
 
+    await this.assetBlockchainQueue.add('finalize-mint', {
+      assetId: result.asset.id,
+      txHash: tokenizeHash,
+      onboardingRequestId: req.id,
+      adminId,
+    });
+
     return {
       success: true,
       assetId: result.asset.id,
       txHash: tokenizeHash,
-      contractAddress,
+      status: 'PROCESSING',
       legalDocsIpfs: pinned.cid,
     };
   }
 }
-

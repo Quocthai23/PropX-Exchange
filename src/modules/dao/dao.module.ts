@@ -9,4 +9,3 @@ import { DaoGovernanceCron } from './jobs/dao-governance.cron';
   providers: [DaoService, DaoGovernanceCron, PrismaService],
 })
 export class DaoModule {}
-

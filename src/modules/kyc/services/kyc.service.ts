@@ -11,6 +11,7 @@ import { CreateKycDto } from '../dto/create-kyc.dto';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 import { BlockchainService } from './blockchain.service';
 import { MultiSigService } from '@/shared/services/multisig.service';
+import * as crypto from 'crypto';
 
 type KycStatus = 'PENDING' | 'APPROVING' | 'APPROVED' | 'REJECTED';
 
@@ -23,7 +24,9 @@ interface KycPrisma {
     update(args: Record<string, unknown>): Promise<unknown>;
   };
   user: {
-    findUnique(args: Record<string, unknown>): Promise<{ walletAddress: string | null } | null>;
+    findUnique(
+      args: Record<string, unknown>,
+    ): Promise<{ walletAddress: string | null } | null>;
     update(args: Record<string, unknown>): Promise<unknown>;
   };
   auditLog: {
@@ -35,6 +38,10 @@ interface KycPrisma {
 export class KycService {
   private readonly logger = new Logger(KycService.name);
   private readonly prisma: KycPrisma;
+  private readonly encryptionKey = Buffer.from(
+    process.env.WALLET_ENCRYPTION_KEY || '12345678901234567890123456789012',
+    'utf-8',
+  );
 
   constructor(
     prismaService: PrismaService,
@@ -46,11 +53,37 @@ export class KycService {
     this.prisma = prismaService as unknown as KycPrisma;
   }
 
+  private encryptIdNumber(text: string): string {
+    const iv = Buffer.alloc(16, 0); // Deterministic IV for @unique
+    const cipher = crypto.createCipheriv('aes-256-cbc', this.encryptionKey, iv);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted;
+  }
+
+  private decryptIdNumber(text: string): string {
+    if (!text || !/^[0-9a-fA-F]+$/.test(text)) return text;
+    try {
+      const iv = Buffer.alloc(16, 0);
+      const encryptedText = Buffer.from(text, 'hex');
+      const decipher = crypto.createDecipheriv(
+        'aes-256-cbc',
+        this.encryptionKey,
+        iv,
+      );
+      let decrypted = decipher.update(encryptedText);
+      decrypted = Buffer.concat([decrypted, decipher.final()]);
+      return decrypted.toString('utf8');
+    } catch {
+      return text;
+    }
+  }
+
   async submitKyc(userId: string, dto: CreateKycDto) {
     const payload = {
       fullName: dto.fullName,
       dob: new Date(dto.dob),
-      idNumber: dto.idNumber,
+      idNumber: this.encryptIdNumber(dto.idNumber),
       idFrontImg: dto.idFrontImg,
       idBackImg: dto.idBackImg,
       selfieImg: dto.selfieImg,
@@ -86,19 +119,30 @@ export class KycService {
   }
 
   async getMyKyc(userId: string) {
-    return this.prisma.kycRecord.findUnique({
+    const record: any = await this.prisma.kycRecord.findUnique({
       where: { userId },
     });
+    if (record && record.idNumber) {
+      record.idNumber = this.decryptIdNumber(record.idNumber as string);
+    }
+    return record;
   }
 
   async listPendingRequests() {
-    return this.prisma.kycRecord.findMany({
+    const records: any[] = (await this.prisma.kycRecord.findMany({
       where: {
         status: {
           in: ['PENDING', 'APPROVING'],
         },
       },
       orderBy: { createdAt: 'desc' },
+    })) as any[];
+
+    return records.map((record) => {
+      if (record.idNumber) {
+        record.idNumber = this.decryptIdNumber(record.idNumber);
+      }
+      return record;
     });
   }
 
@@ -149,9 +193,16 @@ export class KycService {
       },
     });
 
-    const approval = await this.multiSigService.approve(proposal.proposalId, adminId);
+    const approval = await this.multiSigService.approve(
+      proposal.proposalId,
+      adminId,
+    );
     if (approval.status === 'EXECUTED') {
-      await this.executeKycWhitelist(userId, user.walletAddress, adminId);
+      await this.kycQueue.add('process-whitelist', {
+        userId,
+        walletAddress: user.walletAddress,
+        adminId,
+      });
     }
 
     return {
@@ -179,7 +230,11 @@ export class KycService {
 
     const userId = String(approval.payload.userId ?? '');
     const walletAddress = String(approval.payload.walletAddress ?? '');
-    await this.executeKycWhitelist(userId, walletAddress, adminId);
+    await this.kycQueue.add('process-whitelist', {
+      userId,
+      walletAddress,
+      adminId,
+    });
 
     return {
       proposalId,
@@ -189,45 +244,7 @@ export class KycService {
     };
   }
 
-  private async executeKycWhitelist(
-    userId: string,
-    walletAddress: string,
-    adminId: string,
-  ) {
-    const { txHash } = await this.blockchainService.addToWhitelist(walletAddress);
-    await this.prisma.$transaction([
-      this.prisma.kycRecord.update({
-        where: { userId },
-        data: {
-          status: 'APPROVED' as KycStatus,
-          rejectReason: null,
-          onChainWhitelisted: true,
-          whitelistTxHash: txHash,
-        },
-      }),
-      this.prisma.user.update({
-        where: { id: userId },
-        data: { kycStatus: 'APPROVED' as KycStatus },
-      }),
-      this.prisma.auditLog.create({
-        data: {
-          entity: 'KYC',
-          entityId: userId,
-          action: 'APPROVED',
-          performedBy: adminId,
-          details: 'Wallet has been whitelisted on-chain via multisig approval.',
-        },
-      }),
-    ]);
-
-    await this.notificationsService.createNotification({
-      userId,
-      type: 'KYC_APPROVED',
-      title: 'KYC Approved!',
-      content:
-        'Your wallet is now whitelisted on-chain and your KYC has been approved.',
-    });
-  }
+  // Bỏ hàm executeKycWhitelist vì đã chuyển logic sang kyc-approval.processor.ts
 
   async rejectKyc(userId: string, reason: string, adminId?: string) {
     if (!reason?.trim()) {

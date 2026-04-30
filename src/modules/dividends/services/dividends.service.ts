@@ -9,6 +9,8 @@ import { createHash } from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BalancesService } from '../../balances/services/balances.service';
 import { CreateDistributionDto } from '../dto/create-distribution.dto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 type DecimalValue = string | number | { toString(): string };
 
@@ -21,9 +23,7 @@ const hashLeaf = (userId: string, amount: string): string =>
   createHash('sha256').update(`${userId}:${amount}`).digest('hex');
 
 const hashPair = (left: string, right: string): string =>
-  createHash('sha256')
-    .update([left, right].sort().join(''))
-    .digest('hex');
+  createHash('sha256').update([left, right].sort().join('')).digest('hex');
 
 const buildMerkleTree = (leaves: string[]): string[][] => {
   if (leaves.length === 0) return [['']];
@@ -203,6 +203,7 @@ export class DividendsService {
   constructor(
     private prisma: PrismaService,
     private readonly balancesService: BalancesService,
+    @InjectQueue('merkle-tree') private readonly merkleTreeQueue: Queue,
   ) {}
 
   async createDistribution(adminId: string, dto: CreateDistributionDto) {
@@ -319,7 +320,10 @@ export class DividendsService {
             });
             totalClaims += claimsData.length;
             totalClaimedOnExchange = totalClaimedOnExchange.plus(
-              claimsData.reduce((sum, claim) => sum.plus(claim.amount), new Decimal(0)),
+              claimsData.reduce(
+                (sum, claim) => sum.plus(claim.amount),
+                new Decimal(0),
+              ),
             );
           }
         }
@@ -342,30 +346,7 @@ export class DividendsService {
           `Processed snapshot for distribution ${dist.id}. Created ${totalClaims} claims.`,
         );
 
-        const merkleClaims = await this.prisma.dividendClaim.findMany({
-          where: { distributionId: dist.id },
-          orderBy: { userId: 'asc' },
-          select: { userId: true, amount: true },
-        });
-        const merkleLeaves = merkleClaims.map((c) =>
-          hashLeaf(c.userId, c.amount.toString()),
-        );
-        const tree = buildMerkleTree(merkleLeaves);
-        const merkleRoot = tree[tree.length - 1][0] ?? '';
-
-        await this.prisma.auditLog.create({
-          data: {
-            entity: 'DIVIDEND_DISTRIBUTION',
-            entityId: dist.id,
-            action: 'MERKLE_ROOT_PUBLISHED',
-            performedBy: 'SYSTEM',
-            details: JSON.stringify({
-              merkleRoot,
-              leafCount: merkleLeaves.length,
-              generatedAt: new Date().toISOString(),
-            }),
-          },
-        });
+        await this.merkleTreeQueue.add('build', { distributionId: dist.id });
       } catch (error) {
         this.logger.error(
           `Failed to process snapshot for distribution ${dist.id}`,
@@ -406,10 +387,16 @@ export class DividendsService {
           'This dividend has already been claimed.',
         );
 
-      await tx.dividendClaim.update({
-        where: { id: claim.id },
+      const updated = await tx.dividendClaim.updateMany({
+        where: { id: claim.id, status: 'PENDING' },
         data: { status: 'CLAIMED', claimedAt: new Date() },
       });
+
+      if (updated.count === 0) {
+        throw new BadRequestException(
+          'This dividend has already been claimed or does not exist.',
+        );
+      }
 
       // Add USDT to user's balance using BalancesService
       await this.balancesService.updateBalance(

@@ -7,8 +7,9 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import { WsJwtGuard } from '../auth/guards/ws-jwt.guard';
 
 interface MarketSubscriptionPayload {
   assetId: string;
@@ -91,16 +92,15 @@ export class RealtimeGateway
     await client.leave(this.marketRoom(payload.assetId));
   }
 
+  @UseGuards(WsJwtGuard)
   @SubscribeMessage('subscribe_user')
-  async subscribeUser(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() payload: UserSubscriptionPayload,
-  ): Promise<void> {
-    if (!payload?.userId) {
+  async subscribeUser(@ConnectedSocket() client: Socket): Promise<void> {
+    const userId = client.data?.user?.sub;
+    if (!userId) {
       return;
     }
 
-    await client.join(this.userRoom(payload.userId));
+    await client.join(this.userRoom(userId));
   }
 
   emitTradeMatched(payload: TradeRealtimePayload): void {

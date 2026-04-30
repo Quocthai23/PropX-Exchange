@@ -14,12 +14,17 @@ export class CreateProposalDto {
   @MinLength(10)
   description: string;
 
-  @ApiProperty({ description: 'Snapshot time (ISO)', example: '2026-05-01T00:00:00.000Z' })
+  @ApiProperty({
+    description: 'Snapshot time (ISO)',
+    example: '2026-05-01T00:00:00.000Z',
+  })
   @IsDateString()
   snapshotDate: string;
 
-  @ApiProperty({ description: 'Voting end time (ISO)', example: '2026-05-08T00:00:00.000Z' })
+  @ApiProperty({
+    description: 'Voting end time (ISO)',
+    example: '2026-05-08T00:00:00.000Z',
+  })
   @IsDateString()
   endDate: string;
 }
-

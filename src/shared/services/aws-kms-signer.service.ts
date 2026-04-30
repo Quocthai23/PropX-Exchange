@@ -1,4 +1,8 @@
-import { KMSClient, SignCommand, SigningAlgorithmSpec } from '@aws-sdk/client-kms';
+import {
+  KMSClient,
+  SignCommand,
+  SigningAlgorithmSpec,
+} from '@aws-sdk/client-kms';
 import {
   AbstractSigner,
   Provider,
@@ -27,7 +31,10 @@ function ensure32BytesHex(value: bigint): string {
   return `0x${value.toString(16).padStart(64, '0')}`;
 }
 
-function parseKmsDerSignature(derHexWithPrefix: string): { r: bigint; s: bigint } {
+function parseKmsDerSignature(derHexWithPrefix: string): {
+  r: bigint;
+  s: bigint;
+} {
   const derHex = trimHexPrefix(derHexWithPrefix);
   if (!derHex.startsWith('30')) {
     throw new Error('Invalid DER signature format from AWS KMS.');
@@ -98,7 +105,9 @@ export class AwsKmsSigner extends AbstractSigner {
   }
 
   async signTransaction(tx: TransactionRequest): Promise<string> {
-    const resolvedTo = tx.to ? await resolveAddress(tx.to, this.provider) : undefined;
+    const resolvedTo = tx.to
+      ? await resolveAddress(tx.to, this.provider)
+      : undefined;
     const txWithoutFrom: Record<string, unknown> = { ...tx };
     delete txWithoutFrom.from;
     const resolvedTx = await Transaction.from({

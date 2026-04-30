@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AppConfigService } from '@/config/app-config.service';
 
@@ -48,8 +50,8 @@ interface NormalizedArticle {
   externalId: string | null;
   dedupeKey: string;
   source: string;
-  title: string;
-  summary: string | null;
+  title: unknown;
+  summary: unknown | null;
   content: string | null;
   url: string;
   imageUrl: string | null;
@@ -68,8 +70,8 @@ interface NewsPrisma {
         source: string;
         externalId: string | null;
         dedupeKey: string;
-        title: string;
-        summary: string | null;
+        title: unknown;
+        summary: unknown | null;
         content: string | null;
         url: string;
         imageUrl: string | null;
@@ -92,6 +94,7 @@ export class ExternalNewsAggregationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
+    @InjectQueue('news-sync') private readonly newsSyncQueue: Queue,
   ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -112,7 +115,6 @@ export class ExternalNewsAggregationService {
   }
 
   async syncLatestNews(options: SyncNewsOptions) {
-    const prisma = this.prisma as unknown as NewsPrisma;
     const providerFilter =
       options.providers && options.providers.length > 0
         ? new Set(options.providers)
@@ -133,43 +135,75 @@ export class ExternalNewsAggregationService {
       };
     }
 
-    let inserted = 0;
-
     for (const provider of providers) {
-      try {
-        const payload = await this.fetchJson(
-          provider.request.url,
-          provider.request.headers,
-        );
-        const rows = this.normalizeProviderPayload(provider.id, payload);
-
-        if (rows.length === 0) {
-          this.logger.debug(`No rows parsed from ${provider.id}.`);
-          continue;
-        }
-
-        const created = await prisma.newsArticle.createMany({
-          data: rows,
-          skipDuplicates: true,
-        });
-
-        inserted += created.count;
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unknown provider error';
-        this.logger.warn(`Failed to sync provider ${provider.id}: ${message}`);
-      }
+      await this.newsSyncQueue.add(
+        'sync-provider',
+        { action: 'sync-provider', providerId: provider.id },
+        { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
+      );
     }
 
     this.logger.log(
-      `External news sync (${options.trigger}) finished. Inserted ${inserted} rows from ${providers.length} providers.`,
+      `External news sync (${options.trigger}) finished. Queued jobs for ${providers.length} providers.`,
     );
 
     return {
       trigger: options.trigger,
       providersProcessed: providers.length,
-      inserted,
     };
+  }
+
+  async syncProvider(providerId: string) {
+    const prisma = this.prisma as unknown as NewsPrisma;
+    const provider = this.buildProviderDescriptors().find(
+      (p) => p.id === providerId,
+    );
+
+    if (!provider || !provider.enabled) {
+      return;
+    }
+
+    try {
+      const payload = await this.fetchJson(
+        provider.request.url,
+        provider.request.headers,
+      );
+      const rows = this.normalizeProviderPayload(
+        provider.id as ExternalProviderId,
+        payload,
+      );
+
+      if (rows.length === 0) {
+        this.logger.debug(`No rows parsed from ${provider.id}.`);
+        return;
+      }
+
+      const created = await prisma.newsArticle.createMany({
+        data: rows,
+        skipDuplicates: true,
+      });
+
+      this.logger.log(`Inserted ${created.count} rows from ${provider.id}.`);
+
+      // After inserting, queue a sentiment analysis job.
+      // Since createMany doesn't return IDs, we could have a job that just checks for recent unprocessed articles
+      await this.newsSyncQueue.add('analyze-sentiment', {
+        action: 'analyze-sentiment',
+        newsIds: [], // Placeholder for finding unprocessed news
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown provider error';
+      this.logger.warn(`Failed to sync provider ${provider.id}: ${message}`);
+      throw error; // Let BullMQ handle the retry based on backoff
+    }
+  }
+
+  async analyzeSentimentAndTagAssets(newsIds: string[]) {
+    // TODO: Implement OpenAI/NLP sentiment logic and regex tagging logic
+    this.logger.log(
+      `analyzeSentimentAndTagAssets executed for ${newsIds.length} articles`,
+    );
   }
 
   private buildProviderDescriptors(): ProviderDescriptor[] {
@@ -357,9 +391,11 @@ export class ExternalNewsAggregationService {
       source,
       externalId,
       dedupeKey,
-      title,
-      summary:
-        this.pickString(row, ['description', 'summary', 'snippet']) || null,
+      title: { [this.config.externalNewsLanguage || 'en']: title },
+      summary: (() => {
+        const s = this.pickString(row, ['description', 'summary', 'snippet']);
+        return s ? { [this.config.externalNewsLanguage || 'en']: s } : null;
+      })(),
       content: this.pickString(row, ['content', 'body']) || null,
       url,
       imageUrl:

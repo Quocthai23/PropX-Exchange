@@ -96,7 +96,10 @@ export class RedeemService {
       throw new NotFoundException('Asset not found.');
     }
 
-    if (!asset.isActive || asset.tradingStatus !== $Enums.AssetTradingStatus.OPEN) {
+    if (
+      !asset.isActive ||
+      asset.tradingStatus !== $Enums.AssetTradingStatus.OPEN
+    ) {
       throw new BadRequestException(
         `Asset ${asset.symbol} is not eligible for redeem at this time.`,
       );

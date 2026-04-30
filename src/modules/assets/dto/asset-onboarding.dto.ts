@@ -1,9 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class SubmitAssetOnboardingDto {
   @ApiProperty({
-    description: 'Legal document URLs (title deed, legal docs, custody authorization)',
+    description:
+      'Legal document URLs (title deed, legal docs, custody authorization)',
     type: [String],
   })
   @IsArray()
@@ -21,7 +28,9 @@ export class ReviewAssetOnboardingDto {
   @IsBoolean()
   approved: boolean;
 
-  @ApiPropertyOptional({ description: 'SPV legal entity after custody transfer' })
+  @ApiPropertyOptional({
+    description: 'SPV legal entity after custody transfer',
+  })
   @IsOptional()
   @IsString()
   @MinLength(2)

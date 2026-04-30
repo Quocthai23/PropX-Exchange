@@ -306,7 +306,10 @@ export class PaymentService {
       transactionIds.push(...createdIds);
       affectedWallets += balances.length;
       totalSwept = totalSwept.plus(
-        balances.reduce((sum, b) => sum.plus(b.available.toString()), new Decimal(0)),
+        balances.reduce(
+          (sum, b) => sum.plus(b.available.toString()),
+          new Decimal(0),
+        ),
       );
     }
 

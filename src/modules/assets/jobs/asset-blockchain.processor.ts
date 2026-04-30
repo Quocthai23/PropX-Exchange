@@ -9,6 +9,8 @@ import { BlockchainService } from '../services/blockchain.service';
 interface FinalizeMintJob {
   assetId: string;
   txHash: string;
+  onboardingRequestId?: string;
+  adminId?: string;
 }
 
 interface LiquidationBurnJob {
@@ -37,7 +39,9 @@ export class AssetBlockchainProcessor extends WorkerHost {
     return this.prisma as any;
   }
 
-  async process(job: Job<FinalizeMintJob | LiquidationBurnJob | RedemptionBurnJob>) {
+  async process(
+    job: Job<FinalizeMintJob | LiquidationBurnJob | RedemptionBurnJob>,
+  ) {
     if (job.name === 'finalize-mint') {
       await this.finalizeMint(job.data as FinalizeMintJob);
     } else if (job.name === 'liquidation-burn') {
@@ -111,9 +115,34 @@ export class AssetBlockchainProcessor extends WorkerHost {
         },
         data: {
           status: 'COMPLETED',
-          confirmations: await this.blockchainService.getRequiredConfirmations(),
+          confirmations:
+            await this.blockchainService.getRequiredConfirmations(),
         },
       });
+      if (data.onboardingRequestId) {
+        await tx.assetOnboardingRequest.update({
+          where: { id: data.onboardingRequestId },
+          data: {
+            status: 'TOKENIZED',
+            updatedAt: new Date(),
+          },
+        });
+        if (data.adminId) {
+          await tx.auditLog.create({
+            data: {
+              entity: 'ASSET_ONBOARDING_REQUEST',
+              entityId: data.onboardingRequestId,
+              action: 'TOKENIZED',
+              performedBy: data.adminId,
+              details: JSON.stringify({
+                txHash: data.txHash,
+                contractAddress,
+                assetId: data.assetId,
+              }),
+            },
+          });
+        }
+      }
     });
   }
 
@@ -136,13 +165,17 @@ export class AssetBlockchainProcessor extends WorkerHost {
       data: { isActive: false, tradingStatus: 'PAUSED' },
     });
 
-    const success = await this.blockchainService.isTransactionSuccessful(burnTxHash);
+    const success =
+      await this.blockchainService.isTransactionSuccessful(burnTxHash);
     if (!success) {
       throw new Error(`Liquidation burn failed: ${burnTxHash}`);
     }
 
     const holdings = await this.db.balance.findMany({
-      where: { assetId: data.assetId, OR: [{ available: { gt: '0' } }, { locked: { gt: '0' } }] },
+      where: {
+        assetId: data.assetId,
+        OR: [{ available: { gt: '0' } }, { locked: { gt: '0' } }],
+      },
     });
     const liquidationPriceDec = new Decimal(data.liquidationPrice);
     for (const holding of holdings) {
@@ -173,7 +206,9 @@ export class AssetBlockchainProcessor extends WorkerHost {
   }
 
   private async finalizeRedemptionBurn(data: RedemptionBurnJob) {
-    const success = await this.blockchainService.isTransactionSuccessful(data.txHash);
+    const success = await this.blockchainService.isTransactionSuccessful(
+      data.txHash,
+    );
     if (!success) {
       await this.db.assetRedemptionRequest.update({
         where: { id: data.redemptionId },

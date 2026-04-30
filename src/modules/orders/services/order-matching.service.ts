@@ -198,10 +198,8 @@ export class OrderMatchingService {
           await tx.trade.create({
             data: {
               assetId,
-              buyerId:
-                side === 'BUY' ? userId : matchingOrder.userId,
-              sellerId:
-                side === 'SELL' ? userId : matchingOrder.userId,
+              buyerId: side === 'BUY' ? userId : matchingOrder.userId,
+              sellerId: side === 'SELL' ? userId : matchingOrder.userId,
               price: matchPrice,
               quantity: matchableQuantity,
             },
@@ -221,10 +219,8 @@ export class OrderMatchingService {
 
           await this.tradingLedgerService.settleMatch({
             tx,
-            buyerId:
-              side === 'BUY' ? userId : matchingOrder.userId,
-            sellerId:
-              side === 'SELL' ? userId : matchingOrder.userId,
+            buyerId: side === 'BUY' ? userId : matchingOrder.userId,
+            sellerId: side === 'SELL' ? userId : matchingOrder.userId,
             assetId,
             quantity: matchableQuantity,
             price: matchPrice,

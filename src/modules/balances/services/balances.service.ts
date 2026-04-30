@@ -1,7 +1,15 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, TransactionType, TransactionStatus } from '@prisma/client';
 import Decimal from 'decimal.js';
+
+export interface TransactionData {
+  type: TransactionType;
+  status: TransactionStatus;
+  fee?: Decimal;
+  idempotencyKey?: string;
+  txHash?: string;
+}
 
 @Injectable()
 export class BalancesService {
@@ -12,6 +20,7 @@ export class BalancesService {
     assetId: string | null,
     amount: Decimal,
     type: 'credit' | 'debit',
+    transactionData: TransactionData,
     options?: {
       useAvailable?: boolean;
       useLocked?: boolean;
@@ -31,6 +40,9 @@ export class BalancesService {
       });
 
       if (!balance) {
+        if (type === 'debit') {
+          throw new BadRequestException('Insufficient balance');
+        }
         balance = await txClient.balance.create({
           data: {
             userId,
@@ -41,38 +53,48 @@ export class BalancesService {
         });
       }
 
-      let newAvailable = new Decimal(balance.available.toString());
-      let newLocked = new Decimal(balance.locked.toString());
+      const updateData: any = {};
 
       if (type === 'credit') {
         if (useAvailable) {
-          newAvailable = newAvailable.plus(amount);
+          updateData.available = { increment: amount.toString() };
         }
         if (useLocked) {
-          newLocked = newLocked.plus(amount);
+          updateData.locked = { increment: amount.toString() };
         }
       } else if (type === 'debit') {
         if (useAvailable) {
-          if (newAvailable.lessThan(amount)) {
+          if (new Decimal(balance.available.toString()).lessThan(amount)) {
             throw new BadRequestException('Insufficient available balance');
           }
-          newAvailable = newAvailable.minus(amount);
+          updateData.available = { decrement: amount.toString() };
         }
         if (useLocked) {
-          if (newLocked.lessThan(amount)) {
+          if (new Decimal(balance.locked.toString()).lessThan(amount)) {
             throw new BadRequestException('Insufficient locked balance');
           }
-          newLocked = newLocked.minus(amount);
+          updateData.locked = { decrement: amount.toString() };
         }
       }
 
-      return txClient.balance.update({
+      const updatedBalance = await txClient.balance.update({
         where: { id: balance.id },
+        data: updateData,
+      });
+
+      await txClient.transaction.create({
         data: {
-          available: newAvailable,
-          locked: newLocked,
+          userId,
+          type: transactionData.type,
+          amount,
+          fee: transactionData.fee || new Decimal(0),
+          status: transactionData.status,
+          idempotencyKey: transactionData.idempotencyKey,
+          txHash: transactionData.txHash,
         },
       });
+
+      return updatedBalance;
     };
 
     if (tx) {
@@ -124,29 +146,25 @@ export class BalancesService {
         throw new BadRequestException('Balance not found');
       }
 
-      let newAvailable = new Decimal(balance.available.toString());
-      let newLocked = new Decimal(balance.locked.toString());
+      const updateData: any = {};
 
       if (direction === 'available_to_locked') {
-        if (newAvailable.lessThan(amount)) {
+        if (new Decimal(balance.available.toString()).lessThan(amount)) {
           throw new BadRequestException('Insufficient available balance');
         }
-        newAvailable = newAvailable.minus(amount);
-        newLocked = newLocked.plus(amount);
+        updateData.available = { decrement: amount.toString() };
+        updateData.locked = { increment: amount.toString() };
       } else {
-        if (newLocked.lessThan(amount)) {
+        if (new Decimal(balance.locked.toString()).lessThan(amount)) {
           throw new BadRequestException('Insufficient locked balance');
         }
-        newLocked = newLocked.minus(amount);
-        newAvailable = newAvailable.plus(amount);
+        updateData.locked = { decrement: amount.toString() };
+        updateData.available = { increment: amount.toString() };
       }
 
       return txClient.balance.update({
         where: { id: balance.id },
-        data: {
-          available: newAvailable,
-          locked: newLocked,
-        },
+        data: updateData,
       });
     };
 

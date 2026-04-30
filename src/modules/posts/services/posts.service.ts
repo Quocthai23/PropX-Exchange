@@ -10,20 +10,54 @@ import {
   PaginationQueryDto,
   CommentDto,
 } from '../dto/posts.dto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { createClient } from 'redis';
+import { AppConfigService } from '@/config/app-config.service';
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private redisClient: any;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: AppConfigService,
+    @InjectQueue('posts') private readonly postsQueue: Queue,
+  ) {
+    this.redisClient = createClient({
+      url: this.config.redisUrl || 'redis://localhost:6379',
+    });
+    this.redisClient.connect().catch(console.error);
+  }
 
   async getPosts(userId: string, query: QueryPostsDto) {
     const where: any = {};
+    const limit = query.take || 20;
+    const cursorObj = (query as any).cursor
+      ? { id: (query as any).cursor }
+      : undefined;
+
+    // Use Redis Feed if possible
+    let redisPostIds: string[] = [];
+    if (!where.userId && !(query as any).cursor) {
+      // Trying to fetch the main feed for the user
+      const feedKey = `feed:user:${userId}`;
+      // In a real app we'd paginate Redis as well using LRANGE with skip logic,
+      // but for simplicity we fetch top limit items.
+      redisPostIds = await this.redisClient.lRange(feedKey, 0, limit - 1);
+    }
+
+    if (redisPostIds.length > 0) {
+      where.id = { in: redisPostIds };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.post.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
-        skip: query.skip || 0,
-        take: query.take || 20,
+        orderBy: redisPostIds.length ? undefined : { createdAt: 'desc' },
+        take: limit,
+        skip: cursorObj ? 1 : 0,
+        cursor: cursorObj,
         include: {
           user: true,
           likes: {
@@ -132,6 +166,39 @@ export class PostsService {
         user: true,
       },
     });
+
+    // 1. Enqueue distribute-post event
+    await this.postsQueue.add('distribute-post', {
+      postId: post.id,
+      authorId: userId,
+    });
+
+    // 2. Extract Cashtags
+    if (dto.content) {
+      const cashtags = dto.content.match(/\$[A-Z0-9]+/g);
+      if (cashtags && cashtags.length > 0) {
+        // Remove $ sign and deduplicate
+        const symbols = Array.from(
+          new Set(cashtags.map((tag) => tag.substring(1))),
+        );
+
+        // Find matching assets
+        const assets = await this.prisma.asset.findMany({
+          where: { symbol: { in: symbols } },
+          select: { id: true },
+        });
+
+        if (assets.length > 0) {
+          await this.prisma.postCashtag.createMany({
+            data: assets.map((a) => ({
+              postId: post.id,
+              assetId: a.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+    }
 
     return post;
   }

@@ -18,7 +18,8 @@ export class AdminUpdateOnboardingStatusDto {
   })
   @IsOptional()
   @IsString()
-  @Matches(/^\d+(\.\d+)?$/, { message: 'appraisedValue must be a decimal string' })
+  @Matches(/^\d+(\.\d+)?$/, {
+    message: 'appraisedValue must be a decimal string',
+  })
   appraisedValue?: string;
 }
-

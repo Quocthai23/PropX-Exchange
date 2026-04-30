@@ -1,4 +1,11 @@
-import { Body, Controller, Param, Post, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  Post,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
@@ -52,4 +59,3 @@ export class DaoController {
     return this.daoService.executeProposal(proposalId, user?.sub ?? 'SYSTEM');
   }
 }
-

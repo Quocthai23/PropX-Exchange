@@ -7,10 +7,13 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BlockchainService } from '../services/blockchain.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 
 interface KycApprovalJobData {
-  targetUserId: string;
+  targetUserId?: string;
+  userId?: string;
   walletAddress: string;
+  adminId?: string;
 }
 
 @Processor('kyc-approval')
@@ -20,15 +23,18 @@ export class KycApprovalProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     private readonly blockchainService: BlockchainService,
+    private readonly notificationsService: NotificationsService,
   ) {
     super();
   }
 
   async process(job: Job<KycApprovalJobData>) {
-    if (job.name !== 'approve') {
+    if (job.name !== 'approve' && job.name !== 'process-whitelist') {
       return;
     }
-    const { targetUserId, walletAddress } = job.data;
+    const targetUserId = job.data.targetUserId || job.data.userId;
+    if (!targetUserId) throw new Error('User ID is required');
+    const { walletAddress, adminId } = job.data;
 
     try {
       this.logger.log(
@@ -98,13 +104,36 @@ export class KycApprovalProcessor extends WorkerHost {
       await this.prisma.$transaction([
         this.prisma.kycRecord.update({
           where: { userId: targetUserId },
-          data: { status: 'APPROVED', rejectReason: null },
+          data: {
+            status: 'APPROVED',
+            rejectReason: null,
+            onChainWhitelisted: true,
+            whitelistTxHash: txHash,
+          },
         }),
         this.prisma.user.update({
           where: { id: targetUserId },
           data: { kycStatus: 'APPROVED' },
         }),
+        this.prisma.auditLog.create({
+          data: {
+            entity: 'KYC',
+            entityId: targetUserId,
+            action: 'APPROVED',
+            performedBy: adminId || 'SYSTEM',
+            details:
+              'Wallet has been whitelisted on-chain via multisig approval.',
+          },
+        }),
       ]);
+
+      await this.notificationsService.createNotification({
+        userId: targetUserId,
+        type: 'KYC_APPROVED',
+        title: 'KYC Approved!',
+        content:
+          'Your wallet is now whitelisted on-chain and your KYC has been approved.',
+      });
 
       this.logger.log(
         `[KYC Approval Job ${job.id}] KYC finalized to APPROVED status`,

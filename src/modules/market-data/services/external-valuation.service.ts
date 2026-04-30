@@ -347,17 +347,40 @@ export class ExternalValuationService {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
+    const brightDataApiKey = process.env.BRIGHTDATA_API_KEY;
+
     try {
-      const response = await fetch(url, {
-        method: 'GET',
-        signal: controller.signal,
-      });
+      if (brightDataApiKey) {
+        // BrightData Web Unlocker API
+        const response = await fetch(
+          'https://api.brightdata.com/request?zone=web_unlocker',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${brightDataApiKey}`,
+            },
+            body: JSON.stringify({ url, format: 'json' }),
+            signal: controller.signal,
+          },
+        );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`BrightData HTTP ${response.status}`);
+        }
+        return response.json();
+      } else {
+        // Fallback
+        const response = await fetch(url, {
+          method: 'GET',
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
       }
-
-      return response.json();
     } finally {
       clearTimeout(timeout);
     }

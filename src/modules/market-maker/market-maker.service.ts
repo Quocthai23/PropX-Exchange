@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '@/prisma/prisma.service';
-import { MarketDataService } from '../market-data/services/market-data.service';
+import { OrdersService } from '../orders/services/orders.service';
 import Decimal from 'decimal.js';
 import { AppConfigService } from '@/config/app-config.service';
 
@@ -12,54 +12,61 @@ const toDecimalValue = (value: DecimalValue): string | number =>
     ? value
     : value.toString();
 
-interface MarketAsset {
-  id: string;
-  symbol: string;
-  tokenPrice: DecimalValue;
-}
-
-interface MarketCandle {
-  close: DecimalValue;
-}
-
-interface MarketMakerPrisma {
-  asset: {
-    findMany(args: { where: { isActive: true } }): Promise<MarketAsset[]>;
-  };
-  candlestick: {
-    findFirst(args: {
-      where: { assetId: string; resolution: '1m' };
-      orderBy: { openTime: 'desc' };
-    }): Promise<MarketCandle | null>;
-  };
-  order: {
-    createMany(args: {
-      data: {
-        userId: string;
-        assetId: string;
-        side: string;
-        type: string;
-        price: Decimal;
-        quantity: Decimal;
-        filledQuantity: Decimal;
-        status: string;
-      }[];
-    }): Promise<unknown>;
-  };
-}
-
 @Injectable()
-export class MarketMakerService {
+export class MarketMakerService implements OnModuleInit {
   private readonly logger = new Logger(MarketMakerService.name);
 
-  // Dummy user ID representing the bot (won't hit foreign key constraints because Order does not strictly map userId).
+  // Bot User ID
   private readonly BOT_USER_ID = '00000000-0000-0000-0000-000000000000';
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly marketDataService: MarketDataService,
+    private readonly ordersService: OrdersService,
     private readonly config: AppConfigService,
   ) {}
+
+  async onModuleInit() {
+    if (!this.config.enableMarketMaker) return;
+
+    // Ensure Bot user exists
+    let botUser = await this.prisma.user.findUnique({
+      where: { id: this.BOT_USER_ID },
+    });
+
+    if (!botUser) {
+      botUser = await this.prisma.user.create({
+        data: {
+          id: this.BOT_USER_ID,
+          email: 'bot@marketmaker.local',
+          passwordHash: 'none',
+          role: 'ADMIN',
+          kycStatus: 'APPROVED',
+          idNumber: 'BOT-001',
+        },
+      });
+    }
+
+    // Ensure USDT balance for bot (null assetId)
+    const usdtBalance = await this.prisma.balance.findFirst({
+      where: { userId: this.BOT_USER_ID, assetId: null },
+    });
+
+    if (usdtBalance) {
+      await this.prisma.balance.update({
+        where: { id: usdtBalance.id },
+        data: { available: new Decimal(10000000) },
+      });
+    } else {
+      await this.prisma.balance.create({
+        data: {
+          userId: this.BOT_USER_ID,
+          assetId: null,
+          available: new Decimal(10000000),
+          locked: new Decimal(0),
+        },
+      });
+    }
+  }
 
   // Run every 30 seconds.
   @Cron('*/30 * * * * *')
@@ -67,76 +74,81 @@ export class MarketMakerService {
     // Use environment variable to enable/disable the bot and avoid unnecessary DB noise.
     if (!this.config.enableMarketMaker) return;
 
-    const prisma = this.prisma as unknown as MarketMakerPrisma;
+    // Cancel old BOT orders to prevent infinite buildup
+    const openOrders = await this.prisma.order.findMany({
+      where: {
+        userId: this.BOT_USER_ID,
+        status: { in: ['OPEN', 'PARTIALLY_FILLED'] },
+      },
+      select: { id: true },
+    });
+
+    if (openOrders.length > 0) {
+      await this.ordersService.bulkCancelOrders(this.BOT_USER_ID, {
+        orderIds: openOrders.map((o) => o.id),
+      });
+    }
 
     // Fetch all active RWA assets.
-    const assets = await prisma.asset.findMany({
+    const assets = await this.prisma.asset.findMany({
       where: { isActive: true },
     });
 
     for (const asset of assets) {
       try {
-        // 1. Find the latest close price as the reference.
-        const lastCandle = await prisma.candlestick.findFirst({
-          where: { assetId: asset.id, resolution: '1m' },
-          orderBy: { openTime: 'desc' },
+        // Ensure bot has token balance
+        const tokenBalance = await this.prisma.balance.findFirst({
+          where: { userId: this.BOT_USER_ID, assetId: asset.id },
         });
 
-        // If no candle exists yet, use ICO price (tokenPrice) as baseline.
-        const currentPrice = lastCandle
-          ? new Decimal(toDecimalValue(lastCandle.close))
-          : new Decimal(toDecimalValue(asset.tokenPrice));
-
-        // 2. Random walk algorithm (max 1% volatility every 30s).
-        const maxVolatility = 0.01;
-        const randomFactor = (Math.random() * 2 - 1) * maxVolatility; // Random from -1% to +1%
-
-        let newPrice = currentPrice.mul(1 + randomFactor).toDecimalPlaces(4);
-
-        // Ensure price never falls to <= 0.
-        if (newPrice.lte(0)) {
-          newPrice = new Decimal(toDecimalValue(asset.tokenPrice));
+        if (tokenBalance) {
+          await this.prisma.balance.update({
+            where: { id: tokenBalance.id },
+            data: { available: new Decimal(1000000) },
+          });
+        } else {
+          await this.prisma.balance.create({
+            data: {
+              userId: this.BOT_USER_ID,
+              assetId: asset.id,
+              available: new Decimal(1000000),
+              locked: new Decimal(0),
+            },
+          });
         }
 
-        // 3. Generate random matched quantity (for example, 1 to 50 tokens).
+        // Anchor NAV logic: Bot always places orders around Reference Price
+        const currentPrice = asset.referencePrice
+          ? new Decimal(toDecimalValue(asset.referencePrice))
+          : new Decimal(toDecimalValue(asset.tokenPrice));
+
+        // Spread logic (e.g., 1% spread from NAV)
+        const spreadFactor = 0.01;
+        const bidPrice = currentPrice.mul(1 - spreadFactor).toDecimalPlaces(4);
+        const askPrice = currentPrice.mul(1 + spreadFactor).toDecimalPlaces(4);
+
+        // Generate random matched quantity (for example, 1 to 50 tokens).
         const quantity = new Decimal(Math.floor(Math.random() * 50) + 1);
 
-        // 4. Store synthetic trades in the Order table (to appear in Trade History).
-        await prisma.order.createMany({
-          data: [
-            {
-              userId: this.BOT_USER_ID,
-              assetId: asset.id,
-              side: 'BUY',
-              type: 'MARKET',
-              price: newPrice,
-              quantity: quantity,
-              filledQuantity: quantity,
-              status: 'FILLED',
-            },
-            {
-              userId: this.BOT_USER_ID,
-              assetId: asset.id,
-              side: 'SELL',
-              type: 'MARKET',
-              price: newPrice,
-              quantity: quantity,
-              filledQuantity: quantity,
-              status: 'FILLED',
-            },
-          ],
+        // Place real LIMIT orders via the normal Matching function
+        await this.ordersService.createOrder(this.BOT_USER_ID, {
+          assetId: asset.id,
+          type: 'LIMIT',
+          side: 'BUY',
+          price: bidPrice.toString(),
+          quantity: quantity.toString(),
         });
 
-        // 5. Push values to MarketDataService for immediate OHLC candle updates.
-        await this.marketDataService.recordTrade(
-          asset.id,
-          newPrice.toString(),
-          quantity.toString(),
-          new Date(),
-        );
+        await this.ordersService.createOrder(this.BOT_USER_ID, {
+          assetId: asset.id,
+          type: 'LIMIT',
+          side: 'SELL',
+          price: askPrice.toString(),
+          quantity: quantity.toString(),
+        });
 
         this.logger.debug(
-          `[Market Maker] Generated candle for ${asset.symbol}: Price ${newPrice.toString()} | Volume ${quantity.toString()}`,
+          `[Market Maker] Placed Limit orders for ${asset.symbol}: Bid ${bidPrice.toString()} | Ask ${askPrice.toString()} | Volume ${quantity.toString()}`,
         );
       } catch (error) {
         this.logger.error(

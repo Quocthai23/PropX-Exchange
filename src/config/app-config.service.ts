@@ -36,6 +36,21 @@ export class AppConfigService {
     return this.configService.get('REDIS_PASSWORD');
   }
 
+  get redisUrl(): string {
+    const explicit = this.configService.get('REDIS_URL');
+    if (explicit) return explicit;
+
+    const host = this.redisHost ?? 'localhost';
+    const port = this.redisPort ?? 6379;
+    const pass = this.redisPassword;
+
+    if (pass) {
+      return `redis://:${encodeURIComponent(pass)}@${host}:${port}`;
+    }
+
+    return `redis://${host}:${port}`;
+  }
+
   get enableMarketMaker(): boolean {
     return this.configService.get('ENABLE_MARKET_MAKER') === 'true';
   }

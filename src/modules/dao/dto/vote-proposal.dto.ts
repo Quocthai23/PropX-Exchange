@@ -6,4 +6,3 @@ export class VoteProposalDto {
   @IsBoolean()
   isFor: boolean;
 }
-

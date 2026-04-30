@@ -7,6 +7,7 @@ import {
 import { ethers } from 'ethers';
 import { KmsService } from '@/shared/services/kms.service';
 import { AppConfigService } from '@/config/app-config.service';
+import { AwsKmsSigner } from '@/shared/services/aws-kms-signer.service';
 
 const DEFAULT_ABI = [
   'function addToWhitelist(address wallet) external returns (bool)',
@@ -16,7 +17,7 @@ const DEFAULT_ABI = [
 export class BlockchainService implements OnModuleInit {
   private readonly logger = new Logger(BlockchainService.name);
   private provider: ethers.JsonRpcProvider | null = null;
-  private signer: ethers.Wallet | null = null;
+  private signer: ethers.Wallet | AwsKmsSigner | null = null;
   private contract:
     | (ethers.BaseContract & {
         addToWhitelist: (
@@ -64,7 +65,29 @@ export class BlockchainService implements OnModuleInit {
         ? (JSON.parse(rawAbi) as unknown as ethers.InterfaceAbi)
         : DEFAULT_ABI;
 
-      this.signer = new ethers.Wallet(privateKey, this.provider);
+      if (this.config.useAwsKms && this.kmsService.getClient()) {
+        const keyId = this.config.chainKmsKeyId;
+        const signerAddress = this.config.chainKmsSignerAddress;
+        if (!keyId || !signerAddress) {
+          throw new Error(
+            'CHAIN_KMS_KEY_ID and CHAIN_KMS_SIGNER_ADDRESS are required',
+          );
+        }
+        this.signer = new AwsKmsSigner(
+          this.kmsService.getClient()!,
+          keyId,
+          signerAddress,
+          this.provider,
+        );
+        this.logger.log('BlockchainService initialized with AwsKmsSigner');
+      } else {
+        const privateKey = await this.kmsService.getAdminPrivateKey();
+        this.signer = new ethers.Wallet(privateKey, this.provider);
+        this.logger.log(
+          'BlockchainService initialized with plain/decrypted private key',
+        );
+      }
+
       this.contract = new ethers.Contract(
         contractAddress,
         abi,
@@ -74,10 +97,6 @@ export class BlockchainService implements OnModuleInit {
           walletAddress: string,
         ) => Promise<ethers.ContractTransactionResponse>;
       };
-
-      this.logger.log(
-        'BlockchainService initialized with KMS-managed private key',
-      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
