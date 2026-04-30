@@ -13,11 +13,15 @@ const mockTx = {
   },
 };
 
+const mockCommissionsService = {
+  triggerCommission: jest.fn(),
+};
+
 describe('TradingLedgerService', () => {
   let service: TradingLedgerService;
 
   beforeEach(() => {
-    service = new TradingLedgerService(mockBalancesService as any);
+    service = new TradingLedgerService(mockBalancesService as any, mockCommissionsService as any);
     jest.clearAllMocks();
   });
 

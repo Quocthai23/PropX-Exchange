@@ -60,7 +60,7 @@ describe('OrderMatchingService', () => {
   it('queues order with deterministic job id for idempotency', async () => {
     mockQueue.add.mockResolvedValue({ id: 'order-1' });
 
-    await service.queueOrder('order-1');
+    await service.queueOrder('order-1', 'asset-1');
 
     expect(mockQueue.add).toHaveBeenCalledWith(
       'match',

@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from '@/prisma/prisma.service';
 
+import { getQueueToken } from '@nestjs/bullmq';
+
 const mockPrisma = {
   notification: {
     create: jest.fn(),
@@ -9,6 +11,10 @@ const mockPrisma = {
     count: jest.fn(),
     updateMany: jest.fn(),
   },
+};
+
+const mockQueue = {
+  add: jest.fn(),
 };
 
 describe('NotificationsService', () => {
@@ -19,6 +25,7 @@ describe('NotificationsService', () => {
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: getQueueToken('notifications'), useValue: mockQueue },
       ],
     }).compile();
 
@@ -28,12 +35,7 @@ describe('NotificationsService', () => {
 
   describe('createNotification', () => {
     it('should create notification successfully', async () => {
-      mockPrisma.notification.create.mockResolvedValue({
-        id: 'notif-id',
-        userId: 'user-id',
-        type: 'TEST',
-        title: 'Test Notification',
-      });
+      mockQueue.add.mockResolvedValue({});
 
       const result = await service.createNotification({
         userId: 'user-id',
@@ -41,7 +43,8 @@ describe('NotificationsService', () => {
         title: 'Test Notification',
       });
 
-      expect(result.id).toEqual('notif-id');
+      expect(result).toEqual({ queued: true });
+      expect(mockQueue.add).toHaveBeenCalled();
     });
   });
 

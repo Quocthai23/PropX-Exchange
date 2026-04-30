@@ -2,12 +2,11 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { COMMISSIONS_QUEUE } from './commissions.module';
 import { CommissionJobData } from './commissions.service';
 import { BalancesService } from '../balances/services/balances.service';
 import { Decimal } from 'decimal.js';
 
-@Processor(COMMISSIONS_QUEUE)
+@Processor('commissions')
 export class CommissionsProcessor extends WorkerHost {
   private readonly logger = new Logger(CommissionsProcessor.name);
 
