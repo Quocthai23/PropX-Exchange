@@ -15,7 +15,7 @@ import { $Enums } from '@prisma/client';
 
 export class CreateSupportTicketDto {
   @ApiProperty({
-    description: 'Ticket subject',
+    description: 'Subject category of the support ticket.',
     enum: [
       'Account Issue',
       'Deposit',
@@ -26,6 +26,7 @@ export class CreateSupportTicketDto {
       'Billing',
       'Other',
     ],
+    example: 'Withdrawal',
   })
   @IsString()
   @IsEnum([
@@ -41,9 +42,10 @@ export class CreateSupportTicketDto {
   subject: string;
 
   @ApiProperty({
-    description: 'Initial message content',
+    description: 'Initial message content describing the issue. Between 1 and 5000 characters.',
     minLength: 1,
     maxLength: 5000,
+    example: 'My withdrawal of 100 USDT submitted 2 days ago is still pending. Transaction ID: TXN_123.',
   })
   @IsString()
   @IsNotEmpty()
@@ -51,50 +53,76 @@ export class CreateSupportTicketDto {
   @MaxLength(5000)
   message: string;
 
-  @ApiPropertyOptional({ description: 'Optional title' })
+  @ApiPropertyOptional({
+    description: 'Optional human-readable title for the ticket.',
+    example: 'Withdrawal stuck for 48 hours',
+  })
   @IsOptional()
   @IsString()
   title?: string;
 
-  @ApiPropertyOptional({ description: 'Optional category' })
+  @ApiPropertyOptional({
+    description: 'Optional category tag to route the ticket to the correct team.',
+    example: 'Finance',
+  })
   @IsOptional()
   @IsString()
   category?: string;
 
-  @ApiPropertyOptional({ description: 'Optional priority (free-form string)' })
-  @IsOptional()
-  @IsString()
-  priority?: string;
-
-  @ApiPropertyOptional({ description: 'Array of attachment URLs' })
-  @IsOptional()
-  attachments?: any;
-}
-
-export class UpdateSupportTicketDto {
-  @ApiPropertyOptional({ description: 'Ticket subject' })
-  @IsOptional()
-  @IsString()
-  subject?: string;
-
-  @ApiPropertyOptional({ description: 'Optional title' })
-  @IsOptional()
-  @IsString()
-  title?: string;
-
-  @ApiPropertyOptional({ description: 'Optional category' })
-  @IsOptional()
-  @IsString()
-  category?: string;
-
-  @ApiPropertyOptional({ description: 'Optional priority (free-form string)' })
+  @ApiPropertyOptional({
+    description: 'Optional priority label (free-form string). Examples: low, medium, high, urgent.',
+    example: 'high',
+  })
   @IsOptional()
   @IsString()
   priority?: string;
 
   @ApiPropertyOptional({
-    description: 'Ticket status',
+    description: 'Array of attachment URLs (e.g. screenshots, transaction receipts).',
+    example: ['https://cdn.example.com/screenshots/txn_error.png'],
+    type: [String],
+  })
+  @IsOptional()
+  attachments?: any;
+}
+
+export class UpdateSupportTicketDto {
+  @ApiPropertyOptional({
+    description: 'Updated subject category of the ticket.',
+    example: 'Billing',
+  })
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @ApiPropertyOptional({
+    description: 'Updated ticket title.',
+    example: 'Resolved: Withdrawal issue',
+  })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({
+    description: 'Updated routing category.',
+    example: 'Finance',
+  })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({
+    description: 'Updated priority label.',
+    example: 'low',
+  })
+  @IsOptional()
+  @IsString()
+  priority?: string;
+
+  @ApiPropertyOptional({
+    description: 'Updated ticket status (managed by support agents).',
     enum: $Enums.SupportTicketStatus,
+    example: 'RESOLVED',
   })
   @IsOptional()
   @IsEnum($Enums.SupportTicketStatus)
@@ -103,9 +131,10 @@ export class UpdateSupportTicketDto {
 
 export class SupportMessageDto {
   @ApiProperty({
-    description: 'Message content',
+    description: 'Message content to send in the support thread. Between 1 and 5000 characters.',
     minLength: 1,
     maxLength: 5000,
+    example: 'Thank you for the update! I can confirm the withdrawal was received.',
   })
   @IsString()
   @IsNotEmpty()
@@ -114,22 +143,33 @@ export class SupportMessageDto {
   content: string;
 
   @ApiPropertyOptional({
-    description: 'Message type. 0 = TEXT, 1 = IMAGE',
+    description: 'Message type. 0 = plain TEXT message, 1 = IMAGE message.',
     enum: [0, 1],
     default: 0,
+    example: 0,
   })
   @IsOptional()
   @Type(() => Number)
   @IsEnum([0, 1])
   messageType?: number = 0;
 
-  @ApiPropertyOptional({ description: 'Array of attachment URLs' })
+  @ApiPropertyOptional({
+    description: 'Array of attachment URLs for this message.',
+    example: ['https://cdn.example.com/screenshots/receipt.png'],
+    type: [String],
+  })
   @IsOptional()
   attachments?: any;
 }
 
 export class GetSupportTicketsQueryDto {
-  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({
+    default: 20,
+    minimum: 1,
+    maximum: 100,
+    description: 'Number of tickets to return.',
+    example: 20,
+  })
   @IsOptional()
   @IsNumber()
   @Min(1)
@@ -137,43 +177,78 @@ export class GetSupportTicketsQueryDto {
   @Type(() => Number)
   take?: number = 20;
 
-  @ApiPropertyOptional({ description: 'Cursor for cursor-based pagination' })
+  @ApiPropertyOptional({
+    description: 'Cursor string for cursor-based pagination. Omit for the first page.',
+    example: 'ticket_01J2XABCDEF',
+  })
   @IsOptional()
   @IsString()
   cursor?: string;
 
-  @ApiPropertyOptional({ enum: $Enums.SupportTicketStatus })
+  @ApiPropertyOptional({
+    description: 'Filter tickets by status.',
+    enum: $Enums.SupportTicketStatus,
+    example: 'OPEN',
+  })
   @IsOptional()
   @IsEnum($Enums.SupportTicketStatus)
   status?: $Enums.SupportTicketStatus;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Filter tickets by category tag.',
+    example: 'Finance',
+  })
   @IsOptional()
   @IsString()
   category?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Filter tickets by priority label.',
+    example: 'high',
+  })
   @IsOptional()
   @IsString()
   priority?: string;
 
-  @ApiPropertyOptional({ enum: ['createdAt'], default: 'createdAt' })
+  @ApiPropertyOptional({
+    enum: ['createdAt'],
+    default: 'createdAt',
+    description: 'Field to sort results by.',
+    example: 'createdAt',
+  })
   @IsOptional()
   @IsEnum(['createdAt'])
   sortBy?: string = 'createdAt';
 
-  @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'desc' })
+  @ApiPropertyOptional({
+    enum: ['asc', 'desc'],
+    default: 'desc',
+    description: 'Sort direction.',
+    example: 'desc',
+  })
   @IsOptional()
   @IsEnum(['asc', 'desc'])
   sortDir?: string = 'desc';
 }
 
 export class AdminGetSupportTicketsQueryDto extends GetSupportTicketsQueryDto {
-  @ApiPropertyOptional() @IsOptional() @IsString() userId?: string;
+  @ApiPropertyOptional({
+    description: 'Filter tickets by a specific user ID (admin use only).',
+    example: 'usr_01J2XABCDEF',
+  })
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }
 
 export class GetMessagesQueryDto {
-  @ApiPropertyOptional({ default: 50, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({
+    default: 50,
+    minimum: 1,
+    maximum: 100,
+    description: 'Number of messages to return.',
+    example: 50,
+  })
   @IsOptional()
   @IsNumber()
   @Min(1)
@@ -181,14 +256,22 @@ export class GetMessagesQueryDto {
   @Type(() => Number)
   take?: number = 50;
 
-  @ApiPropertyOptional({ default: 0 })
+  @ApiPropertyOptional({
+    default: 0,
+    minimum: 0,
+    description: 'Number of messages to skip (offset pagination).',
+    example: 0,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
   skip?: number = 0;
 
-  @ApiPropertyOptional({ description: 'Cursor for cursor-based pagination' })
+  @ApiPropertyOptional({
+    description: 'Cursor string for cursor-based pagination.',
+    example: 'msg_01J2XABCDEF',
+  })
   @IsOptional()
   @IsString()
   cursor?: string;

@@ -75,17 +75,17 @@ enum AssetTradingStatus {
 
 enum OnboardingStatus {
   PENDING
-  APPRAISING // Đang thẩm định thực tế
-  APPROVED // Đã duyệt, chờ token hóa
+  APPRAISING // Actual appraising in progress
+  APPROVED // Approved, waiting for tokenization
   REJECTED
-  PROCESSING // Đang gọi Blockchain (Queue)
-  TOKENIZED // Đã mint thành công token
+  PROCESSING // Calling Blockchain (Queue)
+  TOKENIZED // Successfully minted token
 }
 
 enum RedemptionStatus {
   PENDING
-  PROCESSING_LEGAL // Đang làm thủ tục sang tên sổ đỏ
-  COMPLETED // Đã sang tên, Token đã bị Burn
+  PROCESSING_LEGAL // Processing legal name transfer
+  COMPLETED // Name transferred, Token burned
   REJECTED
 }
 
@@ -291,9 +291,9 @@ model Asset {
   tradingStatus         AssetTradingStatus       @default(OPEN)
   expectedApy           Decimal?
   tokenStandard         String? // VD: "ERC20", "ERC3643"
-  spvName               String? // Special Purpose Vehicle - Pháp nhân đứng tên tài sản ngoài đời
+  spvName               String? // Special Purpose Vehicle - Legal entity holding the real-world asset
   legalDocsIpfs         String? // CID of encrypted, immutable legal docs on IPFS
-  auditReportUrl        String? // Link báo cáo kiểm toán tài sản định kỳ
+  auditReportUrl        String? // Link to periodic asset audit report
   isHot                 Boolean                  @default(false)
   isActive              Boolean                  @default(false)
   candlesticks          Candlestick[]
@@ -331,14 +331,14 @@ model AssetOnboardingRequest {
   id             String           @id @default(uuid())
   userId         String
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title          String // VD: "Căn hộ Vinhomes Smart City"
+  title          String // Ex: "Vinhomes Smart City Apartment"
   description    String           @db.Text
-  location       String? // Vị trí tài sản
-  estimatedValue Decimal // Định giá mong muốn
-  legalDocuments Json // Mảng URL ảnh Sổ đỏ, giấy tờ pháp lý
+  location       String? // Asset location
+  estimatedValue Decimal // Desired valuation
+  legalDocuments Json // Array of URLs to Title deeds, legal documents
   status         OnboardingStatus @default(PENDING)
-  adminNotes     String?          @db.Text // Ghi chú của đội thẩm định
-  appraisedValue Decimal? // Giá trị định giá sau khi thẩm định
+  adminNotes     String?          @db.Text // Appraisal team notes
+  appraisedValue Decimal? // Appraised value after appraisal
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -351,10 +351,10 @@ model AssetRedemptionRequest {
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   assetId           String
   asset             Asset            @relation(fields: [assetId], references: [id])
-  tokenQuantity     Decimal // Số lượng token mang đi quy đổi
+  tokenQuantity     Decimal // Quantity of tokens for exchange
   status            RedemptionStatus @default(PENDING)
-  legalTransferDocs Json? // Hợp đồng/biên bản chuyển nhượng đã ký
-  burnTxHash        String? // Hash giao dịch Burn token on-chain
+  legalTransferDocs Json? // Signed transfer contract/minutes
+  burnTxHash        String? // On-chain Burn token transaction hash
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
@@ -366,12 +366,12 @@ model DaoProposal {
   id           String              @id @default(uuid())
   assetId      String
   asset        Asset               @relation(fields: [assetId], references: [id])
-  proposerId   String // Người tạo đề xuất (UserId)
+  proposerId   String // Proposal creator (UserId)
   proposer     User                @relation("DaoProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
   title        String
   description  String              @db.Text
-  snapshotDate DateTime // Thời điểm chốt quyền vote
-  endDate      DateTime // Hạn chót bỏ phiếu
+  snapshotDate DateTime // Voting power snapshot time
+  endDate      DateTime // Voting deadline
   status       ProposalStatus      @default(ACTIVE)
   votes        ProposalVote[]
   snapshots    DaoVotingSnapshot[]
@@ -400,8 +400,8 @@ model ProposalVote {
   proposal    DaoProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   userId      String
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isFor       Boolean // True: Đồng ý, False: Chống
-  votingPower Decimal // Trọng số tại snapshotDate
+  isFor       Boolean // True: For, False: Against
+  votingPower Decimal // Voting weight at snapshotDate
   createdAt   DateTime    @default(now())
 
   @@unique([proposalId, userId])
@@ -771,6 +771,13 @@ enum CommissionEvent {
   YIELD
 }
 
+enum CommissionRewardStatus {
+  PENDING
+  AVAILABLE
+  CLAIMED
+  REJECTED
+}
+
 model CommissionConfig {
   id             String          @id @default(uuid())
   eventType      CommissionEvent @unique
@@ -781,18 +788,21 @@ model CommissionConfig {
 }
 
 model CommissionReward {
-  id               String          @id @default(uuid())
-  userId           String          // Người được nhận thưởng (A)
-  user             User            @relation("UserCommissionRewards", fields: [userId], references: [id], onDelete: Cascade)
-  sourceUserId     String          // Người tạo ra sự kiện (B)
-  sourceUser       User            @relation("SourceCommissionRewards", fields: [sourceUserId], references: [id])
+  id               String                 @id @default(uuid())
+  userId           String                 // Reward recipient (A)
+  user             User                   @relation("UserCommissionRewards", fields: [userId], references: [id], onDelete: Cascade)
+  sourceUserId     String                 // Event trigger user (B)
+  sourceUser       User                   @relation("SourceCommissionRewards", fields: [sourceUserId], references: [id])
   eventType        CommissionEvent
-  amount           Decimal         // Số tiền thưởng nhận được
-  currency         String          @default("USDT")
-  sourceTxId       String?         // ID của giao dịch gốc
-  status           String          @default("PENDING") // PENDING, PAID
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  amount           Decimal                // Reward amount received
+  currency         String                 @default("USDT")
+  sourceTxId       String?                // Source transaction ID
+  status           CommissionRewardStatus @default(PENDING) // Reward status
+  unlockAt         DateTime?              // Allowed claim time (Vesting)
+  claimedAt        DateTime?              // Successful claim time
+  txHash           String?                // On-chain transaction hash (Claim On-chain)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
   @@index([userId, status])
   @@index([sourceUserId])

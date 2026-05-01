@@ -51,7 +51,7 @@ export class AdminPaymentController {
   @Post('sweep-funds')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Sweep Funds (Gom quỹ từ ví người dùng về ví tổng)',
+    summary: 'Sweep Funds (Aggregate funds from user wallets to master wallet)',
   })
   sweepFunds(@CurrentUser() user: JwtPayload, @Body() dto: AdminSweepFundsDto) {
     return this.paymentService.adminSweepFunds(user.sub, dto);

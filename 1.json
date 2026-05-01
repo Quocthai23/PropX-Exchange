@@ -1,4 +1,4 @@
-{
+﻿{
   "openapi": "3.0.3",
   "info": {
     "title": "Documentation",
@@ -37,9 +37,6 @@
         "name": "apiKey",
         "in": "header"
       }
-    },
-    "schemas": {
-
     }
   },
   "paths": {

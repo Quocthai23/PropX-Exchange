@@ -984,10 +984,12 @@
             "name": "take",
             "required": false,
             "in": "query",
+            "description": "Number of notifications to return per page.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
               "default": 20,
+              "example": 20,
               "type": "number"
             }
           },
@@ -995,9 +997,11 @@
             "name": "skip",
             "required": false,
             "in": "query",
+            "description": "Number of notifications to skip (offset pagination).",
             "schema": {
               "minimum": 0,
               "default": 0,
+              "example": 0,
               "type": "number"
             }
           },
@@ -1005,8 +1009,9 @@
             "name": "category",
             "required": false,
             "in": "query",
-            "description": "Optional filter by notification category, 0 for User, 1 for System, 2 for Trading",
+            "description": "Filter by notification category. 0 = User activity, 1 = System announcements, 2 = Trading alerts.",
             "schema": {
+              "example": 2,
               "type": "number",
               "enum": [
                 0,
@@ -1019,8 +1024,9 @@
             "name": "isRead",
             "required": false,
             "in": "query",
-            "description": "Optional filter by read status",
+            "description": "Filter by read status. true = only read, false = only unread.",
             "schema": {
+              "example": false,
               "type": "boolean"
             }
           }
@@ -2249,7 +2255,7 @@
             "name": "skip",
             "required": false,
             "in": "query",
-            "description": "Number of records to skip",
+            "description": "Number of records to skip (offset pagination).",
             "schema": {
               "minimum": 0,
               "example": 0,
@@ -2260,7 +2266,7 @@
             "name": "take",
             "required": false,
             "in": "query",
-            "description": "Number of records to take",
+            "description": "Number of reward records to return.",
             "schema": {
               "minimum": 1,
               "example": 10,
@@ -2271,8 +2277,9 @@
             "name": "eventType",
             "required": false,
             "in": "query",
-            "description": "Filter by event type",
+            "description": "Filter rewards by commission event type.",
             "schema": {
+              "example": "TRADING_FEE_REBATE",
               "type": "string",
               "enum": [
                 "TRADE",
@@ -2349,6 +2356,54 @@
           }
         ],
         "summary": "Get current user commission stats",
+        "tags": [
+          "Commissions"
+        ]
+      }
+    },
+    "/commissions/claim": {
+      "post": {
+        "operationId": "CommissionsController_claimRewards",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimRewardsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Return EIP-712/191 signature and payload."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "summary": "Generate a claim signature for the user to claim on-chain",
         "tags": [
           "Commissions"
         ]
@@ -2554,10 +2609,12 @@
             "name": "take",
             "required": false,
             "in": "query",
+            "description": "Number of transaction records to return.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
               "default": 20,
+              "example": 20,
               "type": "number"
             }
           },
@@ -2565,9 +2622,11 @@
             "name": "skip",
             "required": false,
             "in": "query",
+            "description": "Number of records to skip (offset pagination).",
             "schema": {
               "minimum": 0,
               "default": 0,
+              "example": 0,
               "type": "number"
             }
           },
@@ -2575,8 +2634,9 @@
             "name": "type",
             "required": false,
             "in": "query",
-            "description": "Transaction type",
+            "description": "Filter by transaction type (e.g. DEPOSIT, WITHDRAW, TRANSFER).",
             "schema": {
+              "example": "DEPOSIT",
               "type": "string",
               "enum": [
                 "DEPOSIT",
@@ -2597,8 +2657,9 @@
             "name": "status",
             "required": false,
             "in": "query",
-            "description": "Transaction status",
+            "description": "Filter by transaction status (e.g. PENDING, COMPLETED, FAILED).",
             "schema": {
+              "example": "COMPLETED",
               "type": "string",
               "enum": [
                 "PENDING",
@@ -2613,8 +2674,10 @@
             "name": "startDate",
             "required": false,
             "in": "query",
-            "description": "Start date (ISO format)",
+            "description": "Start date filter (ISO 8601 format). Returns transactions created on or after this date.",
             "schema": {
+              "format": "date-time",
+              "example": "2026-01-01T00:00:00.000Z",
               "type": "string"
             }
           },
@@ -2622,8 +2685,10 @@
             "name": "endDate",
             "required": false,
             "in": "query",
-            "description": "End date (ISO format)",
+            "description": "End date filter (ISO 8601 format). Returns transactions created on or before this date.",
             "schema": {
+              "format": "date-time",
+              "example": "2026-12-31T23:59:59.999Z",
               "type": "string"
             }
           }
@@ -2670,10 +2735,12 @@
             "name": "take",
             "required": false,
             "in": "query",
+            "description": "Number of transaction records to return.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
               "default": 20,
+              "example": 20,
               "type": "number"
             }
           },
@@ -2681,9 +2748,11 @@
             "name": "skip",
             "required": false,
             "in": "query",
+            "description": "Number of records to skip (offset pagination).",
             "schema": {
               "minimum": 0,
               "default": 0,
+              "example": 0,
               "type": "number"
             }
           },
@@ -2691,8 +2760,9 @@
             "name": "type",
             "required": false,
             "in": "query",
-            "description": "Transaction type",
+            "description": "Filter by transaction type (e.g. DEPOSIT, WITHDRAW, TRANSFER).",
             "schema": {
+              "example": "DEPOSIT",
               "type": "string",
               "enum": [
                 "DEPOSIT",
@@ -2713,8 +2783,9 @@
             "name": "status",
             "required": false,
             "in": "query",
-            "description": "Transaction status",
+            "description": "Filter by transaction status (e.g. PENDING, COMPLETED, FAILED).",
             "schema": {
+              "example": "COMPLETED",
               "type": "string",
               "enum": [
                 "PENDING",
@@ -2729,8 +2800,10 @@
             "name": "startDate",
             "required": false,
             "in": "query",
-            "description": "Start date (ISO format)",
+            "description": "Start date filter (ISO 8601 format). Returns transactions created on or after this date.",
             "schema": {
+              "format": "date-time",
+              "example": "2026-01-01T00:00:00.000Z",
               "type": "string"
             }
           },
@@ -2738,8 +2811,10 @@
             "name": "endDate",
             "required": false,
             "in": "query",
-            "description": "End date (ISO format)",
+            "description": "End date filter (ISO 8601 format). Returns transactions created on or before this date.",
             "schema": {
+              "format": "date-time",
+              "example": "2026-12-31T23:59:59.999Z",
               "type": "string"
             }
           }
@@ -2877,7 +2952,7 @@
             "accessToken": []
           }
         ],
-        "summary": "Sweep Funds (Gom quỹ từ ví người dùng về ví tổng)",
+        "summary": "Sweep Funds (Aggregate funds from user wallets to master wallet)",
         "tags": [
           "Admin - Payment"
         ]
@@ -3392,10 +3467,12 @@
             "name": "take",
             "required": false,
             "in": "query",
+            "description": "Number of tickets to return.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
               "default": 20,
+              "example": 20,
               "type": "number"
             }
           },
@@ -3403,8 +3480,9 @@
             "name": "cursor",
             "required": false,
             "in": "query",
-            "description": "Cursor for cursor-based pagination",
+            "description": "Cursor string for cursor-based pagination. Omit for the first page.",
             "schema": {
+              "example": "ticket_01J2XABCDEF",
               "type": "string"
             }
           },
@@ -3412,7 +3490,9 @@
             "name": "status",
             "required": false,
             "in": "query",
+            "description": "Filter tickets by status.",
             "schema": {
+              "example": "OPEN",
               "type": "string",
               "enum": [
                 "OPEN",
@@ -3426,7 +3506,9 @@
             "name": "category",
             "required": false,
             "in": "query",
+            "description": "Filter tickets by category tag.",
             "schema": {
+              "example": "Finance",
               "type": "string"
             }
           },
@@ -3434,7 +3516,9 @@
             "name": "priority",
             "required": false,
             "in": "query",
+            "description": "Filter tickets by priority label.",
             "schema": {
+              "example": "high",
               "type": "string"
             }
           },
@@ -3442,8 +3526,10 @@
             "name": "sortBy",
             "required": false,
             "in": "query",
+            "description": "Field to sort results by.",
             "schema": {
               "default": "createdAt",
+              "example": "createdAt",
               "type": "string",
               "enum": [
                 "createdAt"
@@ -3454,8 +3540,10 @@
             "name": "sortDir",
             "required": false,
             "in": "query",
+            "description": "Sort direction.",
             "schema": {
               "default": "desc",
+              "example": "desc",
               "type": "string",
               "enum": [
                 "asc",
@@ -3623,10 +3711,12 @@
             "name": "take",
             "required": false,
             "in": "query",
+            "description": "Number of messages to return.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
               "default": 50,
+              "example": 50,
               "type": "number"
             }
           },
@@ -3634,9 +3724,11 @@
             "name": "skip",
             "required": false,
             "in": "query",
+            "description": "Number of messages to skip (offset pagination).",
             "schema": {
               "minimum": 0,
               "default": 0,
+              "example": 0,
               "type": "number"
             }
           },
@@ -3644,8 +3736,9 @@
             "name": "cursor",
             "required": false,
             "in": "query",
-            "description": "Cursor for cursor-based pagination",
+            "description": "Cursor string for cursor-based pagination.",
             "schema": {
+              "example": "msg_01J2XABCDEF",
               "type": "string"
             }
           }
@@ -3808,10 +3901,12 @@
             "name": "take",
             "required": false,
             "in": "query",
+            "description": "Number of tickets to return.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
               "default": 20,
+              "example": 20,
               "type": "number"
             }
           },
@@ -3819,8 +3914,9 @@
             "name": "cursor",
             "required": false,
             "in": "query",
-            "description": "Cursor for cursor-based pagination",
+            "description": "Cursor string for cursor-based pagination. Omit for the first page.",
             "schema": {
+              "example": "ticket_01J2XABCDEF",
               "type": "string"
             }
           },
@@ -3828,7 +3924,9 @@
             "name": "status",
             "required": false,
             "in": "query",
+            "description": "Filter tickets by status.",
             "schema": {
+              "example": "OPEN",
               "type": "string",
               "enum": [
                 "OPEN",
@@ -3842,7 +3940,9 @@
             "name": "category",
             "required": false,
             "in": "query",
+            "description": "Filter tickets by category tag.",
             "schema": {
+              "example": "Finance",
               "type": "string"
             }
           },
@@ -3850,7 +3950,9 @@
             "name": "priority",
             "required": false,
             "in": "query",
+            "description": "Filter tickets by priority label.",
             "schema": {
+              "example": "high",
               "type": "string"
             }
           },
@@ -3858,8 +3960,10 @@
             "name": "sortBy",
             "required": false,
             "in": "query",
+            "description": "Field to sort results by.",
             "schema": {
               "default": "createdAt",
+              "example": "createdAt",
               "type": "string",
               "enum": [
                 "createdAt"
@@ -3870,8 +3974,10 @@
             "name": "sortDir",
             "required": false,
             "in": "query",
+            "description": "Sort direction.",
             "schema": {
               "default": "desc",
+              "example": "desc",
               "type": "string",
               "enum": [
                 "asc",
@@ -3883,7 +3989,9 @@
             "name": "userId",
             "required": false,
             "in": "query",
+            "description": "Filter tickets by a specific user ID (admin use only).",
             "schema": {
+              "example": "usr_01J2XABCDEF",
               "type": "string"
             }
           }
@@ -4028,12 +4136,23 @@
     },
     "/auth/send-otp": {
       "post": {
+        "description": "Send a one-time password to the specified email for registration, password reset, withdrawal, or transfer verification.",
         "operationId": "AuthController_sendOtp",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendOtpDto"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/SendOtpDto"
+              }
+            },
+            "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/SendOtpDto"
               }
@@ -4045,7 +4164,7 @@
             "description": "OTP sent successfully."
           },
           "400": {
-            "$ref": "#/components/responses/BadRequest"
+            "description": "Invalid email address or unsupported purpose."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -4086,15 +4205,25 @@
               "schema": {
                 "$ref": "#/components/schemas/VerifyOtpDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Returns a special-purpose token upon successful verification."
+            "description": "Returns a short-lived, single-purpose token upon successful OTP verification."
           },
           "400": {
-            "$ref": "#/components/responses/BadRequest"
+            "description": "OTP is invalid, expired, or email does not match."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -4125,6 +4254,7 @@
     },
     "/auth/register": {
       "post": {
+        "description": "Create a new user account using a verified register token from /auth/verify-otp. Returns JWT tokens or a challenge if MFA is required.",
         "operationId": "AuthController_register",
         "parameters": [],
         "requestBody": {
@@ -4134,15 +4264,25 @@
               "schema": {
                 "$ref": "#/components/schemas/RegisterDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Returns Tokens or ChallengeRequiredResponse"
+            "description": "Returns access token + user object, or ChallengeRequiredResponse when MFA is needed."
           },
           "400": {
-            "$ref": "#/components/responses/BadRequest"
+            "description": "Invalid register token, email already exists, or username taken."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -4168,6 +4308,7 @@
     },
     "/auth/login-with-social": {
       "post": {
+        "description": "Authenticate using a Google or Apple ID token from the React Native SDK.",
         "operationId": "AuthController_loginWithSocial",
         "parameters": [],
         "requestBody": {
@@ -4177,12 +4318,22 @@
               "schema": {
                 "$ref": "#/components/schemas/LoginWithSocialDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginWithSocialDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginWithSocialDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Returns access token + user object on success."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -4211,6 +4362,7 @@
     },
     "/auth/web3/nonce": {
       "post": {
+        "description": "Generate a one-time nonce to be embedded in the SIWE message before wallet signing.",
         "operationId": "AuthController_getWeb3Nonce",
         "parameters": [],
         "requestBody": {
@@ -4220,12 +4372,17 @@
               "schema": {
                 "$ref": "#/components/schemas/Web3NonceDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Web3NonceDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Returns a random nonce string."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -4254,6 +4411,7 @@
     },
     "/auth/verify-signature": {
       "post": {
+        "description": "Verify an EIP-4361 signature to authenticate or register a user via their Web3 wallet.",
         "operationId": "AuthController_verifySignature",
         "parameters": [],
         "requestBody": {
@@ -4263,15 +4421,20 @@
               "schema": {
                 "$ref": "#/components/schemas/VerifySignatureDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifySignatureDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Returns access token + user object on success."
           },
           "400": {
-            "$ref": "#/components/responses/BadRequest"
+            "description": "Invalid signature, nonce mismatch, or expired nonce."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -4297,6 +4460,7 @@
     },
     "/auth/login": {
       "post": {
+        "description": "Authenticate with email/password credentials. Returns JWT tokens or an MFA challenge if enabled.",
         "operationId": "AuthController_login",
         "parameters": [],
         "requestBody": {
@@ -4306,18 +4470,28 @@
               "schema": {
                 "$ref": "#/components/schemas/LoginDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Returns Tokens or ChallengeRequiredResponse"
+            "description": "Returns access token + user object, or ChallengeRequiredResponse when MFA is needed."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "Invalid email or password."
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
@@ -4340,6 +4514,7 @@
     },
     "/auth/reset-password": {
       "post": {
+        "description": "Reset the user password using a verified reset token from /auth/verify-otp.",
         "operationId": "AuthController_resetPassword",
         "parameters": [],
         "requestBody": {
@@ -4349,15 +4524,25 @@
               "schema": {
                 "$ref": "#/components/schemas/ResetPasswordDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Password reset successfully."
           },
           "400": {
-            "$ref": "#/components/responses/BadRequest"
+            "description": "Invalid or expired reset token."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -4383,6 +4568,7 @@
     },
     "/auth/check-email": {
       "post": {
+        "description": "Check whether the given email address is already registered in the system.",
         "operationId": "AuthController_checkEmail",
         "parameters": [],
         "requestBody": {
@@ -4392,12 +4578,22 @@
               "schema": {
                 "$ref": "#/components/schemas/CheckEmailDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckEmailDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckEmailDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Returns { exists: boolean }."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -4426,6 +4622,7 @@
     },
     "/auth/check-reference-code": {
       "post": {
+        "description": "Validate whether a referral code exists and is eligible for use during registration.",
         "operationId": "AuthController_checkReferenceCode",
         "parameters": [],
         "requestBody": {
@@ -4435,12 +4632,22 @@
               "schema": {
                 "$ref": "#/components/schemas/CheckReferenceCodeDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckReferenceCodeDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckReferenceCodeDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Returns validity of the reference code."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -4469,6 +4676,7 @@
     },
     "/auth/challenge": {
       "post": {
+        "description": "Initiate an MFA challenge for a sensitive operation such as withdrawal or transfer. Returns a challengeId to be verified with the chosen MFA factor.",
         "operationId": "AuthController_createChallenge",
         "parameters": [],
         "requestBody": {
@@ -4478,12 +4686,17 @@
               "schema": {
                 "$ref": "#/components/schemas/AuthChallengeDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthChallengeDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Returns challengeId and requiredFactors."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
@@ -4517,6 +4730,7 @@
     },
     "/auth/challenge/verify": {
       "post": {
+        "description": "Submit the MFA code (TOTP or Email OTP) to complete a challenge and receive a verified challengeId for downstream actions.",
         "operationId": "AuthController_verifyChallenge",
         "parameters": [],
         "requestBody": {
@@ -4526,15 +4740,20 @@
               "schema": {
                 "$ref": "#/components/schemas/VerifyChallengeDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyChallengeDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Returns verified challengeId on success."
           },
           "400": {
-            "$ref": "#/components/responses/BadRequest"
+            "description": "Invalid or expired MFA code."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -4598,6 +4817,7 @@
     },
     "/auth/change-password": {
       "post": {
+        "description": "Change the password for the currently authenticated user. Requires the old password for verification.",
         "operationId": "AuthController_changePassword",
         "parameters": [],
         "requestBody": {
@@ -4607,18 +4827,28 @@
               "schema": {
                 "$ref": "#/components/schemas/ChangePasswordDto"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Password changed successfully."
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "Old password is incorrect."
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
@@ -4729,10 +4959,12 @@
             "name": "take",
             "required": false,
             "in": "query",
+            "description": "Number of records to return per page.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
               "default": 20,
+              "example": 20,
               "type": "number"
             }
           },
@@ -4740,9 +4972,11 @@
             "name": "skip",
             "required": false,
             "in": "query",
+            "description": "Number of records to skip (offset-based pagination).",
             "schema": {
               "minimum": 0,
               "default": 0,
+              "example": 0,
               "type": "number"
             }
           },
@@ -4750,8 +4984,9 @@
             "name": "userId",
             "required": false,
             "in": "query",
-            "description": "Filter posts by author id",
+            "description": "Filter posts by a specific author user ID.",
             "schema": {
+              "example": "usr_01J2XABCDEF",
               "type": "string"
             }
           },
@@ -4759,8 +4994,9 @@
             "name": "assetId",
             "required": false,
             "in": "query",
-            "description": "Filter posts tagged with an asset id",
+            "description": "Filter posts tagged with a specific asset ID.",
             "schema": {
+              "example": "asset_01J2XAAPL",
               "type": "string"
             }
           },
@@ -4768,8 +5004,9 @@
             "name": "followingOnly",
             "required": true,
             "in": "query",
-            "description": "Only return posts from followed authors",
+            "description": "When true, returns only posts from authors the current user follows.",
             "schema": {
+              "example": false,
               "type": "boolean"
             }
           },
@@ -4777,7 +5014,9 @@
             "name": "status",
             "required": false,
             "in": "query",
+            "description": "Filter posts by moderation status.",
             "schema": {
+              "example": "APPROVED",
               "type": "string",
               "enum": [
                 "PENDING",
@@ -4790,9 +5029,10 @@
             "name": "search",
             "required": false,
             "in": "query",
-            "description": "Search by content",
+            "description": "Full-text search term to match against post content.",
             "schema": {
               "maxLength": 255,
+              "example": "bullish AAPL",
               "type": "string"
             }
           },
@@ -4800,8 +5040,10 @@
             "name": "sortBy",
             "required": false,
             "in": "query",
+            "description": "Field to sort results by.",
             "schema": {
               "default": "createdAt",
+              "example": "createdAt",
               "type": "string",
               "enum": [
                 "createdAt",
@@ -4815,8 +5057,10 @@
             "name": "sortDir",
             "required": false,
             "in": "query",
+            "description": "Sort direction.",
             "schema": {
               "default": "desc",
+              "example": "desc",
               "type": "string",
               "enum": [
                 "asc",
@@ -4924,10 +5168,12 @@
             "name": "take",
             "required": false,
             "in": "query",
+            "description": "Number of records to return per page.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
               "default": 20,
+              "example": 20,
               "type": "number"
             }
           },
@@ -4935,9 +5181,11 @@
             "name": "skip",
             "required": false,
             "in": "query",
+            "description": "Number of records to skip (offset-based pagination).",
             "schema": {
               "minimum": 0,
               "default": 0,
+              "example": 0,
               "type": "number"
             }
           }
@@ -5229,10 +5477,12 @@
             "name": "take",
             "required": false,
             "in": "query",
+            "description": "Number of records to return per page.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
               "default": 20,
+              "example": 20,
               "type": "number"
             }
           },
@@ -5240,9 +5490,11 @@
             "name": "skip",
             "required": false,
             "in": "query",
+            "description": "Number of records to skip (offset-based pagination).",
             "schema": {
               "minimum": 0,
               "default": 0,
+              "example": 0,
               "type": "number"
             }
           }
@@ -5907,14 +6159,16 @@
           "avatar": {
             "type": "string",
             "format": "uri",
-            "description": "New avatar URL"
+            "description": "Publicly accessible URL of the new avatar image.",
+            "example": "https://cdn.example.com/avatars/user123.jpg"
           },
           "username": {
             "type": "string",
             "minLength": 3,
             "maxLength": 100,
             "pattern": "^[A-Za-z0-9_]+$",
-            "description": "New username"
+            "description": "New username. Must be 3-100 characters: only letters, numbers, and underscores allowed.",
+            "example": "john_doe_99"
           },
           "gender": {
             "enum": [
@@ -5923,22 +6177,26 @@
               "OTHER"
             ],
             "type": "string",
-            "description": "New gender"
+            "description": "User gender selection.",
+            "example": "MALE"
           },
           "bio": {
             "type": "string",
             "maxLength": 255,
-            "description": "New bio",
-            "minLength": 0
+            "description": "Short bio or description displayed on the user profile. Maximum 255 characters.",
+            "minLength": 0,
+            "example": "Crypto enthusiast & RWA investor. Building the future of finance."
           },
           "coverAvatar": {
             "type": "string",
             "format": "uri",
-            "description": "New cover avatar URL"
+            "description": "Publicly accessible URL of the cover/banner image for the profile.",
+            "example": "https://cdn.example.com/covers/banner_123.jpg"
           },
           "displayName": {
             "type": "string",
-            "description": "New display name"
+            "description": "Display name shown on the profile (may differ from username).",
+            "example": "John Doe"
           }
         }
       },
@@ -5979,7 +6237,8 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 50,
-            "description": "Reference code to set for the user"
+            "description": "Referral code to associate with this account. Can only be set once.",
+            "example": "REF-ABC123"
           }
         },
         "required": [
@@ -5992,31 +6251,39 @@
           "fullName": {
             "type": "string",
             "maxLength": 120,
-            "description": "Full legal name",
-            "example": "Nguyen Van A"
+            "description": "Full legal name as it appears on the official identity document.",
+            "example": "Nguyen Van An"
           },
           "dob": {
             "type": "string",
-            "description": "Date of birth in ISO format",
-            "example": "1995-08-15"
+            "description": "Date of birth in ISO 8601 format (YYYY-MM-DD).",
+            "example": "1995-08-15",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "format": "date"
           },
           "idNumber": {
             "type": "string",
             "maxLength": 40,
-            "description": "Government-issued ID number",
+            "description": "Government-issued national ID, passport, or driver's license number.",
             "example": "012345678901"
           },
           "idFrontImg": {
             "type": "string",
-            "description": "Front-side image URL of identity document"
+            "description": "Publicly accessible URL of the front-side image of the identity document.",
+            "example": "https://cdn.example.com/kyc/id_front_user123.jpg",
+            "format": "uri"
           },
           "idBackImg": {
             "type": "string",
-            "description": "Back-side image URL of identity document"
+            "description": "Publicly accessible URL of the back-side image of the identity document.",
+            "example": "https://cdn.example.com/kyc/id_back_user123.jpg",
+            "format": "uri"
           },
           "selfieImg": {
             "type": "string",
-            "description": "Selfie image URL for identity verification"
+            "description": "Publicly accessible URL of the selfie image for liveness/identity verification.",
+            "example": "https://cdn.example.com/kyc/selfie_user123.jpg",
+            "format": "uri"
           }
         },
         "required": [
@@ -6121,34 +6388,40 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 20,
-            "description": "Asset symbol (e.g. EURUSD)"
+            "description": "Ticker symbol used to identify the asset (e.g. EURUSD, AAPL, GOLD).",
+            "example": "EURUSD"
           },
           "priceSourceSymbol": {
             "type": "string",
             "minLength": 1,
             "maxLength": 20,
-            "description": "Price source symbol"
+            "description": "Symbol used to fetch real-time price from the data provider (may differ from display symbol).",
+            "example": "EUR/USD"
           },
           "name": {
             "type": "string",
             "minLength": 1,
             "maxLength": 100,
-            "description": "Asset display name"
+            "description": "Human-readable display name of the asset shown in the UI.",
+            "example": "Euro / US Dollar"
           },
           "categoryId": {
             "type": "string",
-            "description": "Asset category identifier"
+            "description": "ID of the asset category (e.g. Forex, Crypto, Stocks, RWA).",
+            "example": "cat_forex_01"
           },
           "logo": {
             "type": "string",
             "format": "uri",
-            "description": "Asset logo URL"
+            "description": "Publicly accessible URL to the asset logo/icon image.",
+            "example": "https://cdn.example.com/logos/eur_usd.png"
           },
           "digit": {
             "type": "number",
             "minimum": 0,
             "maximum": 20,
-            "description": "Decimal digits for price formatting"
+            "description": "Number of decimal places for displaying the asset price (0-20).",
+            "example": 5
           },
           "spread": {
             "type": "string",
@@ -6192,26 +6465,38 @@
           },
           "minTradeSize": {
             "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "description": "Minimum allowed trade volume (lot size) as a decimal string.",
+            "example": "0.01"
           },
           "maxTradeSize": {
             "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "description": "Maximum allowed trade volume (lot size) as a decimal string.",
+            "example": "100.00"
           },
           "volumeStep": {
             "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "description": "Step increment for trade volume (e.g. 0.01 means orders must be multiples of 0.01).",
+            "example": "0.01"
           },
           "pipSize": {
             "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "description": "Pip size for the asset (e.g. 0.0001 for EUR/USD).",
+            "example": "0.0001"
           },
           "slippage": {
             "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "description": "Maximum allowed price slippage in pips during order execution.",
+            "example": "3"
           },
           "swapType": {
-            "type": "string"
+            "type": "string",
+            "description": "Swap calculation type (e.g. Points, Percent, Currency).",
+            "example": "Points"
           },
           "swapLong": {
             "type": "string",
@@ -6332,27 +6617,51 @@
           "commissionRate": {
             "type": "number",
             "minimum": 0,
-            "description": "The commission rate, e.g., 0.20 for 20%",
+            "description": "Commission rate as a decimal fraction. E.g. 0.20 = 20%, 0.05 = 5%.",
             "example": 0.2
           },
           "isActive": {
             "type": "boolean",
-            "description": "Is the commission event active",
+            "description": "Whether this commission event configuration is active and will generate rewards.",
             "example": true
           }
         }
+      },
+      "ClaimRewardsDto": {
+        "type": "object",
+        "properties": {
+          "rewardIds": {
+            "minItems": 1,
+            "description": "Array of commission reward IDs to claim in a single batch operation.",
+            "example": [
+              "reward_01J2XABCDEF",
+              "reward_01J2XGHIJKL"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "rewardIds"
+        ]
       },
       "DepositDemoDto": {
         "type": "object",
         "properties": {
           "amount": {
             "type": "string",
-            "description": "Deposit amount"
+            "description": "Deposit amount as a decimal string. Must be a valid positive number.",
+            "example": "500.00",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
           },
           "idempotencyKey": {
             "type": "string",
             "format": "uuid",
-            "description": "Client-generated UUID to prevent duplicate submissions"
+            "description": "Client-generated UUID v4 to prevent duplicate deposit submissions (idempotency).",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
           }
         },
         "required": [
@@ -6364,7 +6673,9 @@
         "properties": {
           "address": {
             "type": "string",
-            "description": "User wallet address (non-custodial). The backend does not store private keys."
+            "description": "User wallet address (non-custodial). The backend does not store private keys. Must be a valid blockchain address.",
+            "example": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
           },
           "type": {
             "type": "string",
@@ -6372,7 +6683,8 @@
               "EVM",
               "SOL"
             ],
-            "description": "Wallet type"
+            "description": "Wallet chain type. EVM for Ethereum-compatible chains, SOL for Solana.",
+            "example": "EVM"
           },
           "chainId": {
             "type": "string",
@@ -6382,7 +6694,8 @@
               "97",
               "11155111"
             ],
-            "description": "Chain ID"
+            "description": "EVM chain ID. 1 = Ethereum Mainnet, 56 = BSC Mainnet, 97 = BSC Testnet, 11155111 = Sepolia.",
+            "example": "56"
           }
         },
         "required": [
@@ -6394,11 +6707,15 @@
         "properties": {
           "amount": {
             "type": "string",
-            "description": "Withdrawal amount"
+            "description": "Withdrawal amount as a decimal string.",
+            "example": "100.50",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
           },
           "destinationAddress": {
             "type": "string",
-            "description": "Blockchain wallet address"
+            "description": "Destination blockchain wallet address to send funds to.",
+            "example": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
           },
           "chainId": {
             "type": "string",
@@ -6408,16 +6725,20 @@
               "97",
               "11155111"
             ],
-            "description": "Chain ID"
+            "description": "Target EVM chain ID for the withdrawal. 1 = Mainnet, 56 = BSC, 97 = BSC Testnet, 11155111 = Sepolia.",
+            "example": "56"
           },
           "idempotencyKey": {
             "type": "string",
             "format": "uuid",
-            "description": "Client-generated UUID to prevent duplicate submissions"
+            "description": "Client-generated UUID v4 to prevent duplicate withdrawal submissions.",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
           },
           "challengeId": {
             "type": "string",
-            "description": "Verified challengeId from /auth/challenge/verify",
+            "description": "Verified challengeId from POST /auth/challenge/verify — proves MFA was completed.",
+            "example": "chal_01J2XABCDEF123",
             "minLength": 1
           }
         },
@@ -6434,28 +6755,37 @@
         "properties": {
           "amount": {
             "type": "string",
-            "description": "Amount to transfer as a string"
+            "description": "Amount to transfer as a decimal string.",
+            "example": "50.00",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
           },
           "assetId": {
             "type": "string",
-            "description": "Asset ID"
+            "description": "Asset ID to transfer. If omitted, transfers the default balance currency (USDT).",
+            "example": "asset_01J2XAAPL"
           },
           "toUserId": {
             "type": "string",
-            "description": "Receiver user ID"
+            "description": "Recipient user ID. Either toUserId or toEmail must be provided.",
+            "example": "usr_01J2XABCDEF"
           },
           "toEmail": {
             "type": "string",
-            "description": "Receiver email"
+            "description": "Recipient email address. Either toUserId or toEmail must be provided.",
+            "example": "recipient@example.com",
+            "format": "email"
           },
           "idempotencyKey": {
             "type": "string",
             "format": "uuid",
-            "description": "Client-generated UUID to prevent duplicate submissions"
+            "description": "Client-generated UUID v4 to prevent duplicate transfer submissions.",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
           },
           "challengeId": {
             "type": "string",
-            "description": "Verified challengeId from /auth/challenge/verify",
+            "description": "Verified challengeId from POST /auth/challenge/verify — proves MFA was completed.",
+            "example": "chal_01J2XABCDEF123",
             "minLength": 1
           }
         },
@@ -6470,25 +6800,31 @@
         "properties": {
           "status": {
             "type": "string",
-            "description": "New status",
+            "description": "New transaction status to apply. Use COMPLETED when the on-chain transaction is confirmed.",
             "enum": [
               "COMPLETED",
               "FAILED",
               "CANCELLED"
-            ]
+            ],
+            "example": "COMPLETED"
           },
           "transactionHash": {
             "type": "string",
-            "description": "Required if status is COMPLETED"
+            "description": "On-chain transaction hash. Required when status is COMPLETED.",
+            "example": "0xabc123def456...",
+            "pattern": "^0x[a-fA-F0-9]{64}$"
           },
           "rejectedReason": {
             "type": "string",
-            "description": "Required if status is FAILED or CANCELLED"
+            "description": "Reason for rejection or cancellation. Required when status is FAILED or CANCELLED.",
+            "example": "Insufficient gas on destination chain."
           },
           "idempotencyKey": {
             "type": "string",
             "format": "uuid",
-            "description": "Idempotency key to prevent double execution"
+            "description": "UUID v4 to prevent double-execution of the same status update.",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
           }
         },
         "required": [
@@ -6507,15 +6843,19 @@
               "97",
               "11155111"
             ],
-            "description": "Chain ID"
+            "description": "EVM chain ID of the network to sweep funds from. 1 = Mainnet, 56 = BSC, 97 = BSC Testnet, 11155111 = Sepolia.",
+            "example": "56"
           },
           "destinationWallet": {
             "type": "string",
-            "description": "Destination wallet address to sweep funds to"
+            "description": "Destination wallet address to aggregate all swept funds into.",
+            "example": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
           },
           "privateKey": {
             "type": "string",
-            "description": "Private key of the admin wallet used for sweeping"
+            "description": "Private key of the admin wallet used to sign sweep transactions. Handle with extreme care.",
+            "example": "0xprivate_key_hex..."
           }
         },
         "required": [
@@ -6617,7 +6957,7 @@
         "properties": {
           "subject": {
             "type": "string",
-            "description": "Ticket subject",
+            "description": "Subject category of the support ticket.",
             "enum": [
               "Account Issue",
               "Deposit",
@@ -6627,29 +6967,40 @@
               "Verification",
               "Billing",
               "Other"
-            ]
+            ],
+            "example": "Withdrawal"
           },
           "message": {
             "type": "string",
             "minLength": 1,
             "maxLength": 5000,
-            "description": "Initial message content"
+            "description": "Initial message content describing the issue. Between 1 and 5000 characters.",
+            "example": "My withdrawal of 100 USDT submitted 2 days ago is still pending. Transaction ID: TXN_123."
           },
           "title": {
             "type": "string",
-            "description": "Optional title"
+            "description": "Optional human-readable title for the ticket.",
+            "example": "Withdrawal stuck for 48 hours"
           },
           "category": {
             "type": "string",
-            "description": "Optional category"
+            "description": "Optional category tag to route the ticket to the correct team.",
+            "example": "Finance"
           },
           "priority": {
             "type": "string",
-            "description": "Optional priority (free-form string)"
+            "description": "Optional priority label (free-form string). Examples: low, medium, high, urgent.",
+            "example": "high"
           },
           "attachments": {
-            "type": "object",
-            "description": "Array of attachment URLs"
+            "description": "Array of attachment URLs (e.g. screenshots, transaction receipts).",
+            "example": [
+              "https://cdn.example.com/screenshots/txn_error.png"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -6662,29 +7013,34 @@
         "properties": {
           "subject": {
             "type": "string",
-            "description": "Ticket subject"
+            "description": "Updated subject category of the ticket.",
+            "example": "Billing"
           },
           "title": {
             "type": "string",
-            "description": "Optional title"
+            "description": "Updated ticket title.",
+            "example": "Resolved: Withdrawal issue"
           },
           "category": {
             "type": "string",
-            "description": "Optional category"
+            "description": "Updated routing category.",
+            "example": "Finance"
           },
           "priority": {
             "type": "string",
-            "description": "Optional priority (free-form string)"
+            "description": "Updated priority label.",
+            "example": "low"
           },
           "status": {
             "type": "string",
-            "description": "Ticket status",
+            "description": "Updated ticket status (managed by support agents).",
             "enum": [
               "OPEN",
               "IN_PROGRESS",
               "RESOLVED",
               "CLOSED"
-            ]
+            ],
+            "example": "RESOLVED"
           }
         }
       },
@@ -6695,20 +7051,28 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 5000,
-            "description": "Message content"
+            "description": "Message content to send in the support thread. Between 1 and 5000 characters.",
+            "example": "Thank you for the update! I can confirm the withdrawal was received."
           },
           "messageType": {
             "type": "number",
             "default": 0,
-            "description": "Message type. 0 = TEXT, 1 = IMAGE",
+            "description": "Message type. 0 = plain TEXT message, 1 = IMAGE message.",
             "enum": [
               0,
               1
-            ]
+            ],
+            "example": 0
           },
           "attachments": {
-            "type": "object",
-            "description": "Array of attachment URLs"
+            "description": "Array of attachment URLs for this message.",
+            "example": [
+              "https://cdn.example.com/screenshots/receipt.png"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -6721,7 +7085,9 @@
           "email": {
             "type": "string",
             "format": "email",
-            "description": "User email address. Required when register or reset password"
+            "description": "User email address. Required for registration or password reset.",
+            "example": "user@example.com",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\\.)+[A-Za-z]{2,}$"
           },
           "purpose": {
             "type": "string",
@@ -6731,7 +7097,8 @@
               "withdrawal",
               "transfer"
             ],
-            "description": "Purpose of sending OTP"
+            "description": "Purpose of sending OTP. Determines the downstream action after verification.",
+            "example": "register"
           }
         },
         "required": [
@@ -6745,14 +7112,17 @@
           "email": {
             "type": "string",
             "format": "email",
-            "description": "User email address. Required when register or reset password"
+            "description": "User email address that the OTP was sent to.",
+            "example": "user@example.com",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\\.)+[A-Za-z]{2,}$"
           },
           "otp": {
             "type": "string",
             "minLength": 6,
             "maxLength": 6,
-            "pattern": "^\\d+$",
-            "description": "6-digit numeric OTP"
+            "pattern": "^\\d{6}$",
+            "description": "6-digit numeric One-Time Password sent to the email.",
+            "example": "123456"
           },
           "purpose": {
             "type": "string",
@@ -6761,7 +7131,9 @@
               "reset_password",
               "withdrawal",
               "transfer"
-            ]
+            ],
+            "description": "Purpose of the OTP — must match the purpose used in send-otp.",
+            "example": "register"
           }
         },
         "required": [
@@ -6775,28 +7147,36 @@
         "properties": {
           "registerToken": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Short-lived registration token returned by /auth/verify-otp. Proves the user owns the email.",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
           },
           "username": {
             "type": "string",
             "minLength": 3,
             "maxLength": 100,
-            "description": "Username (3-100 characters)"
+            "description": "Desired username. Must be 3-100 characters, containing only letters, numbers, and underscores.",
+            "example": "john_doe_99",
+            "pattern": "^[A-Za-z0-9_]+$"
           },
           "password": {
             "type": "string",
             "minLength": 8,
-            "description": "Register password (min 8 chars, mixed case, number, special char)",
+            "description": "Account password. Min 8 characters — must include at least 1 lowercase, 1 uppercase, 1 digit, and 1 special character.",
+            "example": "P@ssword1!",
             "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$"
           },
           "referenceCode": {
             "type": "string",
             "maxLength": 50,
-            "description": "Referral code"
+            "description": "Referral code of the user who invited this account.",
+            "example": "REF-ABC123"
           },
           "avatar": {
             "type": "string",
-            "description": "URL to user avatar image"
+            "description": "Publicly accessible URL to the user avatar image.",
+            "example": "https://cdn.example.com/avatars/user123.jpg",
+            "format": "uri"
           }
         },
         "required": [
@@ -6813,12 +7193,14 @@
               "google",
               "apple"
             ],
-            "description": "Social provider: google or apple"
+            "description": "Social identity provider to authenticate with.",
+            "example": "google"
           },
           "idToken": {
             "type": "string",
             "minLength": 1,
-            "description": "ID token from social provider (React Native app)"
+            "description": "ID token issued by the social provider (obtained from React Native SDK).",
+            "example": "ya29.a0AfH6SMC..."
           }
         },
         "required": [
@@ -6831,7 +7213,9 @@
         "properties": {
           "walletAddress": {
             "type": "string",
-            "description": "Optional wallet address"
+            "description": "Optional EVM wallet address to scope the nonce (checksummed, 0x-prefixed).",
+            "example": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
           }
         }
       },
@@ -6840,19 +7224,27 @@
         "properties": {
           "message": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "EIP-4361 (SIWE) formatted message that was signed by the wallet.",
+            "example": "example.com wants you to sign in with your Ethereum account..."
           },
           "signature": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Hex-encoded ECDSA signature produced by the wallet over the message.",
+            "example": "0x4f3a...deadbeef"
           },
           "nonce": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Random nonce previously issued by GET /auth/web3/nonce to prevent replay attacks.",
+            "example": "nonce_01J2XAB"
           },
           "walletAddress": {
             "type": "string",
-            "description": "Wallet address to cross-check ownership"
+            "description": "EVM wallet address to cross-check ownership (checksummed, 0x-prefixed).",
+            "example": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
           }
         },
         "required": [
@@ -6866,12 +7258,16 @@
         "properties": {
           "email": {
             "type": "string",
-            "description": "User email address",
-            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\\.)+[A-Za-z]{2,}$"
+            "description": "Registered email address of the user.",
+            "example": "user@example.com",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\\.)+[A-Za-z]{2,}$",
+            "format": "email"
           },
           "password": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "User account password.",
+            "example": "P@ssword1!"
           }
         },
         "required": [
@@ -6884,12 +7280,15 @@
         "properties": {
           "resetPasswordToken": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Short-lived password-reset token returned by /auth/verify-otp.",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
           },
           "newPassword": {
             "type": "string",
             "minLength": 8,
-            "description": "New password (min 8 chars, mixed case, number, special char)",
+            "description": "New password. Min 8 characters — must include at least 1 lowercase, 1 uppercase, 1 digit, and 1 special character.",
+            "example": "NewP@ss99!",
             "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$"
           }
         },
@@ -6904,7 +7303,8 @@
           "email": {
             "type": "string",
             "format": "email",
-            "description": "User email address",
+            "description": "Email address to check for existing registration.",
+            "example": "user@example.com",
             "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\\.)+[A-Za-z]{2,}$"
           }
         },
@@ -6919,7 +7319,8 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 50,
-            "description": "Referral code"
+            "description": "Referral code to validate before using it during registration.",
+            "example": "REF-ABC123"
           }
         },
         "required": [
@@ -6937,11 +7338,18 @@
               "DISABLE_MFA",
               "WITHDRAW",
               "TRANSFER"
-            ]
+            ],
+            "description": "Sensitive action purpose that requires an MFA challenge.",
+            "example": "WITHDRAW"
           },
           "payload": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": true,
+            "description": "Optional context payload attached to the challenge (e.g. withdrawal details).",
+            "example": {
+              "amount": "100",
+              "destinationAddress": "0xABC..."
+            }
           }
         },
         "required": [
@@ -6953,18 +7361,24 @@
         "properties": {
           "challengeId": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Challenge ID returned by POST /auth/challenge.",
+            "example": "chal_01J2XABCDEF123"
           },
           "factor": {
             "type": "string",
             "enum": [
               "TOTP",
               "EMAIL_OTP"
-            ]
+            ],
+            "description": "MFA factor used to complete the challenge.",
+            "example": "TOTP"
           },
           "code": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "The OTP or TOTP code for the chosen factor.",
+            "example": "654321"
           }
         },
         "required": [
@@ -6978,12 +7392,15 @@
         "properties": {
           "oldPassword": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Current (old) password of the authenticated user.",
+            "example": "OldP@ss1!"
           },
           "newPassword": {
             "type": "string",
             "minLength": 8,
-            "description": "New password (min 8 chars, mixed case, number, special char)",
+            "description": "New password. Min 8 characters — must include at least 1 lowercase, 1 uppercase, 1 digit, and 1 special character.",
+            "example": "NewP@ss99!",
             "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$"
           }
         },
@@ -7001,12 +7418,14 @@
               "image",
               "video"
             ],
-            "description": "Media type attached to the post"
+            "description": "Media type attached to the post.",
+            "example": "image"
           },
           "link": {
             "type": "string",
             "format": "uri",
-            "description": "Public URL of the media resource"
+            "description": "Publicly accessible URL of the media resource (image or video).",
+            "example": "https://cdn.example.com/posts/photo_001.jpg"
           }
         },
         "required": [
@@ -7021,11 +7440,18 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 10000,
-            "description": "Post content"
+            "description": "Main text content of the post. Supports plain text up to 10,000 characters.",
+            "example": "Just opened a long position on $AAPL — bullish on earnings! 🚀"
           },
           "linksUrl": {
             "maxItems": 10,
-            "description": "Optional list of images/videos attached to the post",
+            "description": "Optional list of image or video attachments. Maximum 10 items.",
+            "example": [
+              {
+                "type": "image",
+                "link": "https://cdn.example.com/img/chart.png"
+              }
+            ],
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MediaLinkDto"
@@ -7033,7 +7459,11 @@
           },
           "assetIds": {
             "maxItems": 20,
-            "description": "Optional list of tagged CFD asset identifiers",
+            "description": "Optional list of CFD/RWA asset identifiers to tag in the post.",
+            "example": [
+              "asset_01J2XAAPL",
+              "asset_01J2XTSLA"
+            ],
             "type": "array",
             "items": {
               "type": "string"
@@ -7041,7 +7471,8 @@
           },
           "repostId": {
             "type": "string",
-            "description": "Optional post identifier to repost"
+            "description": "Optional ID of an existing post to repost/quote.",
+            "example": "post_01J2XABCDEF"
           }
         },
         "required": [
@@ -7055,7 +7486,8 @@
             "type": "string",
             "maxLength": 5000,
             "minLength": 1,
-            "description": "Comment content"
+            "description": "Comment text content. Must be between 1 and 5000 characters.",
+            "example": "Great analysis! I agree with your take on the technicals."
           }
         },
         "required": [
@@ -7067,16 +7499,16 @@
         "properties": {
           "title": {
             "type": "string",
-            "example": "Căn hộ Vinhomes Smart City"
+            "example": "Vinhomes Smart City Apartment"
           },
           "description": {
             "type": "string",
             "description": "Asset description",
-            "example": "2PN, full nội thất..."
+            "example": "2BR, fully furnished..."
           },
           "location": {
             "type": "string",
-            "example": "Hà Nội - Nam Từ Liêm"
+            "example": "Hanoi - Nam Tu Liem"
           },
           "estimatedValue": {
             "type": "string",
@@ -7182,7 +7614,7 @@
           "title": {
             "type": "string",
             "minLength": 3,
-            "example": "Có nên bán đứt dự án với giá 3.5 tỷ?"
+            "example": "Should we sell the project outright for 3.5 billion?"
           },
           "description": {
             "type": "string",

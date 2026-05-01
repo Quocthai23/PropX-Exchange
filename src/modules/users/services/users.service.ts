@@ -1,17 +1,15 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
-import Decimal from 'decimal.js';
 import { PrismaService } from '@/prisma/prisma.service';
 import { UpdateProfileDto, UpdateReferralDto } from '../dto/update-user.dto';
 import {
   ToggleFavoriteAssetDto,
   UpsertRelationDto,
 } from '../dto/create-user.dto';
-
-type DecimalValue = string | number | { toString(): string };
+import { UserPortfolioService } from './user-portfolio.service';
+import { UserRelationsService } from './user-relations.service';
 
 interface UsersPrisma {
   user: {
@@ -22,48 +20,23 @@ interface UsersPrisma {
   userRelation: {
     count(args: Record<string, unknown>): Promise<number>;
     findUnique(args: Record<string, unknown>): Promise<any>;
-    findMany(args: Record<string, unknown>): Promise<any[]>;
-    update(args: Record<string, unknown>): Promise<any>;
-    create(args: Record<string, unknown>): Promise<any>;
   };
   favoriteAsset: {
     findUnique(args: Record<string, unknown>): Promise<any>;
     delete(args: Record<string, unknown>): Promise<any>;
     create(args: Record<string, unknown>): Promise<any>;
   };
-  balance: {
-    findMany(args: Record<string, unknown>): Promise<any[]>;
-  };
-  transaction: {
-    findMany(args: Record<string, unknown>): Promise<any[]>;
-    aggregate(args: Record<string, unknown>): Promise<{
-      _sum: { amount: DecimalValue | null };
-    }>;
-  };
-  asset: {
-    findMany(args: Record<string, unknown>): Promise<any[]>;
-  };
-  order: {
-    findFirst(args: Record<string, unknown>): Promise<any>;
-  };
-}
-
-export interface PortfolioPosition {
-  assetId: string;
-  symbol: string;
-  name: string;
-  quantity: string;
-  marketPrice: string;
-  marketValue: string;
-  expectedApy: string;
-  annualYieldEstimate: string;
 }
 
 @Injectable()
 export class UsersService {
   private readonly prisma: UsersPrisma;
 
-  constructor(prismaService: PrismaService) {
+  constructor(
+    prismaService: PrismaService,
+    private readonly portfolioService: UserPortfolioService,
+    private readonly relationsService: UserRelationsService,
+  ) {
     this.prisma = prismaService as unknown as UsersPrisma;
   }
 
@@ -172,93 +145,6 @@ export class UsersService {
     return { success: true };
   }
 
-  async getSuggestions(
-    userId: string,
-    take: number,
-  ): Promise<Record<string, unknown>[]> {
-    const safeTake = Math.min(Math.max(take || 5, 1), 50);
-    const blockedRelations = await this.prisma.userRelation.findMany({
-      where: {
-        OR: [
-          { fromUserId: userId, isBlocking: true },
-          { toUserId: userId, isBlocking: true },
-          { fromUserId: userId, isFollowing: true },
-        ],
-      },
-      select: { fromUserId: true, toUserId: true },
-    });
-
-    const excluded = new Set<string>([userId]);
-    for (const relation of blockedRelations) {
-      excluded.add(relation.fromUserId);
-      excluded.add(relation.toUserId);
-    }
-
-    const candidates = await this.prisma.user.findMany({
-      where: {
-        status: 'ACTIVE',
-        id: { notIn: [...excluded] },
-      },
-      take: safeTake,
-      select: {
-        id: true,
-        username: true,
-        avatar: true,
-        displayName: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return candidates;
-  }
-
-  async getRelations(
-    targetUserId: string,
-    relationType: string,
-    skip: number,
-    take: number,
-  ): Promise<{ data: Record<string, unknown>[]; total: number }> {
-    let where: Record<string, unknown> = {};
-    let includeUser: 'fromUser' | 'toUser' = 'toUser';
-
-    if (relationType === 'followings') {
-      where = { fromUserId: targetUserId, isFollowing: true };
-      includeUser = 'toUser';
-    } else if (relationType === 'follower') {
-      where = { toUserId: targetUserId, isFollowing: true };
-      includeUser = 'fromUser';
-    } else if (relationType === 'block') {
-      where = { fromUserId: targetUserId, isBlocking: true };
-      includeUser = 'toUser';
-    }
-
-    const [relations, total] = await Promise.all([
-      this.prisma.userRelation.findMany({
-        where,
-        skip,
-        take,
-        include: {
-          [includeUser]: {
-            select: {
-              id: true,
-              username: true,
-              avatar: true,
-              displayName: true,
-            },
-          },
-        },
-      }),
-      this.prisma.userRelation.count({ where }),
-    ]);
-
-    const data = relations.map((relation) => ({
-      ...(relation[includeUser] as Record<string, unknown>),
-    }));
-
-    return { data, total };
-  }
-
   async toggleFavoriteAsset(
     userId: string,
     dto: ToggleFavoriteAssetDto,
@@ -280,79 +166,6 @@ export class UsersService {
     }
   }
 
-  async upsertRelation(
-    currentUserId: string,
-    targetUserId: string,
-    dto: UpsertRelationDto,
-  ): Promise<{
-    isFollowing: boolean;
-    isBlocking: boolean;
-    isBlockedBy: boolean;
-  }> {
-    if (currentUserId === targetUserId) {
-      throw new BadRequestException('cannot-relate-to-self');
-    }
-
-    const existingRelation = await this.prisma.userRelation.findUnique({
-      where: {
-        fromUserId_toUserId: {
-          fromUserId: currentUserId,
-          toUserId: targetUserId,
-        },
-      },
-    });
-
-    const incomingRelation = await this.prisma.userRelation.findUnique({
-      where: {
-        fromUserId_toUserId: {
-          fromUserId: targetUserId,
-          toUserId: currentUserId,
-        },
-      },
-    });
-
-    const relationData: Record<string, unknown> = {};
-
-    switch (dto.action) {
-      case 'follow':
-        relationData.isFollowing = true;
-        relationData.isBlocking = false;
-        break;
-      case 'unfollow':
-        relationData.isFollowing = false;
-        break;
-      case 'block':
-        relationData.isBlocking = true;
-        relationData.isFollowing = false;
-        break;
-      case 'unblock':
-        relationData.isBlocking = false;
-        break;
-    }
-
-    let relation;
-    if (existingRelation) {
-      relation = await this.prisma.userRelation.update({
-        where: { id: existingRelation.id },
-        data: relationData,
-      });
-    } else {
-      relation = await this.prisma.userRelation.create({
-        data: {
-          fromUserId: currentUserId,
-          toUserId: targetUserId,
-          ...relationData,
-        },
-      });
-    }
-
-    return {
-      isFollowing: relation.isFollowing,
-      isBlocking: relation.isBlocking,
-      isBlockedBy: incomingRelation?.isBlocking || false,
-    };
-  }
-
   async updateReferral(
     userId: string,
     dto: UpdateReferralDto,
@@ -364,188 +177,30 @@ export class UsersService {
     return { success: true };
   }
 
+  // Delegated to UserPortfolioService
   async getPortfolioOverview(userId: string) {
-    const [balances, dividendAggregate] = await Promise.all([
-      this.prisma.balance.findMany({
-        where: { userId },
-        select: {
-          assetId: true,
-          available: true,
-          locked: true,
-        },
-      }),
-      this.prisma.transaction.aggregate({
-        where: {
-          userId,
-          status: 'COMPLETED',
-          type: 'DIVIDEND',
-        },
-        _sum: { amount: true },
-      }),
-    ]);
-
-    const stablecoinBalance = balances
-      .filter((balance) => !balance.assetId || balance.assetId === '')
-      .reduce(
-        (sum, balance) =>
-          sum
-            .plus(balance.available.toString())
-            .plus(balance.locked.toString()),
-        new Decimal(0),
-      );
-
-    const rwaBalances = balances.filter(
-      (balance) => balance.assetId && balance.assetId !== '',
-    );
-
-    const assetIds = [
-      ...new Set(rwaBalances.map((balance) => balance.assetId!)),
-    ];
-    const assets =
-      assetIds.length > 0
-        ? await this.prisma.asset.findMany({
-            where: { id: { in: assetIds } },
-            select: {
-              id: true,
-              symbol: true,
-              name: true,
-              tokenPrice: true,
-              referencePrice: true,
-              expectedApy: true,
-            },
-          })
-        : [];
-
-    const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
-
-    const latestPriceEntries = await Promise.all(
-      assetIds.map(async (assetId) => {
-        const latestFilledOrder = await this.prisma.order.findFirst({
-          where: {
-            assetId,
-            price: { not: null },
-            status: { in: ['FILLED', 'PARTIALLY_FILLED'] },
-          },
-          orderBy: { updatedAt: 'desc' },
-          select: { price: true },
-        });
-
-        const fallbackPrice = assetMap.get(assetId)?.tokenPrice;
-        const marketPrice = latestFilledOrder?.price ?? fallbackPrice ?? '0';
-
-        return [
-          assetId,
-          new Decimal(this.toDecimalString(marketPrice)),
-        ] as const;
-      }),
-    );
-
-    const latestPriceMap = new Map(latestPriceEntries);
-
-    const positions: PortfolioPosition[] = [];
-    let totalRwaValue = new Decimal(0);
-    let totalRwaReferenceValue = new Decimal(0);
-    let totalApyWeightedValue = new Decimal(0);
-    let estimatedAnnualYield = new Decimal(0);
-
-    for (const holding of rwaBalances) {
-      const assetId = holding.assetId;
-      if (!assetId) continue;
-
-      const asset = assetMap.get(assetId);
-      if (!asset) continue;
-
-      const quantity = new Decimal(
-        this.toDecimalString(holding.available),
-      ).plus(this.toDecimalString(holding.locked));
-
-      if (quantity.lte(0)) continue;
-
-      const marketPrice = latestPriceMap.get(assetId) ?? new Decimal(0);
-      const marketValue = quantity.mul(marketPrice);
-      const referencePrice = new Decimal(
-        this.toDecimalString(asset.referencePrice ?? marketPrice),
-      );
-      const referenceValue = quantity.mul(referencePrice);
-      const apy = new Decimal(this.toDecimalString(asset.expectedApy ?? 0));
-      const annualYieldForAsset = marketValue.mul(apy).div(100);
-
-      totalRwaValue = totalRwaValue.plus(marketValue);
-      totalRwaReferenceValue = totalRwaReferenceValue.plus(referenceValue);
-      totalApyWeightedValue = totalApyWeightedValue.plus(marketValue.mul(apy));
-      estimatedAnnualYield = estimatedAnnualYield.plus(annualYieldForAsset);
-
-      positions.push({
-        assetId,
-        symbol: asset.symbol,
-        name: asset.name,
-        quantity: quantity.toFixed(8),
-        marketPrice: marketPrice.toFixed(8),
-        marketValue: marketValue.toFixed(8),
-        expectedApy: apy.toFixed(4),
-        annualYieldEstimate: annualYieldForAsset.toFixed(8),
-      });
-    }
-
-    const [depositAggregate, withdrawAggregate] = await Promise.all([
-      this.prisma.transaction.aggregate({
-        where: {
-          userId,
-          status: 'COMPLETED',
-          type: 'DEPOSIT',
-        },
-        _sum: { amount: true },
-      }),
-      this.prisma.transaction.aggregate({
-        where: {
-          userId,
-          status: 'COMPLETED',
-          type: 'WITHDRAW',
-        },
-        _sum: { amount: true },
-      }),
-    ]);
-
-    const totalDepositAmount = new Decimal(
-      this.toDecimalString(depositAggregate._sum.amount ?? 0),
-    );
-    const totalWithdrawAmount = new Decimal(
-      this.toDecimalString(withdrawAggregate._sum.amount ?? 0),
-    );
-    const netDepositedCapital = totalDepositAmount.minus(totalWithdrawAmount);
-
-    const totalPortfolioValue = stablecoinBalance.plus(totalRwaValue);
-    const pnl = totalPortfolioValue.minus(netDepositedCapital);
-    const pnlPercent = netDepositedCapital.gt(0)
-      ? pnl.div(netDepositedCapital).mul(100)
-      : new Decimal(0);
-
-    const weightedApy = totalRwaValue.gt(0)
-      ? totalApyWeightedValue.div(totalRwaValue)
-      : new Decimal(0);
-    const totalDividendsReceived = new Decimal(
-      this.toDecimalString(dividendAggregate._sum.amount ?? 0),
-    );
-
-    return {
-      asOf: new Date().toISOString(),
-      stablecoinBalance: stablecoinBalance.toFixed(8),
-      rwaMarketValue: totalRwaValue.toFixed(8),
-      rwaReferenceValue: totalRwaReferenceValue.toFixed(8),
-      totalPortfolioValue: totalPortfolioValue.toFixed(8),
-      netDepositedCapital: netDepositedCapital.toFixed(8),
-      pnl: pnl.toFixed(8),
-      pnlPercent: pnlPercent.toFixed(4),
-      estimatedApy: weightedApy.toFixed(4),
-      estimatedAnnualYield: estimatedAnnualYield.toFixed(8),
-      totalDividendsReceived: totalDividendsReceived.toFixed(8),
-      positions,
-    };
+    return this.portfolioService.getPortfolioOverview(userId);
   }
 
-  private toDecimalString(value: DecimalValue): string {
-    return typeof value === 'string' || typeof value === 'number'
-      ? String(value)
-      : value.toString();
+  // Delegated to UserRelationsService
+  async getSuggestions(userId: string, take: number) {
+    return this.relationsService.getSuggestions(userId, take);
+  }
+
+  async getRelations(
+    targetUserId: string,
+    relationType: string,
+    skip: number,
+    take: number,
+  ) {
+    return this.relationsService.getRelations(targetUserId, relationType, skip, take);
+  }
+
+  async upsertRelation(
+    currentUserId: string,
+    targetUserId: string,
+    dto: UpsertRelationDto,
+  ) {
+    return this.relationsService.upsertRelation(currentUserId, targetUserId, dto);
   }
 }

@@ -72,7 +72,7 @@ export class PostsController {
     return await this.postsService.getPosts(user.sub, query);
   }
 
-  // CHÚ Ý: Route /me/bookmarks phải đặt TRƯỚC route /:postId để tránh bị bắt nhầm
+  // NOTE: Route /me/bookmarks must be placed BEFORE route /:postId to avoid misrouting
   @Get('me/bookmarks')
   @ApiOperation({ summary: 'List bookmarked posts' })
   @ApiResponse({

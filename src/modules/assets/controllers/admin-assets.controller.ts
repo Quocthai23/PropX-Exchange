@@ -44,7 +44,7 @@ export class AdminAssetsController {
   @Post()
   @ApiOperation({ summary: 'Create a new asset (Pending approval)' })
   async createAsset(@Body() dto: CreateAssetDto) {
-    // Tạo tài sản mới, mặc định trạng thái sẽ là inactive/pending
+    // Create new asset, default status will be inactive/pending
     return await this.assetsService.createAsset(dto);
   }
 
@@ -54,7 +54,7 @@ export class AdminAssetsController {
     @CurrentUser() user: JwtPayload | undefined,
     @Param('id') id: string,
   ) {
-    // Duyệt tài sản để public ra thị trường
+    // Approve asset to publish to the market
     return await this.assetsService.approveAsset(id, user?.sub ?? 'SYSTEM');
   }
 

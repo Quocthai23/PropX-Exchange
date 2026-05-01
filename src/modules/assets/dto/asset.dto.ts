@@ -15,38 +15,65 @@ import {
 } from 'class-validator';
 
 export class UpdateAssetDto {
-  @ApiPropertyOptional({ description: 'Asset symbol (e.g. EURUSD)' })
+  @ApiPropertyOptional({
+    description: 'Ticker symbol used to identify the asset (e.g. EURUSD, AAPL, GOLD).',
+    example: 'EURUSD',
+    minLength: 1,
+    maxLength: 20,
+  })
   @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(20)
   symbol?: string;
 
-  @ApiPropertyOptional({ description: 'Price source symbol' })
+  @ApiPropertyOptional({
+    description: 'Symbol used to fetch real-time price from the data provider (may differ from display symbol).',
+    example: 'EUR/USD',
+    minLength: 1,
+    maxLength: 20,
+  })
   @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(20)
   priceSourceSymbol?: string;
 
-  @ApiPropertyOptional({ description: 'Asset display name' })
+  @ApiPropertyOptional({
+    description: 'Human-readable display name of the asset shown in the UI.',
+    example: 'Euro / US Dollar',
+    minLength: 1,
+    maxLength: 100,
+  })
   @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(100)
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Asset category identifier' })
+  @ApiPropertyOptional({
+    description: 'ID of the asset category (e.g. Forex, Crypto, Stocks, RWA).',
+    example: 'cat_forex_01',
+  })
   @IsOptional()
   @IsString()
   categoryId?: string;
 
-  @ApiPropertyOptional({ description: 'Asset logo URL', format: 'uri' })
+  @ApiPropertyOptional({
+    description: 'Publicly accessible URL to the asset logo/icon image.',
+    format: 'uri',
+    example: 'https://cdn.example.com/logos/eur_usd.png',
+  })
   @IsOptional()
   @IsUrl()
   logo?: string;
 
-  @ApiPropertyOptional({ description: 'Decimal digits for price formatting' })
+  @ApiPropertyOptional({
+    description: 'Number of decimal places for displaying the asset price (0-20).',
+    example: 5,
+    minimum: 0,
+    maximum: 20,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
@@ -111,32 +138,52 @@ export class UpdateAssetDto {
   priceBandPercentage?: string;
 
   // Financial/Trading configuration (Using strings for precise Decimals)
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Minimum allowed trade volume (lot size) as a decimal string.',
+    example: '0.01',
+    pattern: '^-?\\d+(\\.\\d+)?$',
+  })
   @IsOptional()
   @IsString()
   @Matches(/^-?\d+(\.\d+)?$/)
   minTradeSize?: string;
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Maximum allowed trade volume (lot size) as a decimal string.',
+    example: '100.00',
+    pattern: '^-?\\d+(\\.\\d+)?$',
+  })
   @IsOptional()
   @IsString()
   @Matches(/^-?\d+(\.\d+)?$/)
   maxTradeSize?: string;
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Step increment for trade volume (e.g. 0.01 means orders must be multiples of 0.01).',
+    example: '0.01',
+    pattern: '^-?\\d+(\\.\\d+)?$',
+  })
   @IsOptional()
   @IsString()
   @Matches(/^-?\d+(\.\d+)?$/)
   volumeStep?: string;
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Pip size for the asset (e.g. 0.0001 for EUR/USD).',
+    example: '0.0001',
+    pattern: '^-?\\d+(\\.\\d+)?$',
+  })
   @IsOptional()
   @IsString()
   @Matches(/^-?\d+(\.\d+)?$/)
   pipSize?: string;
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Maximum allowed price slippage in pips during order execution.',
+    example: '3',
+    pattern: '^-?\\d+(\\.\\d+)?$',
+  })
   @IsOptional()
   @IsString()
   @Matches(/^-?\d+(\.\d+)?$/)
   slippage?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() swapType?: string;
+  @ApiPropertyOptional({ description: 'Swap calculation type (e.g. Points, Percent, Currency).', example: 'Points' }) @IsOptional() @IsString() swapType?: string;
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

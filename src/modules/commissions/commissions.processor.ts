@@ -79,27 +79,7 @@ export class CommissionsProcessor extends WorkerHost {
             amount: rewardAmount.toString(),
             currency,
             sourceTxId,
-            status: 'PAID'
-          }
-        });
-
-        // 5. Add to balance (USDT usually has assetId = null)
-        await this.balancesService.updateBalance(
-          referrerId,
-          null, // Assuming USDT
-          rewardAmount,
-          'credit',
-          { tx: tx as any }
-        );
-
-        // 6. Create Transaction History
-        await tx.transaction.create({
-          data: {
-            userId: referrerId,
-            type: 'COMMISSION',
-            amount: rewardAmount.toString(),
-            fee: '0',
-            status: 'COMPLETED',
+            status: 'AVAILABLE' // Ready to claim status
           }
         });
 

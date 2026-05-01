@@ -244,7 +244,7 @@ export class KycService {
     };
   }
 
-  // Bỏ hàm executeKycWhitelist vì đã chuyển logic sang kyc-approval.processor.ts
+  // Removed executeKycWhitelist function as logic was moved to kyc-approval.processor.ts
 
   async rejectKyc(userId: string, reason: string, adminId?: string) {
     if (!reason?.trim()) {

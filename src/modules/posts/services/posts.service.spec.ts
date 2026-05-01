@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PostsService } from './posts.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { AppConfigService } from '@/config/app-config.service';
 
 const mockPrisma = {
   post: {
@@ -32,6 +33,14 @@ const mockPrisma = {
   },
 };
 
+const mockConfig = {
+  redisUrl: 'redis://localhost:6379',
+};
+
+const mockQueue = {
+  add: jest.fn(),
+};
+
 describe('PostsService', () => {
   let service: PostsService;
 
@@ -40,6 +49,8 @@ describe('PostsService', () => {
       providers: [
         PostsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: AppConfigService, useValue: mockConfig },
+        { provide: 'BullQueue_posts', useValue: mockQueue },
       ],
     }).compile();
 

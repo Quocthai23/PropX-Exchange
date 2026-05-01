@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class CreateProposalDto {
-  @ApiProperty({ example: 'Có nên bán đứt dự án với giá 3.5 tỷ?' })
+  @ApiProperty({ example: 'Should we sell the project outright for 3.5 billion?' })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)

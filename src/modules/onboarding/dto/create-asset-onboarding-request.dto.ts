@@ -8,20 +8,20 @@ import {
 } from 'class-validator';
 
 export class CreateAssetOnboardingRequestDto {
-  @ApiProperty({ example: 'Căn hộ Vinhomes Smart City' })
+  @ApiProperty({ example: 'Vinhomes Smart City Apartment' })
   @IsString()
   @IsNotEmpty()
   title: string;
 
   @ApiProperty({
     description: 'Asset description',
-    example: '2PN, full nội thất...',
+    example: '2BR, fully furnished...',
   })
   @IsString()
   @IsNotEmpty()
   description: string;
 
-  @ApiPropertyOptional({ example: 'Hà Nội - Nam Từ Liêm' })
+  @ApiPropertyOptional({ example: 'Hanoi - Nam Tu Liem' })
   @IsOptional()
   @IsString()
   location?: string;

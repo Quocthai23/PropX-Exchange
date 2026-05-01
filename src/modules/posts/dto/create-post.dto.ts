@@ -16,21 +16,28 @@ import { Type } from 'class-transformer';
 export class MediaLinkDto {
   @ApiProperty({
     enum: ['image', 'video'],
-    description: 'Media type attached to the post',
+    description: 'Media type attached to the post.',
+    example: 'image',
   })
   @IsEnum(['image', 'video'])
   type: string;
 
   @ApiProperty({
     format: 'uri',
-    description: 'Public URL of the media resource',
+    description: 'Publicly accessible URL of the media resource (image or video).',
+    example: 'https://cdn.example.com/posts/photo_001.jpg',
   })
   @IsUrl()
   link: string;
 }
 
 export class CreatePostDto {
-  @ApiProperty({ minLength: 1, maxLength: 10000, description: 'Post content' })
+  @ApiProperty({
+    minLength: 1,
+    maxLength: 10000,
+    description: 'Main text content of the post. Supports plain text up to 10,000 characters.',
+    example: 'Just opened a long position on $AAPL — bullish on earnings! 🚀',
+  })
   @IsString()
   @IsNotEmpty()
   @MinLength(1)
@@ -40,7 +47,10 @@ export class CreatePostDto {
   @ApiPropertyOptional({
     type: [MediaLinkDto],
     maxItems: 10,
-    description: 'Optional list of images/videos attached to the post',
+    description: 'Optional list of image or video attachments. Maximum 10 items.',
+    example: [
+      { type: 'image', link: 'https://cdn.example.com/img/chart.png' },
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -52,7 +62,8 @@ export class CreatePostDto {
   @ApiPropertyOptional({
     type: [String],
     maxItems: 20,
-    description: 'Optional list of tagged CFD asset identifiers',
+    description: 'Optional list of CFD/RWA asset identifiers to tag in the post.',
+    example: ['asset_01J2XAAPL', 'asset_01J2XTSLA'],
   })
   @IsOptional()
   @IsArray()
@@ -60,7 +71,10 @@ export class CreatePostDto {
   @IsString({ each: true })
   assetIds?: string[];
 
-  @ApiPropertyOptional({ description: 'Optional post identifier to repost' })
+  @ApiPropertyOptional({
+    description: 'Optional ID of an existing post to repost/quote.',
+    example: 'post_01J2XABCDEF',
+  })
   @IsOptional()
   @IsString()
   repostId?: string;

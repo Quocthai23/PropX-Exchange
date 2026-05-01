@@ -1,7 +1,7 @@
-import { Controller, Get, Put, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { CommissionsService } from './commissions.service';
-import { UpdateCommissionConfigDto, GetRewardsQueryDto } from './dto/commission.dto';
+import { UpdateCommissionConfigDto, GetRewardsQueryDto, ClaimRewardsDto } from './dto/commission.dto';
 import { CommissionEvent } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/dto/roles.guard';
@@ -51,5 +51,15 @@ export class CommissionsController {
   @ApiResponse({ status: 200, description: 'Return user commission stats.' })
   async getUserStats(@CurrentUser('id') userId: string) {
     return this.commissionsService.getUserStats(userId);
+  }
+
+  @Post('claim')
+  @ApiOperation({ summary: 'Generate a claim signature for the user to claim on-chain' })
+  @ApiResponse({ status: 201, description: 'Return EIP-712/191 signature and payload.' })
+  async claimRewards(
+    @CurrentUser('id') userId: string,
+    @Body() dto: ClaimRewardsDto,
+  ) {
+    return this.commissionsService.generateClaimSignature(userId, dto);
   }
 }

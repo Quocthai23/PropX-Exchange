@@ -13,7 +13,7 @@ export class PostsProcessor
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PostsProcessor.name);
-  private redisClient: RedisClientType; // Dùng Type rõ ràng thay vì 'any'
+  private redisClient: RedisClientType; // Use explicit Type instead of 'any'
 
   constructor(
     private readonly prisma: PrismaService,
@@ -29,7 +29,7 @@ export class PostsProcessor
     );
   }
 
-  // Quản lý lifecycle chuẩn NestJS
+  // Standard NestJS lifecycle management
   async onModuleInit() {
     await this.redisClient.connect();
     this.logger.log('Redis connected for PostsProcessor');
@@ -46,12 +46,12 @@ export class PostsProcessor
       const { postId, authorId } = job.data;
       this.logger.log(`Distributing post ${postId} from author ${authorId}`);
 
-      const BATCH_SIZE = 2000; // Xử lý 2000 follower mỗi cụm (Batch)
+      const BATCH_SIZE = 2000; // Process 2000 followers per batch
       let lastId: string | undefined = undefined;
       let totalDistributed = 0;
       let hasMore = true;
 
-      // Kỹ thuật Cursor-based loop để xử lý hàng triệu Follower không bị OOM
+      // Cursor-based loop technique to process millions of followers without OOM
       while (hasMore) {
         const followers = await this.prisma.userRelation.findMany({
           where: { toUserId: authorId, isFollowing: true },
@@ -59,7 +59,7 @@ export class PostsProcessor
           take: BATCH_SIZE,
           skip: lastId ? 1 : 0,
           cursor: lastId ? { id: lastId } : undefined,
-          orderBy: { id: 'asc' }, // Bắt buộc order khi dùng cursor
+          orderBy: { id: 'asc' }, // Order is required when using cursor
         });
 
         if (followers.length === 0) {
@@ -75,12 +75,12 @@ export class PostsProcessor
           multi.lTrim(feedKey, 0, 999);
         }
 
-        await multi.exec(); // Đẩy 2000 lệnh tới Redis cùng lúc
+        await multi.exec(); // Push 2000 commands to Redis simultaneously
 
         totalDistributed += followers.length;
-        lastId = followers[followers.length - 1].id; // Lấy ID cuối để lặp tiếp
+        lastId = followers[followers.length - 1].id; // Get the last ID to continue loop
 
-        // Nếu lấy ra ít hơn số lượng mong muốn => Đã hết dữ liệu
+        // If fewer records fetched than batch size => End of data
         if (followers.length < BATCH_SIZE) {
           hasMore = false;
         }
