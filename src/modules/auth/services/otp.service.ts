@@ -64,20 +64,35 @@ export class OtpService {
     });
 
     if (!this.transporter) {
+      this.logger.warn(`SMTP is not configured. OTP for ${email} is: ${otpCode}`);
+      if (this.config.nodeEnv === 'development') {
+        return {
+          message:
+            '[DEV ONLY] OTP code logged to console (SMTP not configured).',
+        };
+      }
       throw new InternalServerErrorException('SMTP is not configured.');
     }
 
     try {
       await this.transporter.sendMail({
-        from: `"RWA Platform Admin" <${this.config.smtpUser}>`,
+        from: `"RWA Platform Admin" <${this.config.smtpUser || 'admin@rwa.com'}>`,
         to: email,
-        subject: 'RWA Platform login verification code',
+        subject: 'RWA Platform verification code',
         text: `Your OTP code is: ${otpCode}. This code will expire in 5 minutes.`,
         html: `<p>Your OTP code is: <b>${otpCode}</b></p><p>This code will expire in 5 minutes.</p>`,
       });
+      this.logger.log(`OTP sent to ${email}`);
       return { message: 'OTP code has been sent to your email.' };
     } catch (error) {
       this.logger.error('Failed to send email:', error);
+      // In development, still allow the flow to continue by logging the OTP
+      if (this.config.nodeEnv === 'development') {
+        this.logger.warn(`[DEV ONLY] OTP for ${email} is: ${otpCode}`);
+        return {
+          message: '[DEV ONLY] SMTP failed, but OTP logged to console.',
+        };
+      }
       throw new InternalServerErrorException('Unable to send OTP email.');
     }
   }

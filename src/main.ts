@@ -293,6 +293,11 @@ async function bootstrap() {
   const configService = app.get(AppConfigService);
   app.useLogger(logger);
 
+  app.enableCors({
+    origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+    credentials: true,
+  });
+
   app.use(
     (
       req: { headers?: Record<string, unknown>; traceId?: string },
@@ -374,7 +379,7 @@ async function bootstrap() {
     customSiteTitle: 'RWA API Documentation',
   });
 
-  await app.listen(configService.port);
+  await app.listen(configService.port, '0.0.0.0');
   logger.log(
     `Application is running on: http://localhost:${configService.port}`,
   );

@@ -94,7 +94,10 @@ export class SupportService {
     }
 
     if (ticket.userId !== userId) {
-      throw new ForbiddenException('Not ticket owner');
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (user?.role !== 'ADMIN') {
+        throw new ForbiddenException('Not ticket owner');
+      }
     }
 
     return ticket;
@@ -142,7 +145,10 @@ export class SupportService {
     }
 
     if (ticket.userId !== userId) {
-      throw new ForbiddenException('Not ticket owner');
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (user?.role !== 'ADMIN') {
+        throw new ForbiddenException('Not ticket owner');
+      }
     }
 
     const take = query.take || 50;
@@ -176,7 +182,10 @@ export class SupportService {
     }
 
     if (ticket.userId !== userId) {
-      throw new ForbiddenException('Not ticket owner');
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (user?.role !== 'ADMIN') {
+        throw new ForbiddenException('Not ticket owner');
+      }
     }
 
     const message = await this.prisma.ticketMessage.create({
