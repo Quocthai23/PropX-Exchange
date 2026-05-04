@@ -83,10 +83,11 @@ export class OrdersService {
         priceDec = new Decimal(0);
       }
     } else if (type === 'LIMIT') {
+      const refPrice = asset.referencePrice || asset.tokenPrice || 1.0;
       this.validatePriceBand(
         priceDec,
-        asset.referencePrice
-          ? new Decimal(asset.referencePrice.toString())
+        refPrice
+          ? new Decimal(refPrice.toString())
           : null,
         asset.priceBandPercentage
           ? new Decimal(asset.priceBandPercentage.toString())
@@ -267,29 +268,18 @@ export class OrdersService {
   }
 
   async bulkCancelOrders(userId: string, dto: BulkCancelOrdersDto) {
-    const results = await Promise.allSettled(
-      dto.orderIds.map(async (orderId) => {
-        try {
-          await this.cancelOrder(userId, orderId);
-          return { orderId, success: true, error: null };
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error';
-          return { orderId, success: false, error: errorMessage };
-        }
-      }),
-    );
-
-    const formattedResults = results.map((result, index) => {
-      if (result.status === 'fulfilled') {
-        return result.value;
+    const results: { orderId: string; success: boolean; error: string | null }[] = [];
+    for (const orderId of dto.orderIds) {
+      try {
+        await this.cancelOrder(userId, orderId);
+        results.push({ orderId, success: true, error: null });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.push({ orderId, success: false, error: errorMessage });
       }
-      return {
-        orderId: dto.orderIds[index],
-        success: false,
-        error: result.reason?.message || 'Unknown error',
-      };
-    });
+    }
+
+    const formattedResults = results;
 
     const successCount = formattedResults.filter((r) => r.success).length;
     const errorCount = formattedResults.length - successCount;

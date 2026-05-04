@@ -60,7 +60,7 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
   private getOrCreateQueue(assetId: string): Queue {
     let queue = this.queues.get(assetId);
     if (!queue) {
-      const queueName = `matching:${assetId}`;
+      const queueName = `matching-${assetId}`;
       queue = new Queue(queueName, { connection: this.getRedisConnection() });
       this.queues.set(assetId, queue);
 

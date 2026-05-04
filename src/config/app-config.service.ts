@@ -55,6 +55,10 @@ export class AppConfigService {
     return this.configService.get('ENABLE_MARKET_MAKER') === 'true';
   }
 
+  get enableDemoMarketData(): boolean {
+    return this.configService.get('ENABLE_DEMO_MARKET_DATA') === 'true';
+  }
+
   get enableSettlement(): boolean {
     return this.configService.get('ENABLE_SETTLEMENT') === 'true';
   }

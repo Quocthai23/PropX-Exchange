@@ -48,10 +48,13 @@ export class OtpService {
   async requestOtp(email: string): Promise<{ message: string }> {
     const existingOtp = await this.prisma.otp.findUnique({ where: { email } });
     if (existingOtp && existingOtp.expiresAt > new Date()) {
-      throw new HttpException(
-        'A previous OTP is still valid. Please check your email or try again after it expires (5 minutes).',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+      if (existingOtp.createdAt > oneMinuteAgo) {
+        throw new HttpException(
+          'Please wait 1 minute before requesting a new OTP.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
     }
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -59,7 +62,7 @@ export class OtpService {
 
     await this.prisma.otp.upsert({
       where: { email },
-      update: { code: otpCode, expiresAt },
+      update: { code: otpCode, expiresAt, createdAt: new Date() },
       create: { email, code: otpCode, expiresAt },
     });
 

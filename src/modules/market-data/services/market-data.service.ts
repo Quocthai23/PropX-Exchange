@@ -9,6 +9,7 @@ import Decimal from 'decimal.js';
 import { PrismaService } from '@/prisma/prisma.service';
 import { createClient } from 'redis';
 import { AppConfigService } from '@/config/app-config.service';
+import { KlineGateway, type KlineUpdatePayload } from '../gateways/kline.gateway';
 
 type DecimalValue = string | number | { toString(): string };
 
@@ -133,6 +134,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
+    private readonly klineGateway: KlineGateway,
   ) {
     this.redisClient = createClient({
       url: this.config.redisUrl,
@@ -156,6 +158,8 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     quantity: string,
     timestamp: Date,
   ): Promise<void> {
+    const tradePrice = new Decimal(price);
+    const tradeQuantity = new Decimal(quantity);
     const tradeData = JSON.stringify({
       assetId,
       price,
@@ -197,6 +201,29 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
         { EX: 86400 },
       );
     }
+
+    const emittedKline: KlineUpdatePayload = {
+      assetId,
+      resolution: '1m',
+      time: Math.floor(openTime.getTime() / 1000),
+      open: Number(price),
+      high: Number(tradePrice),
+      low: Number(tradePrice),
+      close: Number(tradePrice),
+      volume: Number(tradeQuantity),
+      isClosed: false,
+    };
+
+    if (existingStr) {
+      const existing = JSON.parse(existingStr);
+      emittedKline.open = Number(existing.open);
+      emittedKline.high = Number(existing.high);
+      emittedKline.low = Number(existing.low);
+      emittedKline.close = Number(price);
+      emittedKline.volume = Number(new Decimal(existing.volume).add(quantity));
+    }
+
+    this.klineGateway.emitKline(emittedKline);
   }
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -314,6 +341,33 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to sync trades to DB', error);
     } finally {
       this.isProcessing = false;
+    }
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async generateDemoTrades() {
+    if (!this.config.enableDemoMarketData) return;
+
+    try {
+      const assets = await this.prisma.asset.findMany({ select: { id: true } });
+      const now = new Date();
+
+      for (const a of assets) {
+        const anchor = await this.getReferencePriceAnchor(a.id);
+        const ref =
+          anchor.referencePrice ?? anchor.valuationSnapshotPrice ?? anchor.marketPrice;
+        if (!ref) continue;
+
+        const fluctuation = (Math.random() * 2 - 1) * 0.01; // +/-1%
+        const price = new Decimal(ref)
+          .mul(new Decimal(1).plus(fluctuation))
+          .toFixed(8);
+        const quantity = new Decimal(Math.max(1, Math.random() * 5)).toFixed(8);
+
+        await this.recordTrade(a.id, price, quantity, now);
+      }
+    } catch (error) {
+      this.logger.error('Failed to generate demo trades', error);
     }
   }
 

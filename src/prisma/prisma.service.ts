@@ -20,17 +20,41 @@ export class PrismaService
       throw new Error('DATABASE_URL is required');
     }
 
-    const adapter = new PrismaMariaDb(datasourceUrl);
+    // allow overriding pool max via env DATABASE_POOL_MAX
+    const poolMax = Number(process.env.DATABASE_POOL_MAX ?? '10');
+    const adapter = new PrismaMariaDb(datasourceUrl, {
+      connectionLimit: poolMax,
+    } as any);
 
-    super({
-      adapter,
-    });
+    // Ensure a single PrismaClient instance per process (helps during dev hot-reload)
+    const g = global as any;
+    if (g.__prisma) {
+      return g.__prisma;
+    }
+
+    super({ adapter } as any);
+    g.__prisma = this;
   }
 
   async onModuleInit(): Promise<void> {
     // PrismaClient methods are strongly typed; this suppresses a false positive when ESLint cannot resolve PnP types.
 
-    await super.$connect();
+    const maxRetries = Number(process.env.PRISMA_CONNECT_RETRIES ?? '5');
+    let lastErr: any;
+    for (let i = 0; i <= maxRetries; i++) {
+      try {
+        await super.$connect();
+        return;
+      } catch (err) {
+        lastErr = err;
+        const backoff = 500 * Math.pow(2, i);
+        // If we've exhausted retries, rethrow
+        if (i === maxRetries) throw lastErr;
+        // wait and retry
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((res) => setTimeout(res, backoff));
+      }
+    }
   }
 
   async onModuleDestroy(): Promise<void> {

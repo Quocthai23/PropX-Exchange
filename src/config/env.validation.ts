@@ -8,6 +8,7 @@ export interface ValidatedEnv {
   REDIS_PASSWORD?: string;
   ENABLE_MARKET_MAKER?: string;
   ENABLE_SETTLEMENT?: string;
+  ENABLE_DEMO_MARKET_DATA?: string;
   JWT_SECRET?: string;
   JWT_REFRESH_SECRET?: string;
   JWT_REFRESH_EXPIRES_IN?: string;
@@ -59,6 +60,8 @@ export interface ValidatedEnv {
   NEWSDATA_API_KEY?: string;
   NEWSDATA_BASE_URL?: string;
   OPENNEWS_CANADA_FEED_URL?: string;
+  DATABASE_POOL_MAX?: number;
+  PRISMA_CONNECT_RETRIES?: number;
 }
 
 function asInt(value: unknown, fallback: number): number {
@@ -76,7 +79,7 @@ export function validateEnv(config: Record<string, unknown>): ValidatedEnv {
 
   const validated: ValidatedEnv = {
     NODE_ENV: nodeEnv,
-    PORT: asInt(config.PORT, 3000),
+    PORT: asInt(config.PORT, 3001),
     DATABASE_URL: config.DATABASE_URL as string | undefined,
     REDIS_URL: config.REDIS_URL as string | undefined,
     REDIS_HOST: (config.REDIS_HOST as string | undefined) ?? 'localhost',
@@ -84,6 +87,9 @@ export function validateEnv(config: Record<string, unknown>): ValidatedEnv {
     REDIS_PASSWORD: config.REDIS_PASSWORD as string | undefined,
     ENABLE_MARKET_MAKER: config.ENABLE_MARKET_MAKER as string | undefined,
     ENABLE_SETTLEMENT: config.ENABLE_SETTLEMENT as string | undefined,
+    ENABLE_DEMO_MARKET_DATA: config.ENABLE_DEMO_MARKET_DATA as
+      | string
+      | undefined,
     JWT_SECRET: config.JWT_SECRET as string | undefined,
     JWT_REFRESH_SECRET: config.JWT_REFRESH_SECRET as string | undefined,
     JWT_REFRESH_EXPIRES_IN: config.JWT_REFRESH_EXPIRES_IN as string | undefined,
@@ -163,6 +169,16 @@ export function validateEnv(config: Record<string, unknown>): ValidatedEnv {
     OPENNEWS_CANADA_FEED_URL: config.OPENNEWS_CANADA_FEED_URL as
       | string
       | undefined,
+    DATABASE_POOL_MAX:
+      typeof config.DATABASE_POOL_MAX === 'string' ||
+      typeof config.DATABASE_POOL_MAX === 'number'
+        ? asInt(config.DATABASE_POOL_MAX, 10)
+        : 10,
+    PRISMA_CONNECT_RETRIES:
+      typeof config.PRISMA_CONNECT_RETRIES === 'string' ||
+      typeof config.PRISMA_CONNECT_RETRIES === 'number'
+        ? asInt(config.PRISMA_CONNECT_RETRIES, 5)
+        : 5,
   };
 
   if (isProduction) {

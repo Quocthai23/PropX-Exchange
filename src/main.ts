@@ -292,6 +292,9 @@ async function bootstrap() {
   const logger = app.get<LoggerService>(WINSTON_MODULE_NEST_PROVIDER);
   const configService = app.get(AppConfigService);
   app.useLogger(logger);
+  
+  // Enable shutdown hooks to ensure Prisma disconnects on hot-reload
+  app.enableShutdownHooks();
 
   app.enableCors({
     origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
@@ -345,7 +348,7 @@ async function bootstrap() {
       'support@swagger.io',
     )
     .addServer('https://mirroto-api.muskcoin.io/', 'Dev server')
-    .addServer('http://0.0.0.0:3000', 'Local server')
+    .addServer('http://0.0.0.0:3001', 'Local server')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -108,14 +108,26 @@ export class BalancesService {
       return mutate(tx);
     }
 
-    return this.prisma.$transaction(
-      async (tx) => {
-        return mutate(tx);
-      },
-      {
-        isolationLevel: 'Serializable',
-      },
-    );
+    const maxRetries = Number(process.env.BALANCE_TX_RETRIES ?? '5');
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => mutate(tx), {
+          isolationLevel: 'RepeatableRead',
+        });
+      } catch (err) {
+        const msg = (err && (err.message || '')).toString().toLowerCase();
+        const isDeadlock =
+          msg.includes('deadlock') ||
+          msg.includes('write conflict') ||
+          msg.includes('lock wait timeout');
+        if (attempt === maxRetries || !isDeadlock) {
+          throw err;
+        }
+        const backoff = 100 * Math.pow(2, attempt);
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((res) => setTimeout(res, backoff));
+      }
+    }
   }
 
   async getBalances(userId: string) {
@@ -179,13 +191,25 @@ export class BalancesService {
       return mutate(tx);
     }
 
-    return this.prisma.$transaction(
-      async (tx) => {
-        return mutate(tx);
-      },
-      {
-        isolationLevel: 'Serializable',
-      },
-    );
+    const maxRetries = Number(process.env.BALANCE_TX_RETRIES ?? '5');
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => mutate(tx), {
+          isolationLevel: 'RepeatableRead',
+        });
+      } catch (err) {
+        const msg = (err && (err.message || '')).toString().toLowerCase();
+        const isDeadlock =
+          msg.includes('deadlock') ||
+          msg.includes('write conflict') ||
+          msg.includes('lock wait timeout');
+        if (attempt === maxRetries || !isDeadlock) {
+          throw err;
+        }
+        const backoff = 100 * Math.pow(2, attempt);
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((res) => setTimeout(res, backoff));
+      }
+    }
   }
 }

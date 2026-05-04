@@ -6123,7 +6123,7 @@
       "description": "Dev server"
     },
     {
-      "url": "http://0.0.0.0:3000",
+      "url": "http://0.0.0.0:3001",
       "description": "Local server"
     }
   ],

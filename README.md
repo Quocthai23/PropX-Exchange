@@ -97,3 +97,29 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
 "# PropX-Exchange" 
+
+## Database connection tuning
+
+If you see errors like "Too many connections" or Prisma pool timeouts, you can either reduce the app's connection pool or increase the database server limit.
+
+- Configure application pool size via environment variable `DATABASE_POOL_MAX` (default 10). The app's `PrismaService` reads this value and sets the adapter connection limit.
+- Configure Prisma connect retry attempts via `PRISMA_CONNECT_RETRIES` (default 5).
+
+Example for development (Windows/Linux):
+
+```bash
+DATABASE_POOL_MAX=5 PRISMA_CONNECT_RETRIES=5 yarn start:dev
+```
+
+If the workload truly requires many connections, increase MariaDB/MySQL `max_connections` on the server:
+
+```sql
+SET GLOBAL max_connections = 200;
+```
+
+Persist this setting in your `my.cnf`/`my.ini` under `[mysqld]`:
+
+[mysqld]
+max_connections=200
+
+After changing server settings or envs, restart the DB or your app as appropriate.

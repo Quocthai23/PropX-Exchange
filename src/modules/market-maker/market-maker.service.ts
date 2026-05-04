@@ -117,9 +117,8 @@ export class MarketMakerService implements OnModuleInit {
         }
 
         // Anchor NAV logic: Bot always places orders around Reference Price
-        const currentPrice = asset.referencePrice
-          ? new Decimal(toDecimalValue(asset.referencePrice))
-          : new Decimal(toDecimalValue(asset.tokenPrice));
+        const refPrice = asset.referencePrice || asset.tokenPrice || 1.0;
+        const currentPrice = new Decimal(toDecimalValue(refPrice as DecimalValue));
 
         // Spread logic (e.g., 1% spread from NAV)
         const spreadFactor = 0.01;
@@ -151,8 +150,7 @@ export class MarketMakerService implements OnModuleInit {
         );
       } catch (error) {
         this.logger.error(
-          `[Market Maker] Failed to generate data for ${asset.symbol}`,
-          error,
+          `[Market Maker] Failed to generate data for ${asset.symbol}: ${error instanceof Error ? error.message : JSON.stringify(error)}`,
         );
       }
     }
