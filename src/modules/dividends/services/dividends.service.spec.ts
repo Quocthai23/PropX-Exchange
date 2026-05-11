@@ -3,6 +3,10 @@ import { DividendsService } from './dividends.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BalancesService } from '../../balances/services/balances.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { CommissionsService } from '../../commissions/commissions.service';
+import { getQueueToken } from '@nestjs/bullmq';
+import { ethers } from 'ethers';
+import { CreateDistributionDto } from '../dto/create-distribution.dto';
 
 const mockPrisma = {
   $transaction: jest.fn((fn) => fn(mockTx)),
@@ -61,6 +65,8 @@ describe('DividendsService', () => {
         DividendsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: BalancesService, useValue: mockBalancesService },
+        { provide: CommissionsService, useValue: {} },
+        { provide: getQueueToken('merkle-tree'), useValue: {} },
       ],
     }).compile();
 
@@ -76,7 +82,7 @@ describe('DividendsService', () => {
         service.createDistribution('admin-id', {
           assetId: 'asset-id',
           totalAmount: '1000',
-        } as any),
+        } as CreateDistributionDto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -93,7 +99,7 @@ describe('DividendsService', () => {
       const result = await service.createDistribution('admin-id', {
         assetId: 'asset-id',
         totalAmount: '1000',
-      } as any);
+      } as CreateDistributionDto);
 
       expect(result.id).toEqual('dist-id');
     });
@@ -118,6 +124,73 @@ describe('DividendsService', () => {
       await expect(service.claimDividend('user-id', 'dist-id')).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('getClaimProof', () => {
+    it('should generate valid merkle proof using ethers keccak256', async () => {
+      const distributionId = 'dist-1';
+      const user1 = {
+        id: 'user-1',
+        walletAddress: '0x1234567890123456789012345678901234567890',
+      };
+      const user2 = {
+        id: 'user-2',
+        walletAddress: '0x0987654321098765432109876543210987654321',
+      };
+
+      const claims = [
+        { userId: user1.id, amount: '100.5', user: user1 },
+        { userId: user2.id, amount: '200.0', user: user2 },
+      ];
+
+      mockPrisma.dividendClaim.findMany.mockResolvedValue(claims);
+
+      const result = await service.getClaimProof(user1.id, distributionId);
+
+      expect(result.distributionId).toBe(distributionId);
+      expect(result.userId).toBe(user1.id);
+      expect(result.amount).toBe('100.5');
+      expect(result.merkleRoot).toBeDefined();
+      expect(result.proof.length).toBeGreaterThan(0);
+
+      // Verify the hashing logic manually
+      const amount1Wei = ethers.parseUnits('100.500000', 6).toString();
+      const amount2Wei = ethers.parseUnits('200.000000', 6).toString();
+
+      const leaf1 = ethers.solidityPackedKeccak256(
+        ['address', 'uint256'],
+        [user1.walletAddress, amount1Wei],
+      );
+      const leaf2 = ethers.solidityPackedKeccak256(
+        ['address', 'uint256'],
+        [user2.walletAddress, amount2Wei],
+      );
+
+      const [a, b] = [leaf1, leaf2].sort();
+      const expectedRoot = ethers.solidityPackedKeccak256(
+        ['bytes32', 'bytes32'],
+        [a, b],
+      );
+
+      expect(result.merkleRoot).toBe(expectedRoot);
+    });
+
+    it('should use a zero address fallback if user lacks wallet address', async () => {
+      const claims = [
+        { userId: 'user-1', amount: '100.0', user: { walletAddress: null } },
+      ];
+      mockPrisma.dividendClaim.findMany.mockResolvedValue(claims);
+
+      const result = await service.getClaimProof('user-1', 'dist-1');
+
+      const expectedAmountWei = ethers.parseUnits('100.000000', 6).toString();
+      const expectedRoot = ethers.solidityPackedKeccak256(
+        ['address', 'uint256'],
+        ['0x0000000000000000000000000000000000000000', expectedAmountWei],
+      );
+
+      expect(result.merkleRoot).toBe(expectedRoot);
     });
   });
 });

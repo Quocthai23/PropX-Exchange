@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SupportService } from './support.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { SupportGateway } from '../gateways/support.gateway';
+import { CreateSupportTicketDto } from '../dto/support.dto';
 
 const mockPrisma = {
   $transaction: jest.fn((fn) => fn(mockTx)),
@@ -12,11 +14,18 @@ const mockPrisma = {
     findUnique: jest.fn(),
     update: jest.fn(),
   },
+  user: {
+    findUnique: jest.fn(),
+  },
   ticketMessage: {
     create: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
   },
+};
+ 
+const mockSupportGateway = {
+  broadcastNewMessage: jest.fn(),
 };
 
 const mockTx = {
@@ -36,6 +45,7 @@ describe('SupportService', () => {
       providers: [
         SupportService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: SupportGateway, useValue: mockSupportGateway },
       ],
     }).compile();
 
@@ -52,7 +62,7 @@ describe('SupportService', () => {
         title: 'Test Ticket',
         category: 'GENERAL',
         initialMessage: 'Help!',
-      } as any);
+      } as CreateSupportTicketDto);
 
       expect(result.id).toEqual('ticket-id');
     });

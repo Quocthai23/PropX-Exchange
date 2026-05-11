@@ -61,8 +61,7 @@ export class Web3AuthService {
       `auth:web3:nonce:addr:${resolvedAddress}`,
     );
     const nonceInRedis =
-      nonceByAddress ??
-      (await redisClient.get(`auth:web3:nonce:${nonce}`));
+      nonceByAddress ?? (await redisClient.get(`auth:web3:nonce:${nonce}`));
     if (!nonceInRedis || nonceInRedis !== nonce) {
       throw new UnauthorizedException('Invalid or expired nonce');
     }

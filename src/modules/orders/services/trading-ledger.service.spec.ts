@@ -21,7 +21,12 @@ describe('TradingLedgerService', () => {
   let service: TradingLedgerService;
 
   beforeEach(() => {
-    service = new TradingLedgerService(mockBalancesService as any, mockCommissionsService as any);
+    service = new TradingLedgerService(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      mockBalancesService as any,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      mockCommissionsService as any,
+    );
     jest.clearAllMocks();
   });
 

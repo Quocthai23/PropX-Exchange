@@ -86,9 +86,7 @@ export class OrdersService {
       const refPrice = asset.referencePrice || asset.tokenPrice || 1.0;
       this.validatePriceBand(
         priceDec,
-        refPrice
-          ? new Decimal(refPrice.toString())
-          : null,
+        refPrice ? new Decimal(refPrice.toString()) : null,
         asset.priceBandPercentage
           ? new Decimal(asset.priceBandPercentage.toString())
           : null,
@@ -268,13 +266,18 @@ export class OrdersService {
   }
 
   async bulkCancelOrders(userId: string, dto: BulkCancelOrdersDto) {
-    const results: { orderId: string; success: boolean; error: string | null }[] = [];
+    const results: {
+      orderId: string;
+      success: boolean;
+      error: string | null;
+    }[] = [];
     for (const orderId of dto.orderIds) {
       try {
         await this.cancelOrder(userId, orderId);
         results.push({ orderId, success: true, error: null });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         results.push({ orderId, success: false, error: errorMessage });
       }
     }

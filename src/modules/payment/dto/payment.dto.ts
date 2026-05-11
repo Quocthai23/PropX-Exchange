@@ -19,7 +19,8 @@ const AMOUNT_REGEX = /^-?\d+(\.\d+)?$/;
 
 export class DepositDemoDto {
   @ApiProperty({
-    description: 'Deposit amount as a decimal string. Must be a valid positive number.',
+    description:
+      'Deposit amount as a decimal string. Must be a valid positive number.',
     example: '500.00',
     pattern: '^-?\\d+(\\.\\d+)?$',
   })
@@ -28,9 +29,11 @@ export class DepositDemoDto {
   amount: string;
 
   @ApiPropertyOptional({
-    description: 'Client-generated UUID v4 to prevent duplicate deposit submissions (idempotency).',
+    description:
+      'Client-generated UUID v4 to prevent duplicate deposit submissions (idempotency).',
     example: '550e8400-e29b-41d4-a716-446655440000',
-    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    pattern:
+      '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
   })
   @IsOptional()
   @IsUUID('4')
@@ -50,7 +53,8 @@ export class CreateWalletDto {
 
   @ApiPropertyOptional({
     enum: ['EVM', 'SOL'],
-    description: 'Wallet chain type. EVM for Ethereum-compatible chains, SOL for Solana.',
+    description:
+      'Wallet chain type. EVM for Ethereum-compatible chains, SOL for Solana.',
     example: 'EVM',
   })
   @IsOptional()
@@ -97,15 +101,18 @@ export class WithdrawV2Dto {
   chainId: string;
 
   @ApiProperty({
-    description: 'Client-generated UUID v4 to prevent duplicate withdrawal submissions.',
+    description:
+      'Client-generated UUID v4 to prevent duplicate withdrawal submissions.',
     example: '550e8400-e29b-41d4-a716-446655440000',
-    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    pattern:
+      '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
   })
   @IsUUID('4')
   idempotencyKey: string;
 
   @ApiProperty({
-    description: 'Verified challengeId from POST /auth/challenge/verify — proves MFA was completed.',
+    description:
+      'Verified challengeId from POST /auth/challenge/verify — proves MFA was completed.',
     example: 'chal_01J2XABCDEF123',
     minLength: 1,
   })
@@ -125,7 +132,8 @@ export class TransferV2Dto {
   amount: string;
 
   @ApiPropertyOptional({
-    description: 'Asset ID to transfer. If omitted, transfers the default balance currency (USDT).',
+    description:
+      'Asset ID to transfer. If omitted, transfers the default balance currency (USDT).',
     example: 'asset_01J2XAAPL',
   })
   @IsOptional()
@@ -133,7 +141,8 @@ export class TransferV2Dto {
   assetId?: string;
 
   @ApiPropertyOptional({
-    description: 'Recipient user ID. Either toUserId or toEmail must be provided.',
+    description:
+      'Recipient user ID. Either toUserId or toEmail must be provided.',
     example: 'usr_01J2XABCDEF',
   })
   @IsOptional()
@@ -142,7 +151,8 @@ export class TransferV2Dto {
   toUserId?: string;
 
   @ApiPropertyOptional({
-    description: 'Recipient email address. Either toUserId or toEmail must be provided.',
+    description:
+      'Recipient email address. Either toUserId or toEmail must be provided.',
     example: 'recipient@example.com',
     format: 'email',
   })
@@ -152,15 +162,18 @@ export class TransferV2Dto {
   toEmail?: string;
 
   @ApiProperty({
-    description: 'Client-generated UUID v4 to prevent duplicate transfer submissions.',
+    description:
+      'Client-generated UUID v4 to prevent duplicate transfer submissions.',
     example: '550e8400-e29b-41d4-a716-446655440000',
-    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    pattern:
+      '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
   })
   @IsUUID('4')
   idempotencyKey: string;
 
   @ApiProperty({
-    description: 'Verified challengeId from POST /auth/challenge/verify — proves MFA was completed.',
+    description:
+      'Verified challengeId from POST /auth/challenge/verify — proves MFA was completed.',
     example: 'chal_01J2XABCDEF123',
     minLength: 1,
   })
@@ -197,7 +210,8 @@ export class GetTransactionHistoryDto {
   skip?: number = 0;
 
   @ApiPropertyOptional({
-    description: 'Filter by transaction type (e.g. DEPOSIT, WITHDRAW, TRANSFER).',
+    description:
+      'Filter by transaction type (e.g. DEPOSIT, WITHDRAW, TRANSFER).',
     enum: $Enums.TransactionType,
     example: 'DEPOSIT',
   })
@@ -206,7 +220,8 @@ export class GetTransactionHistoryDto {
   type?: $Enums.TransactionType;
 
   @ApiPropertyOptional({
-    description: 'Filter by transaction status (e.g. PENDING, COMPLETED, FAILED).',
+    description:
+      'Filter by transaction status (e.g. PENDING, COMPLETED, FAILED).',
     enum: $Enums.TransactionStatus,
     example: 'COMPLETED',
   })
@@ -215,7 +230,8 @@ export class GetTransactionHistoryDto {
   status?: $Enums.TransactionStatus;
 
   @ApiPropertyOptional({
-    description: 'Start date filter (ISO 8601 format). Returns transactions created on or after this date.',
+    description:
+      'Start date filter (ISO 8601 format). Returns transactions created on or after this date.',
     example: '2026-01-01T00:00:00.000Z',
     format: 'date-time',
   })
@@ -224,7 +240,8 @@ export class GetTransactionHistoryDto {
   startDate?: string;
 
   @ApiPropertyOptional({
-    description: 'End date filter (ISO 8601 format). Returns transactions created on or before this date.',
+    description:
+      'End date filter (ISO 8601 format). Returns transactions created on or before this date.',
     example: '2026-12-31T23:59:59.999Z',
     format: 'date-time',
   })
@@ -235,7 +252,8 @@ export class GetTransactionHistoryDto {
 
 export class AdminUpdateWithdrawStatusDto {
   @ApiProperty({
-    description: 'New transaction status to apply. Use COMPLETED when the on-chain transaction is confirmed.',
+    description:
+      'New transaction status to apply. Use COMPLETED when the on-chain transaction is confirmed.',
     enum: ['COMPLETED', 'FAILED', 'CANCELLED'],
     example: 'COMPLETED',
   })
@@ -243,7 +261,8 @@ export class AdminUpdateWithdrawStatusDto {
   status: $Enums.TransactionStatus;
 
   @ApiPropertyOptional({
-    description: 'On-chain transaction hash. Required when status is COMPLETED.',
+    description:
+      'On-chain transaction hash. Required when status is COMPLETED.',
     example: '0xabc123def456...',
     pattern: '^0x[a-fA-F0-9]{64}$',
   })
@@ -253,7 +272,8 @@ export class AdminUpdateWithdrawStatusDto {
   transactionHash?: string;
 
   @ApiPropertyOptional({
-    description: 'Reason for rejection or cancellation. Required when status is FAILED or CANCELLED.',
+    description:
+      'Reason for rejection or cancellation. Required when status is FAILED or CANCELLED.',
     example: 'Insufficient gas on destination chain.',
   })
   @ValidateIf(
@@ -265,9 +285,11 @@ export class AdminUpdateWithdrawStatusDto {
   rejectedReason?: string;
 
   @ApiProperty({
-    description: 'UUID v4 to prevent double-execution of the same status update.',
+    description:
+      'UUID v4 to prevent double-execution of the same status update.',
     example: '550e8400-e29b-41d4-a716-446655440000',
-    pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    pattern:
+      '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
   })
   @IsUUID('4')
   idempotencyKey: string;
@@ -284,7 +306,8 @@ export class AdminSweepFundsDto {
   chainId: string;
 
   @ApiProperty({
-    description: 'Destination wallet address to aggregate all swept funds into.',
+    description:
+      'Destination wallet address to aggregate all swept funds into.',
     example: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
     pattern: '^0x[a-fA-F0-9]{40}$',
   })
@@ -293,7 +316,8 @@ export class AdminSweepFundsDto {
   destinationWallet: string;
 
   @ApiProperty({
-    description: 'Private key of the admin wallet used to sign sweep transactions. Handle with extreme care.',
+    description:
+      'Private key of the admin wallet used to sign sweep transactions. Handle with extreme care.',
     example: '0xprivate_key_hex...',
   })
   @IsString()

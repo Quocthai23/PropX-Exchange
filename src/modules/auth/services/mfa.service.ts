@@ -41,7 +41,9 @@ export class MfaService {
 
   async verifyChallenge(dto: any, user: any) {
     const redisClient = this.authRedis.getClient();
-    const challengeRaw = await redisClient.get(`auth:challenge:${dto.challengeId}`);
+    const challengeRaw = await redisClient.get(
+      `auth:challenge:${dto.challengeId}`,
+    );
     if (!challengeRaw) {
       throw new UnauthorizedException('Challenge not found or expired');
     }

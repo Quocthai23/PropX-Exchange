@@ -54,10 +54,17 @@ export class BlockchainService implements OnModuleInit {
   private readonly usdtTokenAddress?: string;
   private readonly usdtTokenAbi: InterfaceAbi = [
     'function transfer(address to, uint256 amount) external returns (bool)',
+    'event Transfer(address indexed from, address indexed to, uint256 value)',
   ];
   private readonly assetTokenAbi: InterfaceAbi = [
     'function burn(uint256 amount) external',
   ];
+
+  private readonly escrowMarketplaceAddress?: string;
+  private readonly escrowMarketplaceAbi?: InterfaceAbi;
+  private readonly kycRegistryAddress?: string;
+  private readonly daoGovernanceAddress?: string;
+  private readonly daoGovernanceAbi?: InterfaceAbi;
 
   private readonly depositReceiver?: string;
   private readonly requiredConfirmations: number;
@@ -107,6 +114,17 @@ export class BlockchainService implements OnModuleInit {
 
     this.usdtTokenAddress = this.config.usdtTokenAddress;
     this.depositReceiver = this.config.depositReceiverAddress?.toLowerCase();
+
+    // Read new contract addresses and ABIs from process.env directly since AppConfigService might not have them typed yet.
+    this.escrowMarketplaceAddress = process.env.ESCROW_MARKETPLACE_ADDRESS;
+    this.escrowMarketplaceAbi = process.env.ESCROW_MARKETPLACE_ABI_JSON
+      ? JSON.parse(process.env.ESCROW_MARKETPLACE_ABI_JSON)
+      : undefined;
+    this.kycRegistryAddress = process.env.KYC_REGISTRY_ADDRESS;
+    this.daoGovernanceAddress = process.env.DAO_GOVERNANCE_ADDRESS;
+    this.daoGovernanceAbi = process.env.DAO_GOVERNANCE_ABI_JSON
+      ? JSON.parse(process.env.DAO_GOVERNANCE_ABI_JSON)
+      : undefined;
   }
 
   private normalizeConfirmations(value: number, source: string): number {
@@ -217,6 +235,7 @@ export class BlockchainService implements OnModuleInit {
         name: string,
         symbol: string,
         totalSupply: bigint,
+        kycRegistryAddress: string,
         overrides?: DynamicFeeOverrides,
       ) => Promise<ContractTransactionResponse>;
     };
@@ -225,6 +244,7 @@ export class BlockchainService implements OnModuleInit {
       request.name,
       request.symbol,
       request.totalSupply,
+      this.kycRegistryAddress || '0x0000000000000000000000000000000000000000',
       await this.getDynamicFeeOverrides(),
     );
 
@@ -596,25 +616,174 @@ export class BlockchainService implements OnModuleInit {
   }
 
   /**
+   * Get the current block number from the provider
+   */
+  async getCurrentBlockNumber(): Promise<number> {
+    if (this.useMockChain) return 1000000;
+    const provider = this.getProvider();
+    return provider.getBlockNumber();
+  }
+
+  /**
+   * Scan for incoming USDT transfers to a specific address within a block range
+   */
+  async getUsdtTransfersTo(
+    receiverAddress: string,
+    fromBlock: number,
+    toBlock: number,
+  ): Promise<{ txHash: string; from: string; amount: Decimal }[]> {
+    if (this.useMockChain) return [];
+
+    if (!this.usdtTokenAddress) {
+      this.logger.warn('USDT_TOKEN_ADDRESS is not set. Cannot scan deposits.');
+      return [];
+    }
+
+    const provider = this.getProvider();
+    const usdtInterface = new Interface(this.usdtTokenAbi);
+
+    // Create filter for Transfer(address indexed from, address indexed to, uint256 value)
+    // The 'to' address is the 3rd topic (topic[2])
+    const filter = {
+      address: this.usdtTokenAddress,
+      fromBlock,
+      toBlock,
+      topics: [
+        usdtInterface.getEvent('Transfer')!.topicHash,
+        null, // Any 'from' address
+        '0x' +
+          receiverAddress.toLowerCase().replace('0x', '').padStart(64, '0'), // Specific 'to' address
+      ],
+    };
+
+    try {
+      const logs = await provider.getLogs(filter);
+      const transfers: { txHash: string; from: string; amount: Decimal }[] = [];
+
+      for (const log of logs) {
+        try {
+          const parsedLog = usdtInterface.parseLog(log);
+          if (parsedLog) {
+            const from = parsedLog.args[0];
+            const rawAmount = parsedLog.args[1];
+            transfers.push({
+              txHash: log.transactionHash,
+              from,
+              amount: new Decimal(formatUnits(rawAmount as string | bigint, 6)), // USDT usually has 6 decimals
+            });
+          }
+        } catch (e) {
+          this.logger.error(
+            `Failed to parse log in getUsdtTransfersTo: ${log.transactionHash}`,
+            e,
+          );
+        }
+      }
+
+      return transfers;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get USDT transfers from block ${fromBlock} to ${toBlock}:`,
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Failed to scan blockchain for deposits.',
+      );
+    }
+  }
+
+  /**
    * Execute settlement for a batch of trades on the blockchain.
    * (Will call the Escrow/Marketplace smart contract batchSettle function)
    */
-  batchSettleTrades(
+  async batchSettleTrades(
     assetAddress: string,
     trades: { from: string; to: string; amount: Decimal }[],
-  ): string {
+    permits?: { deadline: number; v: number; r: string; s: string }[],
+  ): Promise<string> {
     if (this.useMockChain) {
       return `0x${crypto.randomUUID().replace(/-/g, '')}`;
     }
 
-    this.logger.log(
-      `Batch settling ${trades.length} trades for asset ${assetAddress} on-chain.`,
-    );
-    // TODO: Integrate with the real smart contract here. Example:
-    // const tx = await escrowContract.batchSettle(assetAddress, trades.map(t => t.from), trades.map(t => t.to), trades.map(t => parseUnits(t.amount.toString(), 18)));
-    // await tx.wait();
-    // return tx.hash;
+    if (!this.escrowMarketplaceAddress || !this.escrowMarketplaceAbi) {
+      this.logger.warn(
+        'ESCROW_MARKETPLACE_ADDRESS or ABI not configured, falling back to mock.',
+      );
+      return `0x${crypto.randomBytes(32).toString('hex')}`;
+    }
 
-    return `0x${crypto.randomBytes(32).toString('hex')}`;
+    const signer = this.getSigner();
+    const escrow = new Contract(
+      this.escrowMarketplaceAddress,
+      this.escrowMarketplaceAbi,
+      signer,
+    );
+
+    const froms = trades.map((t) => t.from);
+    const tos = trades.map((t) => t.to);
+    const amounts = trades.map((t) => parseUnits(t.amount.toString(), 18)); // Assuming 18 decimals for AssetToken
+
+    let tx;
+    if (permits && permits.length === trades.length) {
+      const deadlines = permits.map((p) => p.deadline);
+      const vs = permits.map((p) => p.v);
+      const rs = permits.map((p) => `0x${p.r.replace('0x', '')}`);
+      const ss = permits.map((p) => `0x${p.s.replace('0x', '')}`);
+
+      tx = await escrow.getFunction('batchSettleWithPermits')(
+        assetAddress,
+        froms,
+        tos,
+        amounts,
+        deadlines,
+        vs,
+        rs,
+        ss,
+        await this.getDynamicFeeOverrides(),
+      );
+    } else {
+      tx = await escrow.getFunction('batchSettle')(
+        assetAddress,
+        froms,
+        tos,
+        amounts,
+        await this.getDynamicFeeOverrides(),
+      );
+    }
+
+    this.logger.log(
+      `Batch settled ${trades.length} trades for asset ${assetAddress} on-chain. Tx: ${tx.hash}`,
+    );
+    return tx.hash;
+  }
+
+  async executeDaoProposal(proposalId: number): Promise<string> {
+    if (this.useMockChain) {
+      return `0x${crypto.randomUUID().replace(/-/g, '')}`;
+    }
+
+    if (!this.daoGovernanceAddress || !this.daoGovernanceAbi) {
+      this.logger.warn(
+        'DAO_GOVERNANCE_ADDRESS or ABI not configured, falling back to mock.',
+      );
+      return `0x${crypto.randomBytes(32).toString('hex')}`;
+    }
+
+    const signer = this.getSigner();
+    const dao = new Contract(
+      this.daoGovernanceAddress,
+      this.daoGovernanceAbi,
+      signer,
+    );
+
+    const tx = await dao.getFunction('executeProposal')(
+      proposalId,
+      await this.getDynamicFeeOverrides(),
+    );
+
+    this.logger.log(
+      `Executed DAO proposal ${proposalId} on-chain. Tx: ${tx.hash}`,
+    );
+    return tx.hash;
   }
 }

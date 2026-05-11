@@ -51,6 +51,7 @@ export class PaymentService {
     }
 
     const transaction = await this.db.$transaction(async (tx: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await this.paymentLedgerService.creditDeposit(userId, amountDec, tx);
       return tx.transaction.create({
         data: {
@@ -236,7 +237,7 @@ export class PaymentService {
       await this.paymentLedgerService.applyWithdrawalStatus({
         tx,
         userId: transaction.userId,
-        amount: new Decimal(transaction.amount.toString()),
+        amount: new Decimal(transaction.amount.toString() as string),
         status: dto.status,
       });
     });
@@ -289,7 +290,7 @@ export class PaymentService {
             data: { available: 0 },
           });
 
-          const createdTx = await tx.transaction.create({
+          const createdTx = await (tx.transaction as any).create({
             data: {
               userId: balance.userId,
               type: 'TRANSFER',
@@ -298,16 +299,19 @@ export class PaymentService {
             },
             select: { id: true },
           });
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           batchIds.push(createdTx.id);
         }
         return batchIds;
       });
 
-      transactionIds.push(...createdIds);
+      transactionIds.push(...(createdIds as string[]));
       affectedWallets += balances.length;
       totalSwept = totalSwept.plus(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         balances.reduce(
-          (sum, b) => sum.plus(b.available.toString()),
+          (sum, b) =>
+            sum.plus((b.available as unknown as string).toString() as string),
           new Decimal(0),
         ),
       );

@@ -71,7 +71,7 @@ export class PostsProcessor
 
         for (const follower of followers) {
           const feedKey = `feed:user:${follower.fromUserId}`;
-          multi.lPush(feedKey, postId);
+          multi.lPush(feedKey, postId as string);
           multi.lTrim(feedKey, 0, 999);
         }
 

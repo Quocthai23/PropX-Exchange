@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsOptional,
@@ -48,7 +48,8 @@ export class GetNotificationsQueryDto {
   category?: number;
 
   @ApiPropertyOptional({
-    description: 'Filter by read status. true = only read, false = only unread.',
+    description:
+      'Filter by read status. true = only read, false = only unread.',
     example: false,
   })
   @IsOptional()

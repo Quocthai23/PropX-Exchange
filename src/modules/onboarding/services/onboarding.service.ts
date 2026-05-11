@@ -37,6 +37,17 @@ export class OnboardingService {
         estimatedValue: new Decimal(dto.estimatedValue),
         legalDocuments: dto.legalDocuments,
         status: $Enums.OnboardingStatus.PENDING,
+        assetType: dto.assetType ?? $Enums.AssetType.ACCUMULATION,
+        monthlyInterestRate: dto.monthlyInterestRate
+          ? new Decimal(dto.monthlyInterestRate)
+          : null,
+        penaltyRate: dto.penaltyRate ? new Decimal(dto.penaltyRate) : null,
+        retainedTokenPercentage: dto.retainedTokenPercentage
+          ? new Decimal(dto.retainedTokenPercentage)
+          : new Decimal(100),
+        releasedTokenPercentage: dto.releasedTokenPercentage
+          ? new Decimal(dto.releasedTokenPercentage)
+          : new Decimal(0),
       },
     });
 
@@ -172,6 +183,11 @@ export class OnboardingService {
           spvName: dto.spvName ?? null,
           legalDocsIpfs: pinned.cid,
           auditReportUrl: dto.auditReportUrl ?? null,
+          assetType: req.assetType,
+          monthlyInterestRate: req.monthlyInterestRate,
+          penaltyRate: req.penaltyRate,
+          retainedTokenPercentage: req.retainedTokenPercentage,
+          releasedTokenPercentage: req.releasedTokenPercentage,
         } as any,
       });
 

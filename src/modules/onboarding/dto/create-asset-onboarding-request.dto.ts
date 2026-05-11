@@ -5,7 +5,10 @@ import {
   IsOptional,
   IsString,
   Matches,
+  IsEnum,
+  IsNumberString,
 } from 'class-validator';
+import { AssetType } from '@prisma/client';
 
 export class CreateAssetOnboardingRequestDto {
   @ApiProperty({ example: 'Vinhomes Smart City Apartment' })
@@ -44,4 +47,41 @@ export class CreateAssetOnboardingRequestDto {
   @IsArray()
   @IsString({ each: true })
   legalDocuments: string[];
+
+  @ApiPropertyOptional({ enum: AssetType, default: AssetType.ACCUMULATION })
+  @IsOptional()
+  @IsEnum(AssetType)
+  assetType?: AssetType;
+
+  @ApiPropertyOptional({
+    description: 'Monthly interest rate for INTEREST_BEARING assets',
+    example: '0.01',
+  })
+  @IsOptional()
+  @IsNumberString()
+  monthlyInterestRate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Penalty rate for late payments',
+    example: '0.05',
+  })
+  @IsOptional()
+  @IsNumberString()
+  penaltyRate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Percentage of tokens retained by the issuer',
+    example: '50',
+  })
+  @IsOptional()
+  @IsNumberString()
+  retainedTokenPercentage?: string;
+
+  @ApiPropertyOptional({
+    description: 'Percentage of tokens released to the market',
+    example: '50',
+  })
+  @IsOptional()
+  @IsNumberString()
+  releasedTokenPercentage?: string;
 }

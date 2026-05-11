@@ -5,6 +5,7 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { BadRequestException } from '@nestjs/common';
 import { PaymentLedgerService } from './payment-ledger.service';
 import { PaymentTransactionHistoryService } from './payment-transaction-history.service';
+import { DepositDemoDto, WithdrawV2Dto } from '../dto/payment.dto';
 
 const mockPrisma = {
   $transaction: jest.fn((fn) => fn(mockTx)),
@@ -69,7 +70,7 @@ describe('PaymentService', () => {
       await expect(
         service.depositDemo('user-id', {
           amount: '0',
-        } as any),
+        } as DepositDemoDto),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -81,7 +82,7 @@ describe('PaymentService', () => {
       const result = await service.depositDemo('user-id', {
         amount: '100',
         idempotencyKey: '00000000-0000-4000-8000-000000000000',
-      } as any);
+      } as DepositDemoDto);
 
       expect(result.transactionId).toEqual('existing-tx');
       expect(result.success).toEqual(true);
@@ -95,7 +96,7 @@ describe('PaymentService', () => {
 
       const result = await service.depositDemo('user-id', {
         amount: '100',
-      } as any);
+      } as DepositDemoDto);
 
       expect(result.transactionId).toEqual('tx-id');
       expect(result.success).toEqual(true);
@@ -114,7 +115,7 @@ describe('PaymentService', () => {
         accountId: 'account-id',
         destinationAddress: '0x123',
         chainId: 1,
-      } as any);
+      } as WithdrawV2Dto);
 
       expect(result.transactionId).toEqual('existing-tx-id');
     });

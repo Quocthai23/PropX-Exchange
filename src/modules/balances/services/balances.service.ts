@@ -124,7 +124,7 @@ export class BalancesService {
           throw err;
         }
         const backoff = 100 * Math.pow(2, attempt);
-        // eslint-disable-next-line no-await-in-loop
+
         await new Promise((res) => setTimeout(res, backoff));
       }
     }
@@ -207,7 +207,7 @@ export class BalancesService {
           throw err;
         }
         const backoff = 100 * Math.pow(2, attempt);
-        // eslint-disable-next-line no-await-in-loop
+
         await new Promise((res) => setTimeout(res, backoff));
       }
     }

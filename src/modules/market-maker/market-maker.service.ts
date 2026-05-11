@@ -44,6 +44,32 @@ export class MarketMakerService implements OnModuleInit {
         },
       });
     }
+
+    // Ensure Bot has token balance for all active assets (Moved from loop for efficiency)
+    const activeAssets = await this.prisma.asset.findMany({
+      where: { isActive: true },
+    });
+    for (const asset of activeAssets) {
+      const tokenBalance = await this.prisma.balance.findFirst({
+        where: { userId: this.BOT_USER_ID, assetId: asset.id },
+      });
+
+      if (tokenBalance) {
+        await this.prisma.balance.update({
+          where: { id: tokenBalance.id },
+          data: { available: new Decimal(1000000) },
+        });
+      } else {
+        await this.prisma.balance.create({
+          data: {
+            userId: this.BOT_USER_ID,
+            assetId: asset.id,
+            available: new Decimal(1000000),
+            locked: new Decimal(0),
+          },
+        });
+      }
+    }
   }
 
   // Run every 10 seconds for faster chart testing.
@@ -60,10 +86,20 @@ export class MarketMakerService implements OnModuleInit {
 
     for (const asset of assets) {
       try {
-        // Fetch anchor to base trade on
-        const anchor = await this.marketDataService.getReferencePriceAnchor(asset.id);
-        const refPrice = anchor.referencePrice || anchor.valuationSnapshotPrice || anchor.marketPrice || asset.tokenPrice || 1.0;
-        const currentPrice = new Decimal(toDecimalValue(refPrice as DecimalValue));
+        // Fetch anchor to base trade on (Using robust Upstream logic)
+        const anchor = await this.marketDataService.getReferencePriceAnchor(
+          asset.id,
+        );
+        const refPrice =
+          anchor.referencePrice ||
+          anchor.valuationSnapshotPrice ||
+          anchor.marketPrice ||
+          asset.tokenPrice ||
+          1.0;
+        const currentPrice = new Decimal(
+          toDecimalValue(refPrice as DecimalValue),
+        );
+
 
         // Fluctuate price slightly (-1% to 1%)
         const fluctuation = (Math.random() * 2 - 1) * 0.01;

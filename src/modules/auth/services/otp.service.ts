@@ -67,7 +67,9 @@ export class OtpService {
     });
 
     if (!this.transporter) {
-      this.logger.warn(`SMTP is not configured. OTP for ${email} is: ${otpCode}`);
+      this.logger.warn(
+        `SMTP is not configured. OTP for ${email} is: ${otpCode}`,
+      );
       if (this.config.nodeEnv === 'development') {
         return {
           message:
@@ -157,7 +159,7 @@ export class OtpService {
         throw new UnauthorizedException('Invalid register token');
       }
       return payload;
-    } catch (e) {
+    } catch {
       throw new UnauthorizedException('Invalid or expired register token');
     }
   }

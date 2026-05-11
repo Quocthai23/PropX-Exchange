@@ -140,7 +140,7 @@ export class KycService {
 
     return records.map((record) => {
       if (record.idNumber) {
-        record.idNumber = this.decryptIdNumber(record.idNumber);
+        record.idNumber = this.decryptIdNumber(record.idNumber as string);
       }
       return record;
     });

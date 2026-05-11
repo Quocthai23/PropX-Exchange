@@ -15,9 +15,24 @@ export class NotificationsProcessor extends WorkerHost {
 
   async process(job: Job<any>): Promise<any> {
     if (job.name === 'send-notification') {
-      await this.handleSendNotification(job.data);
+      await this.handleSendNotification(
+        job.data as {
+          userId: string;
+          type: string;
+          title: string;
+          content?: string;
+          metadata?: any;
+        },
+      );
     } else if (job.name === 'broadcast-notification') {
-      await this.handleBroadcastNotification(job.data);
+      await this.handleBroadcastNotification(
+        job.data as {
+          userIds: string[];
+          type: string;
+          title: string;
+          content?: string;
+        },
+      );
     }
   }
 

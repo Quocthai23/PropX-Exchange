@@ -42,10 +42,12 @@ export class CreateSupportTicketDto {
   subject: string;
 
   @ApiProperty({
-    description: 'Initial message content describing the issue. Between 1 and 5000 characters.',
+    description:
+      'Initial message content describing the issue. Between 1 and 5000 characters.',
     minLength: 1,
     maxLength: 5000,
-    example: 'My withdrawal of 100 USDT submitted 2 days ago is still pending. Transaction ID: TXN_123.',
+    example:
+      'My withdrawal of 100 USDT submitted 2 days ago is still pending. Transaction ID: TXN_123.',
   })
   @IsString()
   @IsNotEmpty()
@@ -62,7 +64,8 @@ export class CreateSupportTicketDto {
   title?: string;
 
   @ApiPropertyOptional({
-    description: 'Optional category tag to route the ticket to the correct team.',
+    description:
+      'Optional category tag to route the ticket to the correct team.',
     example: 'Finance',
   })
   @IsOptional()
@@ -70,7 +73,8 @@ export class CreateSupportTicketDto {
   category?: string;
 
   @ApiPropertyOptional({
-    description: 'Optional priority label (free-form string). Examples: low, medium, high, urgent.',
+    description:
+      'Optional priority label (free-form string). Examples: low, medium, high, urgent.',
     example: 'high',
   })
   @IsOptional()
@@ -78,7 +82,8 @@ export class CreateSupportTicketDto {
   priority?: string;
 
   @ApiPropertyOptional({
-    description: 'Array of attachment URLs (e.g. screenshots, transaction receipts).',
+    description:
+      'Array of attachment URLs (e.g. screenshots, transaction receipts).',
     example: ['https://cdn.example.com/screenshots/txn_error.png'],
     type: [String],
   })
@@ -131,10 +136,12 @@ export class UpdateSupportTicketDto {
 
 export class SupportMessageDto {
   @ApiProperty({
-    description: 'Message content to send in the support thread. Between 1 and 5000 characters.',
+    description:
+      'Message content to send in the support thread. Between 1 and 5000 characters.',
     minLength: 1,
     maxLength: 5000,
-    example: 'Thank you for the update! I can confirm the withdrawal was received.',
+    example:
+      'Thank you for the update! I can confirm the withdrawal was received.',
   })
   @IsString()
   @IsNotEmpty()
@@ -178,7 +185,8 @@ export class GetSupportTicketsQueryDto {
   take?: number = 20;
 
   @ApiPropertyOptional({
-    description: 'Cursor string for cursor-based pagination. Omit for the first page.',
+    description:
+      'Cursor string for cursor-based pagination. Omit for the first page.',
     example: 'ticket_01J2XABCDEF',
   })
   @IsOptional()

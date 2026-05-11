@@ -20,12 +20,14 @@ export class NewsSyncProcessor extends WorkerHost {
 
     if (action === 'sync-provider') {
       this.logger.log(`Processing news sync for provider: ${providerId}`);
-      await this.newsAggregationService.syncProvider(providerId);
+      await this.newsAggregationService.syncProvider(providerId as string);
     } else if (action === 'analyze-sentiment') {
       this.logger.log(
         `Processing sentiment analysis for ${newsIds.length} articles`,
       );
-      await this.newsAggregationService.analyzeSentimentAndTagAssets(newsIds);
+      await this.newsAggregationService.analyzeSentimentAndTagAssets(
+        newsIds as string[],
+      );
     }
   }
 }

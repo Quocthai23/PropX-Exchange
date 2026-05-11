@@ -9,12 +9,19 @@ import { PaymentTransactionHistoryService } from './services/payment-transaction
 import { BalancesModule } from '../balances/balances.module';
 import { RolesGuard } from '../users/dto/roles.guard';
 
+import { AssetsModule } from '../assets/assets.module';
+import { TransactionProcessingProcessor } from './jobs/transaction-processing.processor';
+import { DepositScannerCron } from './jobs/deposit-scanner.cron';
+import { TransactionsCron } from './jobs/transactions.cron';
+import { GasSpikeService } from './services/gas-spike.service';
+
 @Module({
   imports: [
     BullModule.registerQueue({
       name: 'transaction-processing',
     }),
     BalancesModule,
+    AssetsModule,
   ],
   controllers: [PaymentController, AdminPaymentController],
   providers: [
@@ -23,6 +30,10 @@ import { RolesGuard } from '../users/dto/roles.guard';
     PaymentTransactionHistoryService,
     PrismaService,
     RolesGuard,
+    TransactionProcessingProcessor,
+    DepositScannerCron,
+    TransactionsCron,
+    GasSpikeService,
   ],
 })
 export class PaymentModule {}

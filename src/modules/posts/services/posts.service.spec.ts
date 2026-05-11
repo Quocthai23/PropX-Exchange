@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PostsService } from './posts.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { CreatePostDto } from '../dto/create-post.dto';
 import { AppConfigService } from '@/config/app-config.service';
 
 const mockPrisma = {
@@ -70,7 +71,7 @@ describe('PostsService', () => {
       const result = await service.createPost('user-id', {
         content: 'Test post',
         mediaUrls: [],
-      } as any);
+      } as CreatePostDto);
 
       expect(result.id).toEqual('post-id');
     });

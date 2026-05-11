@@ -18,7 +18,8 @@ const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
 
 export class SendOtpDto {
   @ApiProperty({
-    description: 'User email address. Required for registration or password reset.',
+    description:
+      'User email address. Required for registration or password reset.',
     example: 'user@example.com',
     pattern: EMAIL_REGEX.source,
     format: 'email',
@@ -30,7 +31,8 @@ export class SendOtpDto {
 
   @ApiProperty({
     enum: ['register', 'reset_password', 'withdrawal', 'transfer'],
-    description: 'Purpose of sending OTP. Determines the downstream action after verification.',
+    description:
+      'Purpose of sending OTP. Determines the downstream action after verification.',
     example: 'register',
   })
   @IsEnum(['register', 'reset_password', 'withdrawal', 'transfer'])
@@ -63,7 +65,8 @@ export class VerifyOtpDto {
 
   @ApiProperty({
     enum: ['register', 'reset_password', 'withdrawal', 'transfer'],
-    description: 'Purpose of the OTP — must match the purpose used in send-otp.',
+    description:
+      'Purpose of the OTP — must match the purpose used in send-otp.',
     example: 'register',
   })
   @IsEnum(['register', 'reset_password', 'withdrawal', 'transfer'])
@@ -72,7 +75,8 @@ export class VerifyOtpDto {
 
 export class RegisterDto {
   @ApiProperty({
-    description: 'Short-lived registration token returned by /auth/verify-otp. Proves the user owns the email.',
+    description:
+      'Short-lived registration token returned by /auth/verify-otp. Proves the user owns the email.',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     minLength: 1,
   })
@@ -81,7 +85,8 @@ export class RegisterDto {
   registerToken: string;
 
   @ApiPropertyOptional({
-    description: 'Desired username. Must be 3-100 characters, containing only letters, numbers, and underscores.',
+    description:
+      'Desired username. Must be 3-100 characters, containing only letters, numbers, and underscores.',
     example: 'john_doe_99',
     minLength: 3,
     maxLength: 100,
@@ -160,7 +165,8 @@ export class AuthChallengeDto {
   @ApiPropertyOptional({
     type: 'object',
     additionalProperties: true,
-    description: 'Optional context payload attached to the challenge (e.g. withdrawal details).',
+    description:
+      'Optional context payload attached to the challenge (e.g. withdrawal details).',
     example: { amount: '100', destinationAddress: '0xABC...' },
   })
   @IsOptional()
@@ -169,7 +175,8 @@ export class AuthChallengeDto {
 
 export class ResetPasswordDto {
   @ApiProperty({
-    description: 'Short-lived password-reset token returned by /auth/verify-otp.',
+    description:
+      'Short-lived password-reset token returned by /auth/verify-otp.',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     minLength: 1,
   })
@@ -235,7 +242,8 @@ export class LoginWithSocialDto {
   provider: string;
 
   @ApiProperty({
-    description: 'ID token issued by the social provider (obtained from React Native SDK).',
+    description:
+      'ID token issued by the social provider (obtained from React Native SDK).',
     example: 'ya29.a0AfH6SMC...',
     minLength: 1,
   })
@@ -246,7 +254,8 @@ export class LoginWithSocialDto {
 
 export class CheckReferenceCodeDto {
   @ApiProperty({
-    description: 'Referral code to validate before using it during registration.',
+    description:
+      'Referral code to validate before using it during registration.',
     example: 'REF-ABC123',
     minLength: 1,
     maxLength: 50,
@@ -287,7 +296,8 @@ export class VerifyChallengeDto {
 
 export class VerifySignatureDto {
   @ApiProperty({
-    description: 'EIP-4361 (SIWE) formatted message that was signed by the wallet.',
+    description:
+      'EIP-4361 (SIWE) formatted message that was signed by the wallet.',
     example: 'example.com wants you to sign in with your Ethereum account...',
     minLength: 1,
   })
@@ -296,7 +306,8 @@ export class VerifySignatureDto {
   message: string;
 
   @ApiProperty({
-    description: 'Hex-encoded ECDSA signature produced by the wallet over the message.',
+    description:
+      'Hex-encoded ECDSA signature produced by the wallet over the message.',
     example: '0x4f3a...deadbeef',
     minLength: 1,
   })
@@ -305,7 +316,8 @@ export class VerifySignatureDto {
   signature: string;
 
   @ApiProperty({
-    description: 'Random nonce previously issued by GET /auth/web3/nonce to prevent replay attacks.',
+    description:
+      'Random nonce previously issued by GET /auth/web3/nonce to prevent replay attacks.',
     example: 'nonce_01J2XAB',
     minLength: 1,
   })
@@ -314,7 +326,8 @@ export class VerifySignatureDto {
   nonce: string;
 
   @ApiPropertyOptional({
-    description: 'EVM wallet address to cross-check ownership (checksummed, 0x-prefixed).',
+    description:
+      'EVM wallet address to cross-check ownership (checksummed, 0x-prefixed).',
     example: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
     pattern: '^0x[a-fA-F0-9]{40}$',
   })
@@ -326,7 +339,8 @@ export class VerifySignatureDto {
 
 export class Web3NonceDto {
   @ApiPropertyOptional({
-    description: 'Optional EVM wallet address to scope the nonce (checksummed, 0x-prefixed).',
+    description:
+      'Optional EVM wallet address to scope the nonce (checksummed, 0x-prefixed).',
     example: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
     pattern: '^0x[a-fA-F0-9]{40}$',
   })

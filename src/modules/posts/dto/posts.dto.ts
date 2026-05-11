@@ -58,7 +58,8 @@ export class QueryPostsDto extends PaginationQueryDto {
   assetId?: string;
 
   @ApiProperty({
-    description: 'When true, returns only posts from authors the current user follows.',
+    description:
+      'When true, returns only posts from authors the current user follows.',
     example: false,
   })
   @IsBoolean()

@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import Decimal from 'decimal.js';
-import { createHash } from 'crypto';
+import { ethers } from 'ethers';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BalancesService } from '../../balances/services/balances.service';
 import { CreateDistributionDto } from '../dto/create-distribution.dto';
@@ -21,11 +21,18 @@ const toDecimalValue = (value: DecimalValue): string | number =>
     ? value
     : value.toString();
 
-const hashLeaf = (userId: string, amount: string): string =>
-  createHash('sha256').update(`${userId}:${amount}`).digest('hex');
+const hashLeaf = (walletAddress: string, amount: string): string => {
+  const amountWei = ethers.parseUnits(Number(amount).toFixed(6), 6).toString();
+  return ethers.solidityPackedKeccak256(
+    ['address', 'uint256'],
+    [walletAddress, amountWei],
+  );
+};
 
-const hashPair = (left: string, right: string): string =>
-  createHash('sha256').update([left, right].sort().join('')).digest('hex');
+const hashPair = (left: string, right: string): string => {
+  const [a, b] = [left, right].sort();
+  return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [a, b]);
+};
 
 const buildMerkleTree = (leaves: string[]): string[][] => {
   if (leaves.length === 0) return [['']];
@@ -442,7 +449,11 @@ export class DividendsService {
     const claims = await this.prisma.dividendClaim.findMany({
       where: { distributionId },
       orderBy: { userId: 'asc' },
-      select: { userId: true, amount: true },
+      select: {
+        userId: true,
+        amount: true,
+        user: { select: { walletAddress: true } },
+      },
     });
     if (claims.length === 0) {
       throw new NotFoundException('Distribution claims not generated yet.');
@@ -453,7 +464,11 @@ export class DividendsService {
       throw new NotFoundException('No claim found for this user.');
     }
 
-    const leaves = claims.map((c) => hashLeaf(c.userId, c.amount.toString()));
+    const leaves = claims.map((c) => {
+      const wallet =
+        c.user?.walletAddress || '0x0000000000000000000000000000000000000000';
+      return hashLeaf(wallet, c.amount.toString());
+    });
     const tree = buildMerkleTree(leaves);
     const merkleRoot = tree[tree.length - 1][0] ?? '';
     const proof = buildMerkleProof(leaves, claimIndex);
@@ -465,5 +480,48 @@ export class DividendsService {
       merkleRoot,
       proof,
     };
+  }
+
+  async processInterestPayments() {
+    // 1. Find all PENDING interest payments that are past their due date
+    const pendingLate = await this.prisma.interestPaymentRequest.findMany({
+      where: {
+        status: 'PENDING',
+        dueDate: { lte: new Date() },
+      },
+      include: { asset: true },
+    });
+
+    for (const payment of pendingLate) {
+      // 2. Mark as LATE
+      await this.prisma.interestPaymentRequest.update({
+        where: { id: payment.id },
+        data: { status: 'LATE' },
+      });
+
+      // 3. Deduct tokens from retained pool and release to market if penalty applies
+      const penaltyRate = payment.asset.penaltyRate ?? new Decimal(0.05);
+      if (penaltyRate.gt(0) && payment.asset.retainedTokenPercentage.gt(0)) {
+        const penaltyPercentage =
+          payment.asset.retainedTokenPercentage.times(penaltyRate);
+        const newRetained =
+          payment.asset.retainedTokenPercentage.minus(penaltyPercentage);
+        const newReleased =
+          payment.asset.releasedTokenPercentage.plus(penaltyPercentage);
+
+        await this.prisma.asset.update({
+          where: { id: payment.asset.id },
+          data: {
+            retainedTokenPercentage: newRetained,
+            releasedTokenPercentage: newReleased,
+          },
+        });
+
+        // TODO: Create a DividendDistribution for the penalty tokens or trigger an Airdrop
+        this.logger.log(
+          `Applied penalty of ${penaltyPercentage}% for asset ${payment.asset.symbol} due to late interest payment.`,
+        );
+      }
+    }
   }
 }

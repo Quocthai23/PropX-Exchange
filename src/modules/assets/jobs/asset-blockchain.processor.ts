@@ -179,7 +179,9 @@ export class AssetBlockchainProcessor extends WorkerHost {
     });
     const liquidationPriceDec = new Decimal(data.liquidationPrice);
     for (const holding of holdings) {
-      const totalHeld = new Decimal(holding.available).plus(holding.locked);
+      const totalHeld = new Decimal(
+        holding.available as unknown as string,
+      ).plus(holding.locked as unknown as string);
       if (totalHeld.lte(0)) continue;
       const payoutAmount = totalHeld.mul(liquidationPriceDec);
       await this.db.$transaction(async (tx: any) => {

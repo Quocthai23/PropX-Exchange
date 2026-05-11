@@ -1,9 +1,10 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 export class CreateKycDto {
   @ApiProperty({
-    description: 'Full legal name as it appears on the official identity document.',
+    description:
+      'Full legal name as it appears on the official identity document.',
     example: 'Nguyen Van An',
     maxLength: 120,
   })
@@ -22,7 +23,8 @@ export class CreateKycDto {
   dob: string;
 
   @ApiProperty({
-    description: 'Government-issued national ID, passport, or driver\'s license number.',
+    description:
+      "Government-issued national ID, passport, or driver's license number.",
     example: '012345678901',
     maxLength: 40,
   })
@@ -32,7 +34,8 @@ export class CreateKycDto {
   idNumber: string;
 
   @ApiProperty({
-    description: 'Publicly accessible URL of the front-side image of the identity document.',
+    description:
+      'Publicly accessible URL of the front-side image of the identity document.',
     example: 'https://cdn.example.com/kyc/id_front_user123.jpg',
     format: 'uri',
   })
@@ -41,7 +44,8 @@ export class CreateKycDto {
   idFrontImg: string;
 
   @ApiProperty({
-    description: 'Publicly accessible URL of the back-side image of the identity document.',
+    description:
+      'Publicly accessible URL of the back-side image of the identity document.',
     example: 'https://cdn.example.com/kyc/id_back_user123.jpg',
     format: 'uri',
   })
@@ -50,7 +54,8 @@ export class CreateKycDto {
   idBackImg: string;
 
   @ApiProperty({
-    description: 'Publicly accessible URL of the selfie image for liveness/identity verification.',
+    description:
+      'Publicly accessible URL of the selfie image for liveness/identity verification.',
     example: 'https://cdn.example.com/kyc/selfie_user123.jpg',
     format: 'uri',
   })

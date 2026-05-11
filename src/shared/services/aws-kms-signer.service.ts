@@ -110,7 +110,8 @@ export class AwsKmsSigner extends AbstractSigner {
       : undefined;
     const txWithoutFrom: Record<string, unknown> = { ...tx };
     delete txWithoutFrom.from;
-    const resolvedTx = await Transaction.from({
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const resolvedTx = Transaction.from({
       ...(txWithoutFrom as any),
       to: resolvedTo,
       from: undefined,

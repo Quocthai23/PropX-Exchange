@@ -7522,6 +7522,34 @@
             "items": {
               "type": "string"
             }
+          },
+          "assetType": {
+            "type": "string",
+            "enum": [
+              "INTEREST_BEARING",
+              "ACCUMULATION"
+            ],
+            "default": "ACCUMULATION"
+          },
+          "monthlyInterestRate": {
+            "type": "string",
+            "description": "Monthly interest rate for INTEREST_BEARING assets",
+            "example": "0.01"
+          },
+          "penaltyRate": {
+            "type": "string",
+            "description": "Penalty rate for late payments",
+            "example": "0.05"
+          },
+          "retainedTokenPercentage": {
+            "type": "string",
+            "description": "Percentage of tokens retained by the issuer",
+            "example": "50"
+          },
+          "releasedTokenPercentage": {
+            "type": "string",
+            "description": "Percentage of tokens released to the market",
+            "example": "50"
           }
         },
         "required": [
@@ -7630,6 +7658,15 @@
             "type": "string",
             "description": "Voting end time (ISO)",
             "example": "2026-05-08T00:00:00.000Z"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "GENERAL",
+              "INCREASE_RELEASED_TOKEN_PERCENTAGE"
+            ],
+            "default": "GENERAL",
+            "description": "Type of proposal"
           }
         },
         "required": [

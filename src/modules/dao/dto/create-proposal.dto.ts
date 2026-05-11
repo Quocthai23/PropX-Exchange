@@ -1,8 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  IsEnum,
+  IsOptional,
+} from 'class-validator';
+import { ProposalType } from '@prisma/client';
 
 export class CreateProposalDto {
-  @ApiProperty({ example: 'Should we sell the project outright for 3.5 billion?' })
+  @ApiProperty({
+    example: 'Should we sell the project outright for 3.5 billion?',
+  })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
@@ -27,4 +37,13 @@ export class CreateProposalDto {
   })
   @IsDateString()
   endDate: string;
+
+  @ApiProperty({
+    enum: ProposalType,
+    default: ProposalType.GENERAL,
+    description: 'Type of proposal',
+  })
+  @IsEnum(ProposalType)
+  @IsOptional()
+  type?: ProposalType;
 }

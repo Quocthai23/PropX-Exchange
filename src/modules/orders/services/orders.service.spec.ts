@@ -5,6 +5,8 @@ import { OrderMatchingService } from './order-matching.service';
 import { TradingLedgerService } from './trading-ledger.service';
 import Decimal from 'decimal.js';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { CreateOrderDto } from '../dto/create-order.dto';
+import { GetOrdersQueryDto } from '../dto/orders.dto';
 
 const mockPrisma = {
   $transaction: jest.fn((fn) => fn(mockTx)),
@@ -68,7 +70,7 @@ describe('OrdersService', () => {
         quantity: '10',
         price: '100',
         idempotencyKey: 'test-key',
-      } as any);
+      } as CreateOrderDto);
 
       expect(result).toEqual({
         orderId: 'existing-order-id',
@@ -87,7 +89,7 @@ describe('OrdersService', () => {
           assetId: 'asset-id',
           quantity: '10',
           price: '100',
-        } as any),
+        } as CreateOrderDto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -106,7 +108,7 @@ describe('OrdersService', () => {
           assetId: 'asset-id',
           quantity: '10',
           price: '100',
-        } as any),
+        } as CreateOrderDto),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -132,7 +134,7 @@ describe('OrdersService', () => {
         assetId: 'asset-id',
         quantity: '10',
         price: '100',
-      } as any);
+      } as CreateOrderDto);
 
       expect(result).toEqual({
         orderId: 'new-order-id',
@@ -147,7 +149,10 @@ describe('OrdersService', () => {
       mockPrisma.order.findMany.mockResolvedValue(mockOrders);
       mockPrisma.order.count.mockResolvedValue(1);
 
-      const result = await service.getOrders('user-id', {} as any);
+      const result = await service.getOrders(
+        'user-id',
+        {} as GetOrdersQueryDto,
+      );
 
       expect(result.data).toEqual(mockOrders);
       expect(result.total).toEqual(1);

@@ -2,6 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { UserPortfolioService } from './user-portfolio.service';
+import { UserRelationsService } from './user-relations.service';
+import { UpdateProfileDto } from '../dto/update-user.dto';
+import { UpsertRelationDto } from '../dto/create-user.dto';
 
 const mockPrisma = {
   user: {
@@ -34,6 +38,16 @@ const mockPrisma = {
   },
 };
 
+const mockPortfolioService = {
+  getPortfolioOverview: jest.fn(),
+};
+ 
+const mockRelationsService = {
+  getSuggestions: jest.fn(),
+  getRelations: jest.fn(),
+  upsertRelation: jest.fn(),
+};
+ 
 describe('UsersService', () => {
   let service: UsersService;
 
@@ -45,6 +59,8 @@ describe('UsersService', () => {
           provide: PrismaService,
           useValue: mockPrisma,
         },
+        { provide: UserPortfolioService, useValue: mockPortfolioService },
+        { provide: UserRelationsService, useValue: mockRelationsService },
       ],
     }).compile();
 
@@ -135,7 +151,10 @@ describe('UsersService', () => {
       const updateData = { username: 'newusername' };
       mockPrisma.user.update.mockResolvedValue({});
 
-      const result = await service.updateProfile('test-id', updateData as any);
+      const result = await service.updateProfile(
+        'test-id',
+        updateData as UpdateProfileDto,
+      );
 
       expect(result).toEqual({ success: true });
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
@@ -185,31 +204,29 @@ describe('UsersService', () => {
 
   describe('upsertRelation', () => {
     it('should throw BadRequestException if relating to self', async () => {
+      mockRelationsService.upsertRelation.mockRejectedValueOnce(
+        new BadRequestException(),
+      );
       await expect(
         service.upsertRelation('same-id', 'same-id', {
           action: 'follow',
-        } as any),
+        } as unknown as UpsertRelationDto),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should follow user', async () => {
-      mockPrisma.userRelation.findUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-      mockPrisma.userRelation.create.mockResolvedValue({
-        isFollowing: true,
-        isBlocking: false,
-      });
-
-      const result = await service.upsertRelation('current-id', 'target-id', {
-        action: 'follow',
-      } as any);
-
-      expect(result).toEqual({
+      const mockResult = {
         isFollowing: true,
         isBlocking: false,
         isBlockedBy: false,
-      });
+      };
+      mockRelationsService.upsertRelation.mockResolvedValueOnce(mockResult);
+ 
+      const result = await service.upsertRelation('current-id', 'target-id', {
+        action: 'follow',
+      } as unknown as UpsertRelationDto);
+ 
+      expect(result).toEqual(mockResult);
     });
   });
 });

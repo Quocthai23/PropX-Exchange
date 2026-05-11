@@ -1,12 +1,22 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CommissionEvent } from '@prisma/client';
-import { IsEnum, IsNumber, IsOptional, IsBoolean, Min, IsString, IsArray, ArrayNotEmpty } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  Min,
+  IsString,
+  IsArray,
+  ArrayNotEmpty,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdateCommissionConfigDto {
   @ApiProperty({
-    description: 'Commission rate as a decimal fraction. E.g. 0.20 = 20%, 0.05 = 5%.',
-    example: 0.20,
+    description:
+      'Commission rate as a decimal fraction. E.g. 0.20 = 20%, 0.05 = 5%.',
+    example: 0.2,
     minimum: 0,
     required: false,
   })
@@ -17,7 +27,8 @@ export class UpdateCommissionConfigDto {
   commissionRate?: number;
 
   @ApiProperty({
-    description: 'Whether this commission event configuration is active and will generate rewards.',
+    description:
+      'Whether this commission event configuration is active and will generate rewards.',
     example: true,
     required: false,
   })
@@ -61,7 +72,8 @@ export class GetRewardsQueryDto {
 
 export class ClaimRewardsDto {
   @ApiProperty({
-    description: 'Array of commission reward IDs to claim in a single batch operation.',
+    description:
+      'Array of commission reward IDs to claim in a single batch operation.',
     type: [String],
     example: ['reward_01J2XABCDEF', 'reward_01J2XGHIJKL'],
   })

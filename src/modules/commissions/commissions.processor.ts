@@ -18,20 +18,30 @@ export class CommissionsProcessor extends WorkerHost {
   }
 
   async process(job: Job<CommissionJobData>): Promise<void> {
-    const { eventType, sourceUserId, amount, sourceTxId, currency = 'USDT' } = job.data;
-    
-    this.logger.debug(`Processing commission for event: ${eventType}, sourceUser: ${sourceUserId}, amount: ${amount}`);
+    const {
+      eventType,
+      sourceUserId,
+      amount,
+      sourceTxId,
+      currency = 'USDT',
+    } = job.data;
+
+    this.logger.debug(
+      `Processing commission for event: ${eventType}, sourceUser: ${sourceUserId}, amount: ${amount}`,
+    );
 
     try {
       await this.prisma.$transaction(async (tx) => {
         // 1. Get the source user and find their referrer
         const sourceUser = await tx.user.findUnique({
           where: { id: sourceUserId },
-          select: { referredBy: true }
+          select: { referredBy: true },
         });
 
         if (!sourceUser || !sourceUser.referredBy) {
-          this.logger.debug(`No referrer found for user ${sourceUserId}. Skipping commission.`);
+          this.logger.debug(
+            `No referrer found for user ${sourceUserId}. Skipping commission.`,
+          );
           return;
         }
 
@@ -39,11 +49,13 @@ export class CommissionsProcessor extends WorkerHost {
 
         // 2. Get Commission Config for the event
         const config = await tx.commissionConfig.findUnique({
-          where: { eventType }
+          where: { eventType },
         });
 
         if (!config || !config.isActive || Number(config.commissionRate) <= 0) {
-          this.logger.debug(`Commission config for ${eventType} is inactive or zero. Skipping.`);
+          this.logger.debug(
+            `Commission config for ${eventType} is inactive or zero. Skipping.`,
+          );
           return;
         }
 
@@ -61,11 +73,13 @@ export class CommissionsProcessor extends WorkerHost {
             where: {
               sourceUserId,
               eventType,
-              sourceTxId
-            }
+              sourceTxId,
+            },
           });
           if (existing) {
-            this.logger.log(`Commission already paid for event ${eventType} and tx ${sourceTxId}. Skipping.`);
+            this.logger.log(
+              `Commission already paid for event ${eventType} and tx ${sourceTxId}. Skipping.`,
+            );
             return;
           }
         }
@@ -79,11 +93,13 @@ export class CommissionsProcessor extends WorkerHost {
             amount: rewardAmount.toString(),
             currency,
             sourceTxId,
-            status: 'AVAILABLE' // Ready to claim status
-          }
+            status: 'AVAILABLE', // Ready to claim status
+          },
         });
 
-        this.logger.log(`Successfully paid commission of ${rewardAmount.toString()} ${currency} to user ${referrerId} for event ${eventType} from user ${sourceUserId}.`);
+        this.logger.log(
+          `Successfully paid commission of ${rewardAmount.toString()} ${currency} to user ${referrerId} for event ${eventType} from user ${sourceUserId}.`,
+        );
       });
     } catch (error) {
       this.logger.error(`Failed to process commission job ${job.id}`, error);

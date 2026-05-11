@@ -12,6 +12,23 @@ enum UserRole {
   ADMIN
 }
 
+enum AssetType {
+  INTEREST_BEARING
+  ACCUMULATION
+}
+
+enum ProposalType {
+  GENERAL
+  INCREASE_RELEASED_TOKEN_PERCENTAGE
+}
+
+enum InterestPaymentStatus {
+  PENDING
+  PAID
+  LATE
+  DEFAULTED
+}
+
 enum UserStatus {
   ACTIVE
   DELETED
@@ -217,14 +234,14 @@ model SupportTicket {
 }
 
 model TicketMessage {
-  id        String        @id @default(uuid())
-  ticketId  String
-  ticket    SupportTicket @relation(fields: [ticketId], references: [id])
-  senderId  String
-  sender    User          @relation("TicketMessageSender", fields: [senderId], references: [id])
-  content   String        @db.Text
+  id          String        @id @default(uuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id])
+  senderId    String
+  sender      User          @relation("TicketMessageSender", fields: [senderId], references: [id])
+  content     String        @db.Text
   attachments Json?
-  createdAt DateTime      @default(now())
+  createdAt   DateTime      @default(now())
 
   @@index([ticketId, createdAt])
 }
@@ -310,6 +327,13 @@ model Asset {
   postCashtags          PostCashtag[]
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
+
+  assetType               AssetType                @default(ACCUMULATION)
+  monthlyInterestRate     Decimal?
+  penaltyRate             Decimal?
+  retainedTokenPercentage Decimal                  @default(100)
+  releasedTokenPercentage Decimal                  @default(0)
+  interestPayments        InterestPaymentRequest[]
 }
 
 model Balance {
@@ -342,6 +366,12 @@ model AssetOnboardingRequest {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
+  assetType               AssetType @default(ACCUMULATION)
+  monthlyInterestRate     Decimal?
+  penaltyRate             Decimal?
+  retainedTokenPercentage Decimal   @default(100)
+  releasedTokenPercentage Decimal   @default(0)
+
   @@index([userId, status, createdAt(sort: Desc)])
 }
 
@@ -373,6 +403,7 @@ model DaoProposal {
   snapshotDate DateTime // Voting power snapshot time
   endDate      DateTime // Voting deadline
   status       ProposalStatus      @default(ACTIVE)
+  type         ProposalType        @default(GENERAL)
   votes        ProposalVote[]
   snapshots    DaoVotingSnapshot[]
   createdAt    DateTime            @default(now())
@@ -781,29 +812,47 @@ enum CommissionRewardStatus {
 model CommissionConfig {
   id             String          @id @default(uuid())
   eventType      CommissionEvent @unique
-  commissionRate Decimal         // e.g., 0.20 for 20%
+  commissionRate Decimal // e.g., 0.20 for 20%
   isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 }
 
 model CommissionReward {
-  id               String                 @id @default(uuid())
-  userId           String                 // Reward recipient (A)
-  user             User                   @relation("UserCommissionRewards", fields: [userId], references: [id], onDelete: Cascade)
-  sourceUserId     String                 // Event trigger user (B)
-  sourceUser       User                   @relation("SourceCommissionRewards", fields: [sourceUserId], references: [id])
-  eventType        CommissionEvent
-  amount           Decimal                // Reward amount received
-  currency         String                 @default("USDT")
-  sourceTxId       String?                // Source transaction ID
-  status           CommissionRewardStatus @default(PENDING) // Reward status
-  unlockAt         DateTime?              // Allowed claim time (Vesting)
-  claimedAt        DateTime?              // Successful claim time
-  txHash           String?                // On-chain transaction hash (Claim On-chain)
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
+  id           String                 @id @default(uuid())
+  userId       String // Reward recipient (A)
+  user         User                   @relation("UserCommissionRewards", fields: [userId], references: [id], onDelete: Cascade)
+  sourceUserId String // Event trigger user (B)
+  sourceUser   User                   @relation("SourceCommissionRewards", fields: [sourceUserId], references: [id])
+  eventType    CommissionEvent
+  amount       Decimal // Reward amount received
+  currency     String                 @default("USDT")
+  sourceTxId   String? // Source transaction ID
+  status       CommissionRewardStatus @default(PENDING) // Reward status
+  unlockAt     DateTime? // Allowed claim time (Vesting)
+  claimedAt    DateTime? // Successful claim time
+  txHash       String? // On-chain transaction hash (Claim On-chain)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
 
   @@index([userId, status])
   @@index([sourceUserId])
+}
+
+model InterestPaymentRequest {
+  id             String                @id @default(uuid())
+  assetId        String
+  asset          Asset                 @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  amountDue      Decimal
+  dueDate        DateTime
+  status         InterestPaymentStatus @default(PENDING)
+  txHash         String?
+  paidAt         DateTime?
+  penaltyApplied Boolean               @default(false)
+  penaltyAmount  Decimal?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([assetId, status])
+  @@index([dueDate, status])
 }

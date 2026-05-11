@@ -67,7 +67,7 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
       const worker = new Worker(
         queueName,
         async (job) => {
-          await this.matchOrder(job.data);
+          await this.matchOrder(job.data as OrderMatchingJobData);
         },
         { connection: this.getRedisConnection(), concurrency: 1 },
       );
@@ -129,10 +129,12 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
       const assetId = order.assetId;
       const userId = order.userId;
 
-      const priceDec = new Decimal(order.price?.toString() ?? 0);
-      const quantityDec = new Decimal(order.quantity.toString());
+      const priceDec = new Decimal(
+        (order.price as unknown as string)?.toString() ?? 0,
+      );
+      const quantityDec = new Decimal(order.quantity.toString() as string);
       // Find matching orders from counterparty
-      const oppositeOrderSide = side === 'BUY' ? 'SELL' : 'BUY';
+      const oppositeOrderSide = (side as string) === 'BUY' ? 'SELL' : 'BUY';
       const priceFilter =
         order.type === 'MARKET'
           ? undefined
@@ -155,7 +157,9 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
       });
 
       let remainingQuantity = quantityDec;
-      let currentOrderFilled = new Decimal(order.filledQuantity.toString());
+      let currentOrderFilled = new Decimal(
+        order.filledQuantity.toString() as string,
+      );
       let tradeCount = 0;
       const maxTotalCost =
         order.type === 'MARKET' && side === 'BUY'
@@ -176,15 +180,17 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
           if (remainingQuantity.isZero()) break;
 
           const matchingOrderRemaining = new Decimal(
-            matchingOrder.quantity,
-          ).minus(matchingOrder.filledQuantity);
+            matchingOrder.quantity as unknown as string,
+          ).minus(matchingOrder.filledQuantity as unknown as string);
           if (matchingOrderRemaining.lte(0)) continue;
 
           let matchableQuantity = Decimal.min(
             remainingQuantity,
             matchingOrderRemaining,
           );
-          const matchPrice = new Decimal(matchingOrder.price?.toString() ?? 0);
+          const matchPrice = new Decimal(
+            (matchingOrder.price as unknown as string)?.toString() ?? 0,
+          );
 
           if (order.type === 'MARKET' && side === 'BUY' && maxTotalCost) {
             const cost = matchableQuantity.times(matchPrice);
@@ -202,10 +208,10 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
             : 'PARTIALLY_FILLED';
 
           const newMatchingOrderFilled = new Decimal(
-            matchingOrder.filledQuantity,
+            matchingOrder.filledQuantity as unknown as string,
           ).plus(matchableQuantity);
           const isMatchingOrderFilled = newMatchingOrderFilled.equals(
-            new Decimal(matchingOrder.quantity),
+            new Decimal(matchingOrder.quantity as unknown as string),
           );
           const matchingOrderNewStatus: OrderStatus = isMatchingOrderFilled
             ? 'FILLED'

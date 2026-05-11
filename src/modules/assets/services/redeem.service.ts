@@ -263,7 +263,7 @@ export class RedeemService {
     const burnTxHash = await this.blockchainService.burnAssetToken({
       assetAddress: req.asset.contractAddress,
       amount: parseUnits(
-        new Decimal(req.tokenQuantity as any).toString(),
+        new Decimal(req.tokenQuantity as unknown as string).toString(),
         DEFAULT_ASSET_TOKEN_DECIMALS,
       ),
     });
@@ -281,7 +281,7 @@ export class RedeemService {
         data: {
           userId: req.userId,
           type: $Enums.TransactionType.BURN,
-          amount: new Decimal(req.tokenQuantity as any),
+          amount: new Decimal(req.tokenQuantity as unknown as string),
           fee: new Decimal(0),
           status: $Enums.TransactionStatus.PENDING,
           txHash: burnTxHash,

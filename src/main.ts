@@ -292,12 +292,16 @@ async function bootstrap() {
   const logger = app.get<LoggerService>(WINSTON_MODULE_NEST_PROVIDER);
   const configService = app.get(AppConfigService);
   app.useLogger(logger);
-  
+
   // Enable shutdown hooks to ensure Prisma disconnects on hot-reload
   app.enableShutdownHooks();
 
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+    ],
     credentials: true,
   });
 

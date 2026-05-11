@@ -6,6 +6,7 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BlockchainService } from './blockchain.service';
 import { MultiSigService } from '@/shared/services/multisig.service';
+import { CreateKycDto } from '../dto/create-kyc.dto';
 
 const mockPrisma = {
   $transaction: jest.fn(),
@@ -84,7 +85,7 @@ describe('KycService', () => {
 
       mockPrisma.$transaction.mockResolvedValue([]);
 
-      const result = await service.submitKyc('user-id', dto as any);
+      const result = await service.submitKyc('user-id', dto as CreateKycDto);
 
       expect(result).toEqual({
         message: 'KYC information submitted successfully.',

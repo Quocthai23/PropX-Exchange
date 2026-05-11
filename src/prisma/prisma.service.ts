@@ -22,6 +22,7 @@ export class PrismaService
 
     // allow overriding pool max via env DATABASE_POOL_MAX
     const poolMax = Number(process.env.DATABASE_POOL_MAX ?? '10');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const adapter = new PrismaMariaDb(datasourceUrl, {
       connectionLimit: poolMax,
     } as any);
@@ -32,6 +33,7 @@ export class PrismaService
       return g.__prisma;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     super({ adapter } as any);
     g.__prisma = this;
   }
@@ -51,7 +53,7 @@ export class PrismaService
         // If we've exhausted retries, rethrow
         if (i === maxRetries) throw lastErr;
         // wait and retry
-        // eslint-disable-next-line no-await-in-loop
+
         await new Promise((res) => setTimeout(res, backoff));
       }
     }

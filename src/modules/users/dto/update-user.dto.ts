@@ -21,7 +21,8 @@ export class UpdateProfileDto {
   avatar?: string;
 
   @ApiPropertyOptional({
-    description: 'New username. Must be 3-100 characters: only letters, numbers, and underscores allowed.',
+    description:
+      'New username. Must be 3-100 characters: only letters, numbers, and underscores allowed.',
     minLength: 3,
     maxLength: 100,
     pattern: '^[A-Za-z0-9_]+$',
@@ -46,10 +47,12 @@ export class UpdateProfileDto {
   gender?: Gender;
 
   @ApiPropertyOptional({
-    description: 'Short bio or description displayed on the user profile. Maximum 255 characters.',
+    description:
+      'Short bio or description displayed on the user profile. Maximum 255 characters.',
     minLength: 0,
     maxLength: 255,
-    example: 'Crypto enthusiast & RWA investor. Building the future of finance.',
+    example:
+      'Crypto enthusiast & RWA investor. Building the future of finance.',
   })
   @IsOptional()
   @IsString()
@@ -57,7 +60,8 @@ export class UpdateProfileDto {
   bio?: string;
 
   @ApiPropertyOptional({
-    description: 'Publicly accessible URL of the cover/banner image for the profile.',
+    description:
+      'Publicly accessible URL of the cover/banner image for the profile.',
     format: 'uri',
     example: 'https://cdn.example.com/covers/banner_123.jpg',
   })
@@ -66,7 +70,8 @@ export class UpdateProfileDto {
   coverAvatar?: string;
 
   @ApiPropertyOptional({
-    description: 'Display name shown on the profile (may differ from username).',
+    description:
+      'Display name shown on the profile (may differ from username).',
     example: 'John Doe',
   })
   @IsOptional()
@@ -76,7 +81,8 @@ export class UpdateProfileDto {
 
 export class UpdateReferralDto {
   @ApiProperty({
-    description: 'Referral code to associate with this account. Can only be set once.',
+    description:
+      'Referral code to associate with this account. Can only be set once.',
     minLength: 1,
     maxLength: 50,
     example: 'REF-ABC123',

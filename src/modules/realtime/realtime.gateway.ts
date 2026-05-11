@@ -96,7 +96,7 @@ export class RealtimeGateway
       return;
     }
 
-    await client.join(this.userRoom(userId));
+    await client.join(this.userRoom(userId as string));
   }
 
   emitTradeMatched(payload: TradeRealtimePayload): void {

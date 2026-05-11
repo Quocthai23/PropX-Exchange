@@ -86,13 +86,20 @@ export class AuthController {
   @ApiBearerAuth('accessToken')
   @SkipThrottle()
   @HttpCode(HttpStatus.OK)
-  @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
+  @ApiConsumes(
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  )
   @ApiOperation({
     summary: 'Send OTP',
-    description: 'Send a one-time password to the specified email for registration, password reset, withdrawal, or transfer verification.',
+    description:
+      'Send a one-time password to the specified email for registration, password reset, withdrawal, or transfer verification.',
   })
   @ApiOkResponse({ description: 'OTP sent successfully.' })
-  @ApiBadRequestResponse({ description: 'Invalid email address or unsupported purpose.' })
+  @ApiBadRequestResponse({
+    description: 'Invalid email address or unsupported purpose.',
+  })
   async sendOtp(
     @Body() dto: SendOtpDto,
     @CurrentUser() user?: JwtPayload & { email?: string },
@@ -110,7 +117,11 @@ export class AuthController {
   @ApiBearerAuth('accessToken')
   @SkipThrottle()
   @HttpCode(HttpStatus.OK)
-  @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
+  @ApiConsumes(
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  )
   @ApiOperation({
     summary: 'Verify OTP',
     description:
@@ -120,7 +131,9 @@ export class AuthController {
     description:
       'Returns a short-lived, single-purpose token upon successful OTP verification.',
   })
-  @ApiBadRequestResponse({ description: 'OTP is invalid, expired, or email does not match.' })
+  @ApiBadRequestResponse({
+    description: 'OTP is invalid, expired, or email does not match.',
+  })
   async verifyOtp(
     @Body() dto: VerifyOtpDto,
     @CurrentUser() user?: JwtPayload & { email?: string },
@@ -136,15 +149,24 @@ export class AuthController {
   @Post('register')
   @SkipThrottle()
   @HttpCode(HttpStatus.OK)
-  @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
+  @ApiConsumes(
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  )
   @ApiOperation({
     summary: 'Register a new user and auto-login',
-    description: 'Create a new user account using a verified register token from /auth/verify-otp. Returns JWT tokens or a challenge if MFA is required.',
+    description:
+      'Create a new user account using a verified register token from /auth/verify-otp. Returns JWT tokens or a challenge if MFA is required.',
   })
   @ApiOkResponse({
-    description: 'Returns access token + user object, or ChallengeRequiredResponse when MFA is needed.',
+    description:
+      'Returns access token + user object, or ChallengeRequiredResponse when MFA is needed.',
   })
-  @ApiBadRequestResponse({ description: 'Invalid register token, email already exists, or username taken.' })
+  @ApiBadRequestResponse({
+    description:
+      'Invalid register token, email already exists, or username taken.',
+  })
   async register(
     @Body() dto: RegisterDto,
     @Req() req: Request,
@@ -211,12 +233,19 @@ export class AuthController {
 
   @Post('login-with-social')
   @HttpCode(HttpStatus.OK)
-  @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
+  @ApiConsumes(
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  )
   @ApiOperation({
     summary: 'Login with social',
-    description: 'Authenticate using a Google or Apple ID token from the React Native SDK.',
+    description:
+      'Authenticate using a Google or Apple ID token from the React Native SDK.',
   })
-  @ApiOkResponse({ description: 'Returns access token + user object on success.' })
+  @ApiOkResponse({
+    description: 'Returns access token + user object on success.',
+  })
   loginWithSocial(@Body() dto: LoginWithSocialDto, @Req() req: Request) {
     return this.authService.loginWithSocial(
       dto.provider,
@@ -230,7 +259,8 @@ export class AuthController {
   @ApiConsumes('application/json', 'application/x-www-form-urlencoded')
   @ApiOperation({
     summary: 'Generate nonce for SIWE flow',
-    description: 'Generate a one-time nonce to be embedded in the SIWE message before wallet signing.',
+    description:
+      'Generate a one-time nonce to be embedded in the SIWE message before wallet signing.',
   })
   @ApiOkResponse({ description: 'Returns a random nonce string.' })
   getWeb3Nonce(@Body() dto: Web3NonceDto) {
@@ -242,10 +272,15 @@ export class AuthController {
   @ApiConsumes('application/json', 'application/x-www-form-urlencoded')
   @ApiOperation({
     summary: 'Login/Register by wallet signature (SIWE)',
-    description: 'Verify an EIP-4361 signature to authenticate or register a user via their Web3 wallet.',
+    description:
+      'Verify an EIP-4361 signature to authenticate or register a user via their Web3 wallet.',
   })
-  @ApiOkResponse({ description: 'Returns access token + user object on success.' })
-  @ApiBadRequestResponse({ description: 'Invalid signature, nonce mismatch, or expired nonce.' })
+  @ApiOkResponse({
+    description: 'Returns access token + user object on success.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid signature, nonce mismatch, or expired nonce.',
+  })
   async verifySignature(
     @Body() dto: VerifySignatureDto,
     @Req() req: Request,
@@ -272,13 +307,19 @@ export class AuthController {
   @Post('login')
   @Throttle({ short: { limit: 5, ttl: 60000 } }) // Stricter throttle for login
   @HttpCode(HttpStatus.OK)
-  @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
+  @ApiConsumes(
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  )
   @ApiOperation({
     summary: 'Login with email and password',
-    description: 'Authenticate with email/password credentials. Returns JWT tokens or an MFA challenge if enabled.',
+    description:
+      'Authenticate with email/password credentials. Returns JWT tokens or an MFA challenge if enabled.',
   })
   @ApiOkResponse({
-    description: 'Returns access token + user object, or ChallengeRequiredResponse when MFA is needed.',
+    description:
+      'Returns access token + user object, or ChallengeRequiredResponse when MFA is needed.',
   })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password.' })
   async login(
@@ -319,10 +360,15 @@ export class AuthController {
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
+  @ApiConsumes(
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  )
   @ApiOperation({
     summary: 'Reset password',
-    description: 'Reset the user password using a verified reset token from /auth/verify-otp.',
+    description:
+      'Reset the user password using a verified reset token from /auth/verify-otp.',
   })
   @ApiOkResponse({ description: 'Password reset successfully.' })
   @ApiBadRequestResponse({ description: 'Invalid or expired reset token.' })
@@ -336,10 +382,15 @@ export class AuthController {
 
   @Post('check-email')
   @HttpCode(HttpStatus.OK)
-  @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
+  @ApiConsumes(
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  )
   @ApiOperation({
     summary: 'Check email exists',
-    description: 'Check whether the given email address is already registered in the system.',
+    description:
+      'Check whether the given email address is already registered in the system.',
   })
   @ApiOkResponse({ description: 'Returns { exists: boolean }.' })
   checkEmail(@Body() dto: CheckEmailDto) {
@@ -350,10 +401,15 @@ export class AuthController {
 
   @Post('check-reference-code')
   @HttpCode(HttpStatus.OK)
-  @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
+  @ApiConsumes(
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  )
   @ApiOperation({
     summary: 'Check reference code',
-    description: 'Validate whether a referral code exists and is eligible for use during registration.',
+    description:
+      'Validate whether a referral code exists and is eligible for use during registration.',
   })
   @ApiOkResponse({ description: 'Returns validity of the reference code.' })
   checkReferenceCode(@Body() dto: CheckReferenceCodeDto) {
@@ -366,7 +422,8 @@ export class AuthController {
   @ApiConsumes('application/json', 'application/x-www-form-urlencoded')
   @ApiOperation({
     summary: 'Create an auth challenge for sensitive purposes',
-    description: 'Initiate an MFA challenge for a sensitive operation such as withdrawal or transfer. Returns a challengeId to be verified with the chosen MFA factor.',
+    description:
+      'Initiate an MFA challenge for a sensitive operation such as withdrawal or transfer. Returns a challengeId to be verified with the chosen MFA factor.',
   })
   @ApiOkResponse({ description: 'Returns challengeId and requiredFactors.' })
   async createChallenge(
@@ -383,7 +440,8 @@ export class AuthController {
   @ApiConsumes('application/json', 'application/x-www-form-urlencoded')
   @ApiOperation({
     summary: 'Verify Challenge',
-    description: 'Submit the MFA code (TOTP or Email OTP) to complete a challenge and receive a verified challengeId for downstream actions.',
+    description:
+      'Submit the MFA code (TOTP or Email OTP) to complete a challenge and receive a verified challengeId for downstream actions.',
   })
   @ApiOkResponse({ description: 'Returns verified challengeId on success.' })
   @ApiBadRequestResponse({ description: 'Invalid or expired MFA code.' })
@@ -429,10 +487,15 @@ export class AuthController {
   @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
+  @ApiConsumes(
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  )
   @ApiOperation({
     summary: 'Change Password',
-    description: 'Change the password for the currently authenticated user. Requires the old password for verification.',
+    description:
+      'Change the password for the currently authenticated user. Requires the old password for verification.',
   })
   @ApiOkResponse({ description: 'Password changed successfully.' })
   @ApiUnauthorizedResponse({ description: 'Old password is incorrect.' })

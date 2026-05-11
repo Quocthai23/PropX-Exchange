@@ -1,7 +1,26 @@
-import { Controller, Get, Put, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Put,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
 import { CommissionsService } from './commissions.service';
-import { UpdateCommissionConfigDto, GetRewardsQueryDto, ClaimRewardsDto } from './dto/commission.dto';
+import {
+  UpdateCommissionConfigDto,
+  GetRewardsQueryDto,
+  ClaimRewardsDto,
+} from './dto/commission.dto';
 import { CommissionEvent } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/dto/roles.guard';
@@ -28,7 +47,10 @@ export class CommissionsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update a commission config (Admin Only)' })
   @ApiParam({ name: 'eventType', enum: CommissionEvent })
-  @ApiResponse({ status: 200, description: 'Return the updated commission config.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the updated commission config.',
+  })
   async updateConfig(
     @Param('eventType') eventType: CommissionEvent,
     @Body() dto: UpdateCommissionConfigDto,
@@ -38,7 +60,10 @@ export class CommissionsController {
 
   @Get('rewards')
   @ApiOperation({ summary: 'Get current user commission rewards' })
-  @ApiResponse({ status: 200, description: 'Return user rewards with pagination.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return user rewards with pagination.',
+  })
   async getUserRewards(
     @CurrentUser('id') userId: string,
     @Query() query: GetRewardsQueryDto,
@@ -54,8 +79,13 @@ export class CommissionsController {
   }
 
   @Post('claim')
-  @ApiOperation({ summary: 'Generate a claim signature for the user to claim on-chain' })
-  @ApiResponse({ status: 201, description: 'Return EIP-712/191 signature and payload.' })
+  @ApiOperation({
+    summary: 'Generate a claim signature for the user to claim on-chain',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Return EIP-712/191 signature and payload.',
+  })
   async claimRewards(
     @CurrentUser('id') userId: string,
     @Body() dto: ClaimRewardsDto,

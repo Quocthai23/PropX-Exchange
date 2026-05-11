@@ -9,7 +9,10 @@ import Decimal from 'decimal.js';
 import { PrismaService } from '@/prisma/prisma.service';
 import { createClient } from 'redis';
 import { AppConfigService } from '@/config/app-config.service';
-import { KlineGateway, type KlineUpdatePayload } from '../gateways/kline.gateway';
+import {
+  KlineGateway,
+  type KlineUpdatePayload,
+} from '../gateways/kline.gateway';
 
 type DecimalValue = string | number | { toString(): string };
 
@@ -190,6 +193,8 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
         newVolume = new Decimal(existing.volume).add(quantity).toString();
       }
 
+      // Continue with updated values to cache and emit
+
       await this.redisClient.set(
         cacheKey,
         JSON.stringify({
@@ -248,6 +253,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
         openTime.setMinutes(0);
         break;
     }
+
     return openTime;
   }
 
@@ -289,6 +295,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
         const trade = JSON.parse(tradeStr);
         const timestamp = new Date(trade.timestamp);
 
+
         for (const resolution of resolutions) {
           const openTime = this.getOpenTimeForResolution(timestamp, resolution);
           const groupKey = `${trade.assetId}_${resolution}_${openTime.getTime()}`;
@@ -313,6 +320,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
               .add(trade.quantity)
               .toString();
           }
+
         }
       }
 
@@ -385,7 +393,9 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       for (const a of assets) {
         const anchor = await this.getReferencePriceAnchor(a.id);
         const ref =
-          anchor.referencePrice ?? anchor.valuationSnapshotPrice ?? anchor.marketPrice;
+          anchor.referencePrice ??
+          anchor.valuationSnapshotPrice ??
+          anchor.marketPrice;
         if (!ref) continue;
 
         const fluctuation = (Math.random() * 2 - 1) * 0.01; // +/-1%
@@ -432,8 +442,10 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     const cacheKey = `${this.REDIS_OHLC_CACHE_PREFIX}${assetId}:${resolution}:${openTimeMs.getTime()}`;
     const cachedStr = await this.redisClient.get(cacheKey);
     if (cachedStr) {
-      const cached = JSON.parse(cachedStr);
-      const cachedTime = Math.floor(new Date(cached.openTime).getTime() / 1000);
+      const cached = JSON.parse(cachedStr) as any;
+      const cachedTime = Math.floor(
+        new Date(cached.openTime as string | number).getTime() / 1000,
+      );
 
       const existingIdx = results.findIndex((r) => r.time === cachedTime);
       if (existingIdx !== -1) {

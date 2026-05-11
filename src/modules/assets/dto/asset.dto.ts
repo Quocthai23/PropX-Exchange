@@ -16,7 +16,8 @@ import {
 
 export class UpdateAssetDto {
   @ApiPropertyOptional({
-    description: 'Ticker symbol used to identify the asset (e.g. EURUSD, AAPL, GOLD).',
+    description:
+      'Ticker symbol used to identify the asset (e.g. EURUSD, AAPL, GOLD).',
     example: 'EURUSD',
     minLength: 1,
     maxLength: 20,
@@ -28,7 +29,8 @@ export class UpdateAssetDto {
   symbol?: string;
 
   @ApiPropertyOptional({
-    description: 'Symbol used to fetch real-time price from the data provider (may differ from display symbol).',
+    description:
+      'Symbol used to fetch real-time price from the data provider (may differ from display symbol).',
     example: 'EUR/USD',
     minLength: 1,
     maxLength: 20,
@@ -69,7 +71,8 @@ export class UpdateAssetDto {
   logo?: string;
 
   @ApiPropertyOptional({
-    description: 'Number of decimal places for displaying the asset price (0-20).',
+    description:
+      'Number of decimal places for displaying the asset price (0-20).',
     example: 5,
     minimum: 0,
     maximum: 20,
@@ -157,7 +160,8 @@ export class UpdateAssetDto {
   @Matches(/^-?\d+(\.\d+)?$/)
   maxTradeSize?: string;
   @ApiPropertyOptional({
-    description: 'Step increment for trade volume (e.g. 0.01 means orders must be multiples of 0.01).',
+    description:
+      'Step increment for trade volume (e.g. 0.01 means orders must be multiples of 0.01).',
     example: '0.01',
     pattern: '^-?\\d+(\\.\\d+)?$',
   })
@@ -175,7 +179,8 @@ export class UpdateAssetDto {
   @Matches(/^-?\d+(\.\d+)?$/)
   pipSize?: string;
   @ApiPropertyOptional({
-    description: 'Maximum allowed price slippage in pips during order execution.',
+    description:
+      'Maximum allowed price slippage in pips during order execution.',
     example: '3',
     pattern: '^-?\\d+(\\.\\d+)?$',
   })
@@ -183,7 +188,13 @@ export class UpdateAssetDto {
   @IsString()
   @Matches(/^-?\d+(\.\d+)?$/)
   slippage?: string;
-  @ApiPropertyOptional({ description: 'Swap calculation type (e.g. Points, Percent, Currency).', example: 'Points' }) @IsOptional() @IsString() swapType?: string;
+  @ApiPropertyOptional({
+    description: 'Swap calculation type (e.g. Points, Percent, Currency).',
+    example: 'Points',
+  })
+  @IsOptional()
+  @IsString()
+  swapType?: string;
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

@@ -5,11 +5,19 @@ import { OrderMatchingService } from './order-matching.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { TradingLedgerService } from './trading-ledger.service';
 import { MarketDataService } from '@/modules/market-data/services/market-data.service';
+import { ConfigService } from '@nestjs/config';
 
 const mockQueue = {
   add: jest.fn(),
   count: jest.fn(),
 };
+ 
+jest.mock('bullmq', () => ({
+  Queue: jest.fn().mockImplementation(() => mockQueue),
+  Worker: jest.fn().mockImplementation(() => ({
+    close: jest.fn(),
+  })),
+}));
 
 const mockTx = {
   order: { update: jest.fn() },
@@ -33,6 +41,10 @@ const mockTradingLedgerService = {
 const mockMarketDataService = {
   recordTrade: jest.fn(),
 };
+ 
+const mockConfigService = {
+  get: jest.fn(),
+};
 
 describe('OrderMatchingService', () => {
   let service: OrderMatchingService;
@@ -45,6 +57,7 @@ describe('OrderMatchingService', () => {
         { provide: TradingLedgerService, useValue: mockTradingLedgerService },
         { provide: MarketDataService, useValue: mockMarketDataService },
         { provide: getQueueToken('order-matching'), useValue: mockQueue },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 

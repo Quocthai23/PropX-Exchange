@@ -161,7 +161,7 @@ export class TradingLedgerService {
         sourceUserId: sellerId,
         amount: quoteAmount.toNumber(),
         sourceTxId: `${sellerId}_${assetId}_${Date.now()}`,
-      })
+      }),
     ]);
   }
 

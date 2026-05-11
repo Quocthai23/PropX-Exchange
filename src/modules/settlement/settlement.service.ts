@@ -128,7 +128,7 @@ export class SettlementService {
         }));
 
         // Submit on-chain transaction
-        const txHash = this.blockchainService.batchSettleTrades(
+        const txHash = await this.blockchainService.batchSettleTrades(
           asset.contractAddress,
           settlementData,
         );

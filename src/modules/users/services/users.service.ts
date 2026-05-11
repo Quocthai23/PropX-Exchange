@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { UpdateProfileDto, UpdateReferralDto } from '../dto/update-user.dto';
 import {
@@ -193,7 +190,12 @@ export class UsersService {
     skip: number,
     take: number,
   ) {
-    return this.relationsService.getRelations(targetUserId, relationType, skip, take);
+    return this.relationsService.getRelations(
+      targetUserId,
+      relationType,
+      skip,
+      take,
+    );
   }
 
   async upsertRelation(
@@ -201,6 +203,10 @@ export class UsersService {
     targetUserId: string,
     dto: UpsertRelationDto,
   ) {
-    return this.relationsService.upsertRelation(currentUserId, targetUserId, dto);
+    return this.relationsService.upsertRelation(
+      currentUserId,
+      targetUserId,
+      dto,
+    );
   }
 }

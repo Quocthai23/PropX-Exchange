@@ -7,6 +7,11 @@ import { UsersController } from './controllers/users.controller';
 
 @Module({
   controllers: [UsersController],
-  providers: [UsersService, UserPortfolioService, UserRelationsService, PrismaService],
+  providers: [
+    UsersService,
+    UserPortfolioService,
+    UserRelationsService,
+    PrismaService,
+  ],
 })
 export class UsersModule {}
