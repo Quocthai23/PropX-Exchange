@@ -34,6 +34,7 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../../auth/types/jwt-payload.type';
+import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -60,16 +61,17 @@ export class PostsController {
   // ==========================================
 
   @Get()
+  @OptionalAuth()
   @ApiOperation({
     summary: 'List posts',
     description: 'List social posts with filtering and sorting',
   })
   @ApiResponse({ status: 200, description: 'Return paginated list of posts' })
   async getPosts(
-    @CurrentUser() user: JwtPayload,
+    @CurrentUser() user: JwtPayload | undefined,
     @Query() query: QueryPostsDto,
   ) {
-    return await this.postsService.getPosts(user.sub, query);
+    return await this.postsService.getPosts(user?.sub, query);
   }
 
   // NOTE: Route /me/bookmarks must be placed BEFORE route /:postId to avoid misrouting

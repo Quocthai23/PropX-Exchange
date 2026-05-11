@@ -30,7 +30,7 @@ export class PostsService {
     this.redisClient.connect().catch(console.error);
   }
 
-  async getPosts(userId: string, query: QueryPostsDto) {
+  async getPosts(userId: string | undefined, query: QueryPostsDto) {
     const where: any = {};
     const limit = query.take || 20;
     const cursorObj = (query as any).cursor
@@ -39,7 +39,7 @@ export class PostsService {
 
     // Use Redis Feed if possible
     let redisPostIds: string[] = [];
-    if (!where.userId && !(query as any).cursor) {
+    if (!where.userId && !(query as any).cursor && userId) {
       // Trying to fetch the main feed for the user
       const feedKey = `feed:user:${userId}`;
       // In a real app we'd paginate Redis as well using LRANGE with skip logic,
@@ -60,14 +60,18 @@ export class PostsService {
         cursor: cursorObj,
         include: {
           user: true,
-          likes: {
-            where: { userId },
-            select: { id: true },
-          },
-          bookmarks: {
-            where: { userId },
-            select: { id: true },
-          },
+          likes: userId
+            ? {
+                where: { userId },
+                select: { id: true },
+              }
+            : false,
+          bookmarks: userId
+            ? {
+                where: { userId },
+                select: { id: true },
+              }
+            : false,
           _count: {
             select: {
               likes: true,

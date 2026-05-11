@@ -5,24 +5,40 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
 import type { JwtPayload } from '../types/jwt-payload.type';
 import { RequestWithUser } from '../types/request-with-user.type';
+import { IS_OPTIONAL_AUTH_KEY } from '../decorators/optional-auth.decorator';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isOptional = this.reflector.getAllAndOverride<boolean>(
+      IS_OPTIONAL_AUTH_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
+      if (isOptional) {
+        return true;
+      }
       throw new UnauthorizedException('Authentication token not found');
     }
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
       request.user = payload;
     } catch {
+      if (isOptional) {
+        return true;
+      }
       throw new UnauthorizedException('Invalid or expired token');
     }
     return true;

@@ -42,7 +42,7 @@ import {
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import type { JwtPayload } from '../types/jwt-payload.type';
-import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
+import { ThrottlerGuard, Throttle, SkipThrottle } from '@nestjs/throttler';
 import type { Response, Request } from 'express';
 import { AppConfigService } from '@/config/app-config.service';
 
@@ -84,7 +84,7 @@ export class AuthController {
 
   @Post('send-otp')
   @ApiBearerAuth('accessToken')
-  @Throttle({ short: { limit: 3, ttl: 300000 } })
+  @SkipThrottle()
   @HttpCode(HttpStatus.OK)
   @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
   @ApiOperation({
@@ -108,6 +108,7 @@ export class AuthController {
 
   @Post('verify-otp')
   @ApiBearerAuth('accessToken')
+  @SkipThrottle()
   @HttpCode(HttpStatus.OK)
   @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
   @ApiOperation({
@@ -133,6 +134,7 @@ export class AuthController {
   }
 
   @Post('register')
+  @SkipThrottle()
   @HttpCode(HttpStatus.OK)
   @ApiConsumes('application/json', 'application/x-www-form-urlencoded', 'multipart/form-data')
   @ApiOperation({

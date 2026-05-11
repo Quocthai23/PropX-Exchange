@@ -7,6 +7,7 @@ import { MfaService } from './services/mfa.service';
 import { Web3AuthService } from './services/web3-auth.service';
 import { AuthRedisService } from './services/auth-redis.service';
 import { AuthController } from './controllers/auth.controller';
+import { AuthCleanupCron } from './jobs/auth-cleanup.cron';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AppConfigService } from '@/config/app-config.service';
 
@@ -30,6 +31,7 @@ import { AppConfigService } from '@/config/app-config.service';
     Web3AuthService,
     AuthRedisService,
     PrismaService,
+    AuthCleanupCron,
   ],
 })
 export class AuthModule {}

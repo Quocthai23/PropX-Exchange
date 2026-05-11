@@ -170,60 +170,85 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     // Push trade to Redis queue for background DB sync
     await this.redisClient.rPush(this.REDIS_TRADE_QUEUE, tradeData);
 
-    // Update in-memory Redis OHLC immediately for fast access
-    const openTime = new Date(timestamp);
-    openTime.setSeconds(0, 0);
-    const cacheKey = `${this.REDIS_OHLC_CACHE_PREFIX}${assetId}:1m:${openTime.getTime()}`;
+    const resolutions = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
-    const existingStr = await this.redisClient.get(cacheKey);
-    if (existingStr) {
-      const existing = JSON.parse(existingStr);
-      existing.high = Decimal.max(existing.high, price).toString();
-      existing.low = Decimal.min(existing.low, price).toString();
-      existing.close = price;
-      existing.volume = new Decimal(existing.volume).add(quantity).toString();
-      await this.redisClient.set(cacheKey, JSON.stringify(existing), {
-        EX: 86400,
-      }); // expire in 1 day
-    } else {
+    for (const resolution of resolutions) {
+      const openTime = this.getOpenTimeForResolution(timestamp, resolution);
+      const cacheKey = `${this.REDIS_OHLC_CACHE_PREFIX}${assetId}:${resolution}:${openTime.getTime()}`;
+
+      const existingStr = await this.redisClient.get(cacheKey);
+      let newOpen = price;
+      let newHigh = price;
+      let newLow = price;
+      let newVolume = quantity;
+
+      if (existingStr) {
+        const existing = JSON.parse(existingStr);
+        newOpen = existing.open;
+        newHigh = Decimal.max(existing.high, price).toString();
+        newLow = Decimal.min(existing.low, price).toString();
+        newVolume = new Decimal(existing.volume).add(quantity).toString();
+      }
+
       await this.redisClient.set(
         cacheKey,
         JSON.stringify({
           assetId,
-          resolution: '1m',
+          resolution,
           openTime: openTime.toISOString(),
-          open: price,
-          high: price,
-          low: price,
+          open: newOpen,
+          high: newHigh,
+          low: newLow,
           close: price,
-          volume: quantity,
+          volume: newVolume,
         }),
         { EX: 86400 },
       );
+
+      const emittedKline: KlineUpdatePayload = {
+        assetId,
+        resolution,
+        time: Math.floor(openTime.getTime() / 1000),
+        open: Number(newOpen),
+        high: Number(newHigh),
+        low: Number(newLow),
+        close: Number(price),
+        volume: Number(newVolume),
+        isClosed: false,
+      };
+
+      this.klineGateway.emitKline(emittedKline);
     }
+  }
 
-    const emittedKline: KlineUpdatePayload = {
-      assetId,
-      resolution: '1m',
-      time: Math.floor(openTime.getTime() / 1000),
-      open: Number(price),
-      high: Number(tradePrice),
-      low: Number(tradePrice),
-      close: Number(tradePrice),
-      volume: Number(tradeQuantity),
-      isClosed: false,
-    };
+  private getOpenTimeForResolution(timestamp: Date, resolution: string): Date {
+    const openTime = new Date(timestamp);
+    openTime.setSeconds(0, 0);
+    const minutes = openTime.getMinutes();
+    const hours = openTime.getHours();
 
-    if (existingStr) {
-      const existing = JSON.parse(existingStr);
-      emittedKline.open = Number(existing.open);
-      emittedKline.high = Number(existing.high);
-      emittedKline.low = Number(existing.low);
-      emittedKline.close = Number(price);
-      emittedKline.volume = Number(new Decimal(existing.volume).add(quantity));
+    switch (resolution) {
+      case '1m':
+        break;
+      case '5m':
+        openTime.setMinutes(Math.floor(minutes / 5) * 5);
+        break;
+      case '15m':
+        openTime.setMinutes(Math.floor(minutes / 15) * 15);
+        break;
+      case '1h':
+        openTime.setMinutes(0);
+        break;
+      case '4h':
+        openTime.setHours(Math.floor(hours / 4) * 4);
+        openTime.setMinutes(0);
+        break;
+      case '1d':
+        openTime.setHours(0);
+        openTime.setMinutes(0);
+        break;
     }
-
-    this.klineGateway.emitKline(emittedKline);
+    return openTime;
   }
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -243,11 +268,12 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
 
       const prisma = this.prisma as unknown as MarketDataPrisma;
 
-      // Group trades by assetId + openTime
+      // Group trades by assetId + resolution + openTime
       const groupedTrades: Record<
         string,
         {
           assetId: string;
+          resolution: string;
           openTime: Date;
           open: string;
           high: string;
@@ -257,32 +283,36 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
         }
       > = {};
 
+      const resolutions = ['1m', '5m', '15m', '1h', '4h', '1d'];
+
       for (const tradeStr of tradesData) {
         const trade = JSON.parse(tradeStr);
         const timestamp = new Date(trade.timestamp);
-        const openTime = new Date(timestamp);
-        openTime.setSeconds(0, 0);
 
-        const groupKey = `${trade.assetId}_${openTime.getTime()}`;
+        for (const resolution of resolutions) {
+          const openTime = this.getOpenTimeForResolution(timestamp, resolution);
+          const groupKey = `${trade.assetId}_${resolution}_${openTime.getTime()}`;
 
-        if (!groupedTrades[groupKey]) {
-          groupedTrades[groupKey] = {
-            assetId: trade.assetId,
-            openTime,
-            open: trade.price,
-            high: trade.price,
-            low: trade.price,
-            close: trade.price,
-            volume: trade.quantity,
-          };
-        } else {
-          const current = groupedTrades[groupKey];
-          current.high = Decimal.max(current.high, trade.price).toString();
-          current.low = Decimal.min(current.low, trade.price).toString();
-          current.close = trade.price;
-          current.volume = new Decimal(current.volume)
-            .add(trade.quantity)
-            .toString();
+          if (!groupedTrades[groupKey]) {
+            groupedTrades[groupKey] = {
+              assetId: trade.assetId,
+              resolution,
+              openTime,
+              open: trade.price,
+              high: trade.price,
+              low: trade.price,
+              close: trade.price,
+              volume: trade.quantity,
+            };
+          } else {
+            const current = groupedTrades[groupKey];
+            current.high = Decimal.max(current.high, trade.price).toString();
+            current.low = Decimal.min(current.low, trade.price).toString();
+            current.close = trade.price;
+            current.volume = new Decimal(current.volume)
+              .add(trade.quantity)
+              .toString();
+          }
         }
       }
 
@@ -292,7 +322,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
           where: {
             assetId_resolution_openTime: {
               assetId: group.assetId,
-              resolution: '1m',
+              resolution: group.resolution,
               openTime: group.openTime,
             },
           },
@@ -302,7 +332,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
           await prisma.candlestick.create({
             data: {
               assetId: group.assetId,
-              resolution: '1m',
+              resolution: group.resolution,
               openTime: group.openTime,
               open: group.open,
               high: group.high,
@@ -316,7 +346,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
             where: {
               assetId_resolution_openTime: {
                 assetId: group.assetId,
-                resolution: '1m',
+                resolution: group.resolution,
                 openTime: group.openTime,
               },
             },
@@ -398,9 +428,8 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     }));
 
     // Supplement with latest from Redis cache if available
-    const openTimeMs = new Date();
-    openTimeMs.setSeconds(0, 0);
-    const cacheKey = `${this.REDIS_OHLC_CACHE_PREFIX}${assetId}:1m:${openTimeMs.getTime()}`;
+    const openTimeMs = this.getOpenTimeForResolution(new Date(), resolution);
+    const cacheKey = `${this.REDIS_OHLC_CACHE_PREFIX}${assetId}:${resolution}:${openTimeMs.getTime()}`;
     const cachedStr = await this.redisClient.get(cacheKey);
     if (cachedStr) {
       const cached = JSON.parse(cachedStr);

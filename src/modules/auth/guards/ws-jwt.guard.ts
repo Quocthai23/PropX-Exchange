@@ -21,7 +21,7 @@ export class WsJwtGuard implements CanActivate {
       const token = this.extractToken(client);
 
       if (!token) {
-        throw new WsException('Unauthorized');
+        return true;
       }
 
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
@@ -29,7 +29,8 @@ export class WsJwtGuard implements CanActivate {
       return true;
     } catch (err) {
       this.logger.error('WebSocket Authentication failed', err);
-      throw new WsException('Unauthorized');
+      // Do not throw to allow connection to proceed without user context
+      return true;
     }
   }
 

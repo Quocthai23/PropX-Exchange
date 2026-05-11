@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
 import type { JwtPayload } from '@/modules/auth/types/jwt-payload.type';
 import { SubmitAssetOnboardingDto } from '../dto/asset-onboarding.dto';
+import { OptionalAuth } from '@/modules/auth/decorators/optional-auth.decorator';
 
 @Controller()
 export class AssetsController {
@@ -20,6 +21,7 @@ export class AssetsController {
 
   @ApiTags('Assets')
   @Get('assets')
+  @OptionalAuth()
   @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'List all assets (public trading list)' })
