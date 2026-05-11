@@ -100,10 +100,11 @@ export class MarketMakerService implements OnModuleInit {
           toDecimalValue(refPrice as DecimalValue),
         );
 
-
         // Fluctuate price slightly (-1% to 1%)
         const fluctuation = (Math.random() * 2 - 1) * 0.01;
-        const tradePrice = currentPrice.mul(new Decimal(1).plus(fluctuation)).toDecimalPlaces(4);
+        const tradePrice = currentPrice
+          .mul(new Decimal(1).plus(fluctuation))
+          .toDecimalPlaces(4);
 
         // Generate random matched quantity (for example, 1 to 50 tokens).
         const quantity = new Decimal(Math.floor(Math.random() * 50) + 1);

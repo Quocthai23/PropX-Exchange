@@ -23,7 +23,7 @@ const mockPrisma = {
     count: jest.fn(),
   },
 };
- 
+
 const mockSupportGateway = {
   broadcastNewMessage: jest.fn(),
 };

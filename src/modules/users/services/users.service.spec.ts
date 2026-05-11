@@ -41,13 +41,13 @@ const mockPrisma = {
 const mockPortfolioService = {
   getPortfolioOverview: jest.fn(),
 };
- 
+
 const mockRelationsService = {
   getSuggestions: jest.fn(),
   getRelations: jest.fn(),
   upsertRelation: jest.fn(),
 };
- 
+
 describe('UsersService', () => {
   let service: UsersService;
 
@@ -221,11 +221,11 @@ describe('UsersService', () => {
         isBlockedBy: false,
       };
       mockRelationsService.upsertRelation.mockResolvedValueOnce(mockResult);
- 
+
       const result = await service.upsertRelation('current-id', 'target-id', {
         action: 'follow',
       } as unknown as UpsertRelationDto);
- 
+
       expect(result).toEqual(mockResult);
     });
   });

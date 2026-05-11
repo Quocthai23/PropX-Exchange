@@ -161,8 +161,6 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     quantity: string,
     timestamp: Date,
   ): Promise<void> {
-    const tradePrice = new Decimal(price);
-    const tradeQuantity = new Decimal(quantity);
     const tradeData = JSON.stringify({
       assetId,
       price,
@@ -186,7 +184,12 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       let newVolume = quantity;
 
       if (existingStr) {
-        const existing = JSON.parse(existingStr);
+        const existing = JSON.parse(existingStr) as {
+          open: string;
+          high: string;
+          low: string;
+          volume: string;
+        };
         newOpen = existing.open;
         newHigh = Decimal.max(existing.high, price).toString();
         newLow = Decimal.min(existing.low, price).toString();
@@ -292,9 +295,13 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       const resolutions = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
       for (const tradeStr of tradesData) {
-        const trade = JSON.parse(tradeStr);
+        const trade = JSON.parse(tradeStr) as {
+          assetId: string;
+          price: string;
+          quantity: string;
+          timestamp: string;
+        };
         const timestamp = new Date(trade.timestamp);
-
 
         for (const resolution of resolutions) {
           const openTime = this.getOpenTimeForResolution(timestamp, resolution);
@@ -320,7 +327,6 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
               .add(trade.quantity)
               .toString();
           }
-
         }
       }
 
@@ -442,10 +448,15 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     const cacheKey = `${this.REDIS_OHLC_CACHE_PREFIX}${assetId}:${resolution}:${openTimeMs.getTime()}`;
     const cachedStr = await this.redisClient.get(cacheKey);
     if (cachedStr) {
-      const cached = JSON.parse(cachedStr) as any;
-      const cachedTime = Math.floor(
-        new Date(cached.openTime as string | number).getTime() / 1000,
-      );
+      const cached = JSON.parse(cachedStr) as {
+        openTime: string;
+        open: string;
+        high: string;
+        low: string;
+        close: string;
+        volume: string;
+      };
+      const cachedTime = Math.floor(new Date(cached.openTime).getTime() / 1000);
 
       const existingIdx = results.findIndex((r) => r.time === cachedTime);
       if (existingIdx !== -1) {

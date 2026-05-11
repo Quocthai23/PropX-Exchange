@@ -11,7 +11,7 @@ const mockQueue = {
   add: jest.fn(),
   count: jest.fn(),
 };
- 
+
 jest.mock('bullmq', () => ({
   Queue: jest.fn().mockImplementation(() => mockQueue),
   Worker: jest.fn().mockImplementation(() => ({
@@ -41,7 +41,7 @@ const mockTradingLedgerService = {
 const mockMarketDataService = {
   recordTrade: jest.fn(),
 };
- 
+
 const mockConfigService = {
   get: jest.fn(),
 };
