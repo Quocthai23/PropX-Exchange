@@ -110,7 +110,7 @@ export class AuthController {
     if (!email) {
       throw new UnauthorizedException('Email is required for this action.');
     }
-    return await this.authService.requestOtp(email);
+    return await this.authService.requestOtp(email, dto.purpose);
   }
 
   @Post('verify-otp')

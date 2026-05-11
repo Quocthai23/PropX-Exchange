@@ -14,6 +14,19 @@ export interface KlineUpdatePayload {
   isClosed: boolean;
 }
 
+export interface TickerUpdatePayload {
+  symbol: string;
+  ask: number | null;
+  bid: number | null;
+  lastPrice: number | null;
+  change: number;
+  changePercent: number;
+  high: number | null;
+  low: number | null;
+  volume: number;
+  quoteVolume: number;
+}
+
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -31,4 +44,10 @@ export class KlineGateway {
       `Emitted kline for asset=${payload.assetId} resolution=${payload.resolution} time=${payload.time}`,
     );
   }
+
+  emitTicker(payload: TickerUpdatePayload): void {
+    this.server.emit('ticker', payload);
+    this.logger.debug(`Emitted ticker for symbol=${payload.symbol}`);
+  }
 }
+

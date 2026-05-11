@@ -22,11 +22,17 @@ export class PostsProcessor
     super();
     this.redisClient = createClient({
       url: this.config.redisUrl || 'redis://localhost:6379',
+      socket: {
+        reconnectStrategy: (retries) => {
+          this.logger.warn(`Redis reconnecting, attempt ${retries}`);
+          return Math.min(retries * 50, 2000);
+        },
+      },
     });
 
-    this.redisClient.on('error', (err) =>
-      this.logger.error('Redis Error:', err),
-    );
+    this.redisClient.on('error', (err) => {
+      this.logger.error('Redis Error in PostsProcessor:', err);
+    });
   }
 
   // Standard NestJS lifecycle management

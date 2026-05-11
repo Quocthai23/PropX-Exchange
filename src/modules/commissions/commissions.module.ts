@@ -6,6 +6,7 @@ import { CommissionsController } from './commissions.controller';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ConfigModule } from '@nestjs/config';
 import { BalancesModule } from '../balances/balances.module';
+import { KmsService } from '@/shared/services/kms.service';
 
 @Module({
   imports: [
@@ -16,7 +17,12 @@ import { BalancesModule } from '../balances/balances.module';
     }),
   ],
   controllers: [CommissionsController],
-  providers: [CommissionsProcessor, CommissionsService, PrismaService],
+  providers: [
+    CommissionsProcessor,
+    CommissionsService,
+    PrismaService,
+    KmsService,
+  ],
   exports: [CommissionsService, BullModule],
 })
 export class CommissionsModule {}

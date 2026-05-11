@@ -41,11 +41,37 @@ export class AuthService {
     return this.tokenService.revokeRefreshTokenByToken(token);
   }
 
-  async requestOtp(email: string) {
+  async requestOtp(email: string, purpose?: string) {
+    // Basic validation based on purpose
+    if (purpose === 'register') {
+      const exists = await this.checkEmailExists(email);
+      if (exists) {
+        throw new ForbiddenException('Email already registered');
+      }
+    } else if (purpose === 'reset_password') {
+      const exists = await this.checkEmailExists(email);
+      if (!exists) {
+        throw new ForbiddenException('Email not found');
+      }
+    }
+
     return this.otpService.requestOtp(email);
   }
 
   async verifyOtp(email: string, otpCode: string, purpose: string) {
+    // Also validate on verify to be safe
+    if (purpose === 'register') {
+      const exists = await this.checkEmailExists(email);
+      if (exists) {
+        throw new ForbiddenException('Email already registered');
+      }
+    } else if (purpose === 'reset_password') {
+      const exists = await this.checkEmailExists(email);
+      if (!exists) {
+        throw new ForbiddenException('Email not found');
+      }
+    }
+
     return this.otpService.verifyOtp(email, otpCode, purpose);
   }
 

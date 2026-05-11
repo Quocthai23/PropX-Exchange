@@ -27,6 +27,9 @@ export class PostsService {
     this.redisClient = createClient({
       url: this.config.redisUrl || 'redis://localhost:6379',
     });
+    this.redisClient.on('error', (err) => {
+      console.error('PostsService Redis Error:', err);
+    });
     this.redisClient.connect().catch(console.error);
   }
 

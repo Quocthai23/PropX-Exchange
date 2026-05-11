@@ -141,9 +141,15 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
   ) {
     this.redisClient = createClient({
       url: this.config.redisUrl,
+      socket: {
+        reconnectStrategy: (retries) => {
+          this.logger.warn(`Redis reconnecting (MarketData), attempt ${retries}`);
+          return Math.min(retries * 50, 2000);
+        },
+      },
     });
     this.redisClient.on('error', (err) =>
-      this.logger.error('Redis Client Error', err),
+      this.logger.error('Redis Client Error in MarketDataService', err),
     );
   }
 
@@ -227,9 +233,81 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
 
       this.klineGateway.emitKline(emittedKline);
     }
+
+    // Emit ticker update whenever a trade occurs
+    await this.emitTickerForAsset(assetId);
+  }
+
+  @Cron(CronExpression.EVERY_10_SECONDS)
+  async emitAllTickers() {
+    const assets = await this.prisma.asset.findMany({
+      where: { isActive: true },
+      select: { id: true },
+    });
+
+    for (const asset of assets) {
+      try {
+        await this.emitTickerForAsset(asset.id);
+      } catch (error) {
+        this.logger.error(`Failed to emit ticker for asset ${asset.id}`, error);
+      }
+    }
+  }
+
+  private async emitTickerForAsset(assetId: string) {
+    const asset = await this.prisma.asset.findUnique({
+      where: { id: assetId },
+      select: { symbol: true },
+    });
+    if (!asset) return;
+
+    const anchor = await this.getReferencePriceAnchor(assetId);
+
+    // Get 24h stats
+    const yesterday = new Date();
+    yesterday.setHours(yesterday.getHours() - 24);
+
+    const candles24h = await this.prisma.candlestick.findMany({
+      where: {
+        assetId,
+        resolution: '1h',
+        openTime: { gte: yesterday },
+      },
+      orderBy: { openTime: 'asc' },
+    });
+
+    let high24h = anchor.marketPrice || 0;
+    let low24h = anchor.marketPrice || 0;
+    let volume24h = 0;
+    let open24h = anchor.marketPrice || 0;
+
+    if (candles24h.length > 0) {
+      open24h = Number(candles24h[0].open);
+      high24h = Math.max(...candles24h.map((c) => Number(c.high)), high24h);
+      low24h = Math.min(...candles24h.map((c) => Number(c.low)), low24h);
+      volume24h = candles24h.reduce((sum, c) => sum + Number(c.volume), 0);
+    }
+
+    const lastPrice = anchor.marketPrice || 0;
+    const change = lastPrice - open24h;
+    const changePercent = open24h !== 0 ? (change / open24h) * 100 : 0;
+
+    this.klineGateway.emitTicker({
+      symbol: asset.symbol,
+      ask: anchor.bestAsk,
+      bid: anchor.bestBid,
+      lastPrice: anchor.marketPrice,
+      change,
+      changePercent,
+      high: high24h,
+      low: low24h,
+      volume: volume24h,
+      quoteVolume: volume24h * lastPrice,
+    });
   }
 
   private getOpenTimeForResolution(timestamp: Date, resolution: string): Date {
+
     const openTime = new Date(timestamp);
     openTime.setSeconds(0, 0);
     const minutes = openTime.getMinutes();

@@ -3,8 +3,748 @@ generator client {
 }
 
 datasource db {
-  // MariaDB is supported under Prisma's "mysql" connector; runtime uses driver adapter.
   provider = "mysql"
+}
+
+model AssetCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?  @db.Text
+  icon        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  assets      Asset[]
+}
+
+model User {
+  id                      String                       @id @default(uuid())
+  walletAddress           String?                      @unique
+  email                   String                       @unique
+  username                String?                      @unique
+  role                    UserRole                     @default(INVESTOR)
+  kycStatus               KycStatus                    @default(NONE)
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+  refreshTokenHash        String?                      @db.Text
+  refreshTokenExpiresAt   DateTime?
+  avatar                  String?
+  bio                     String?                      @db.Text
+  coverAvatar             String?
+  displayName             String?
+  enabledMfa              Boolean                      @default(false)
+  gender                  String?
+  mfaSecret               String?                      @db.Text
+  notificationPreferences String?                      @db.LongText
+  passwordHash            String?                      @db.Text
+  referenceCode           String?                      @unique
+  referredBy              String?
+  status                  UserStatus                   @default(ACTIVE)
+  accounts                Account[]
+  assetOnboardingRequests AssetOnboardingRequest[]
+  assetRedemptionRequests AssetRedemptionRequest[]
+  auditLogs               AuditLog[]                   @relation("AuditLogPerformer")
+  balances                Balance[]
+  comments                Comment[]
+  sourceCommissionRewards CommissionReward[]           @relation("SourceCommissionRewards")
+  commissionRewards       CommissionReward[]           @relation("UserCommissionRewards")
+  daoProposalsProposed    DaoProposal[]                @relation("DaoProposalProposer")
+  daoVotingSnapshots      DaoVotingSnapshot[]
+  deviceSessions          DeviceSession[]
+  dividendClaims          DividendClaim[]
+  favoriteAssets          FavoriteAsset[]
+  approvedKycRecords      KycRecord[]                  @relation("KycApprover")
+  kycRecord               KycRecord?
+  notifications           Notification[]
+  orders                  Order[]
+  posts                   Post[]
+  postBookmarks           PostBookmark[]
+  postLikes               PostLike[]
+  postReports             PostReport[]
+  proposalVotes           ProposalVote[]
+  supportTickets          SupportTicket[]              @relation("SupportTicketOwner")
+  sentTicketMessages      TicketMessage[]              @relation("TicketMessageSender")
+  buyerTrades             Trade[]                      @relation("BuyerTrades")
+  sellerTrades            Trade[]                      @relation("SellerTrades")
+  transactions            Transaction[]
+  referrer                User?                        @relation("UserReferrals", fields: [referredBy], references: [id])
+  referrals               User[]                       @relation("UserReferrals")
+  devices                 UserDevice[]
+  readGlobalNotifications UserReadGlobalNotification[]
+  outgoingRelations       UserRelation[]               @relation("OutgoingRelations")
+  incomingRelations       UserRelation[]               @relation("IncomingRelations")
+
+  @@index([referredBy], map: "User_referredBy_fkey")
+}
+
+model FavoriteAsset {
+  id        String   @id @default(uuid())
+  userId    String
+  assetId   String
+  createdAt DateTime @default(now())
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+  @@index([assetId], map: "FavoriteAsset_assetId_fkey")
+}
+
+model UserRelation {
+  id          String   @id @default(uuid())
+  fromUserId  String
+  toUserId    String
+  isFollowing Boolean  @default(false)
+  isBlocking  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  fromUser    User     @relation("OutgoingRelations", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser      User     @relation("IncomingRelations", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId], map: "UserRelation_toUserId_fkey")
+}
+
+model SupportTicket {
+  id              String              @id @default(uuid())
+  userId          String
+  subject         String
+  status          SupportTicketStatus @default(OPEN)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  assignedAdminId String?
+  category        String?
+  priority        String?
+  title           String?
+  user            User                @relation("SupportTicketOwner", fields: [userId], references: [id])
+  messages        TicketMessage[]
+
+  @@index([userId, status, createdAt])
+}
+
+model TicketMessage {
+  id          String        @id @default(uuid())
+  ticketId    String
+  senderId    String
+  content     String        @db.Text
+  createdAt   DateTime      @default(now())
+  attachments String?       @db.LongText
+  sender      User          @relation("TicketMessageSender", fields: [senderId], references: [id])
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id])
+
+  @@index([ticketId, createdAt])
+  @@index([senderId], map: "TicketMessage_senderId_fkey")
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model DeviceSession {
+  id                    String   @id @default(uuid())
+  userId                String
+  deviceId              String
+  refreshTokenHash      String   @db.Text
+  refreshTokenExpiresAt DateTime
+  userAgent             String?
+  ipAddress             String?
+  lastSeenAt            DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@index([userId, refreshTokenExpiresAt])
+}
+
+model KycRecord {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  fullName           String
+  dob                DateTime
+  idNumber           String    @unique
+  idFrontImg         String
+  idBackImg          String
+  selfieImg          String
+  status             KycStatus @default(PENDING)
+  rejectReason       String?
+  createdAt          DateTime  @default(now())
+  approvedBy         String?
+  onChainWhitelisted Boolean   @default(false)
+  updatedAt          DateTime  @updatedAt
+  whitelistTxHash    String?
+  approver           User?     @relation("KycApprover", fields: [approvedBy], references: [id])
+  user               User      @relation(fields: [userId], references: [id])
+
+  @@index([approvedBy], map: "KycRecord_approvedBy_fkey")
+}
+
+model Asset {
+  id                      String                   @id @default(uuid())
+  contractAddress         String?                  @unique
+  name                    String
+  symbol                  String                   @unique
+  totalSupply             Decimal
+  tokenPrice              Decimal
+  createdAt               DateTime                 @default(now())
+  categoryId              String
+  description             String?                  @db.Text
+  expectedApy             Decimal?
+  isActive                Boolean                  @default(false)
+  isHot                   Boolean                  @default(false)
+  logo                    String?
+  txHash                  String?                  @unique
+  updatedAt               DateTime                 @updatedAt
+  referencePrice          Decimal?
+  priceBandPercentage     Decimal                  @default(0.070000000000000000000000000000)
+  tradingStatus           AssetTradingStatus       @default(OPEN)
+  assetType               AssetType                @default(ACCUMULATION)
+  auditReportUrl          String?
+  legalDocsIpfs           String?
+  monthlyInterestRate     Decimal?
+  penaltyRate             Decimal?
+  releasedTokenPercentage Decimal                  @default(0.000000000000000000000000000000)
+  retainedTokenPercentage Decimal                  @default(100.000000000000000000000000000000)
+  spvName                 String?
+  tokenStandard           String?
+  category                AssetCategory            @relation(fields: [categoryId], references: [id])
+  taggedNews              AssetNews[]
+  redemptionRequests      AssetRedemptionRequest[]
+  valuationSnapshots      AssetValuationSnapshot[]
+  balances                Balance[]
+  candlesticks            Candlestick[]
+  corporateActions        CorporateAction[]
+  daoProposals            DaoProposal[]
+  dividendDistributions   DividendDistribution[]
+  favoriteAssets          FavoriteAsset[]
+  interestPayments        InterestPaymentRequest[]
+  orders                  Order[]
+  postCashtags            PostCashtag[]
+  trades                  Trade[]
+
+  @@index([categoryId], map: "Asset_categoryId_fkey")
+}
+
+model Balance {
+  id           String   @id @default(uuid())
+  userId       String
+  assetId      String?
+  available    Decimal  @default(0.000000000000000000000000000000)
+  locked       Decimal  @default(0.000000000000000000000000000000)
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  avgCostPrice Decimal?
+  asset        Asset?   @relation(fields: [assetId], references: [id])
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+  @@index([assetId], map: "Balance_assetId_fkey")
+}
+
+model AssetOnboardingRequest {
+  id                      String           @id @default(uuid())
+  userId                  String
+  title                   String
+  description             String           @db.Text
+  location                String?
+  estimatedValue          Decimal
+  legalDocuments          String           @db.LongText
+  status                  OnboardingStatus @default(PENDING)
+  adminNotes              String?          @db.Text
+  appraisedValue          Decimal?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  assetType               AssetType        @default(ACCUMULATION)
+  monthlyInterestRate     Decimal?
+  penaltyRate             Decimal?
+  retainedTokenPercentage Decimal          @default(100.000000000000000000000000000000)
+  releasedTokenPercentage Decimal          @default(0.000000000000000000000000000000)
+  user                    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt(sort: Desc)])
+}
+
+model AssetRedemptionRequest {
+  id                String           @id @default(uuid())
+  userId            String
+  assetId           String
+  tokenQuantity     Decimal
+  status            RedemptionStatus @default(PENDING)
+  legalTransferDocs String?          @db.LongText
+  burnTxHash        String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  asset             Asset            @relation(fields: [assetId], references: [id])
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@index([assetId, status, createdAt(sort: Desc)])
+}
+
+model DaoProposal {
+  id           String              @id @default(uuid())
+  assetId      String
+  proposerId   String
+  title        String
+  description  String              @db.Text
+  snapshotDate DateTime
+  endDate      DateTime
+  status       ProposalStatus      @default(ACTIVE)
+  type         ProposalType        @default(GENERAL)
+  createdAt    DateTime            @default(now())
+  asset        Asset               @relation(fields: [assetId], references: [id])
+  proposer     User                @relation("DaoProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
+  snapshots    DaoVotingSnapshot[]
+  votes        ProposalVote[]
+
+  @@index([assetId, status, endDate])
+  @@index([proposerId, createdAt(sort: Desc)])
+}
+
+model DaoVotingSnapshot {
+  id          String      @id @default(uuid())
+  proposalId  String
+  userId      String
+  votingPower Decimal
+  createdAt   DateTime    @default(now())
+  proposal    DaoProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalId, userId])
+  @@index([proposalId, votingPower(sort: Desc)])
+  @@index([userId], map: "DaoVotingSnapshot_userId_fkey")
+}
+
+model ProposalVote {
+  id          String      @id @default(uuid())
+  proposalId  String
+  userId      String
+  isFor       Boolean
+  votingPower Decimal
+  createdAt   DateTime    @default(now())
+  proposal    DaoProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalId, userId])
+  @@index([proposalId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  userId         String
+  assetId        String
+  side           OrderSide
+  price          Decimal?
+  quantity       Decimal
+  filledQuantity Decimal     @default(0.000000000000000000000000000000)
+  status         OrderStatus
+  createdAt      DateTime    @default(now())
+  idempotencyKey String?     @unique
+  type           OrderType
+  updatedAt      DateTime    @updatedAt
+  asset          Asset       @relation(fields: [assetId], references: [id])
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([assetId], map: "Order_assetId_fkey")
+  @@index([userId], map: "Order_userId_fkey")
+}
+
+model Transaction {
+  id               String              @id @default(uuid())
+  userId           String
+  type             TransactionType
+  amount           Decimal
+  txHash           String?             @unique
+  status           TransactionStatus
+  createdAt        DateTime            @default(now())
+  confirmations    Int                 @default(0)
+  fee              Decimal             @default(0.000000000000000000000000000000)
+  gasPrice         Decimal?
+  idempotencyKey   String?             @unique
+  lastGasPrice     Decimal?
+  refundStatus     String              @default("NONE")
+  refundTxHash     String?
+  speedUpAttempts  Int                 @default(0)
+  stuckSince       DateTime?
+  updatedAt        DateTime            @updatedAt
+  speedUpAttempts_ GasSpeedUpAttempt[]
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "Transaction_userId_fkey")
+}
+
+model GasSpeedUpAttempt {
+  id             String      @id @default(uuid())
+  transactionId  String
+  previousTxHash String
+  newTxHash      String
+  oldGasPrice    Decimal
+  newGasPrice    Decimal
+  gasFeePaid     Decimal
+  status         String      @default("PENDING")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId], map: "GasSpeedUpAttempt_transactionId_fkey")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  entity      String
+  entityId    String
+  action      String
+  performedBy String
+  details     String?  @db.Text
+  createdAt   DateTime @default(now())
+  performer   User     @relation("AuditLogPerformer", fields: [performedBy], references: [id])
+
+  @@index([performedBy], map: "AuditLog_performedBy_fkey")
+}
+
+model CorporateAction {
+  id            String              @id @default(uuid())
+  assetId       String
+  type          CorporateActionType
+  amount        Decimal
+  recordDate    DateTime
+  executionDate DateTime
+  status        String
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  asset         Asset               @relation(fields: [assetId], references: [id])
+
+  @@index([assetId], map: "CorporateAction_assetId_fkey")
+}
+
+model DividendDistribution {
+  id           String          @id @default(uuid())
+  assetId      String
+  totalAmount  Decimal
+  snapshotDate DateTime
+  status       String          @default("PENDING")
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  claims       DividendClaim[]
+  asset        Asset           @relation(fields: [assetId], references: [id])
+
+  @@index([assetId], map: "DividendDistribution_assetId_fkey")
+}
+
+model DividendClaim {
+  id             String               @id @default(uuid())
+  distributionId String
+  userId         String
+  amount         Decimal
+  status         String               @default("PENDING")
+  claimedAt      DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  distribution   DividendDistribution @relation(fields: [distributionId], references: [id])
+  user           User                 @relation(fields: [userId], references: [id])
+
+  @@unique([distributionId, userId])
+  @@index([userId], map: "DividendClaim_userId_fkey")
+}
+
+model Candlestick {
+  id         String   @id @default(uuid())
+  assetId    String
+  resolution String
+  openTime   DateTime
+  open       Decimal
+  high       Decimal
+  low        Decimal
+  close      Decimal
+  volume     Decimal
+  createdAt  DateTime @default(now())
+  asset      Asset    @relation(fields: [assetId], references: [id])
+
+  @@unique([assetId, resolution, openTime])
+  @@index([assetId, resolution, openTime(sort: Desc)])
+}
+
+model Trade {
+  id               String   @id @default(uuid())
+  assetId          String
+  buyerId          String
+  sellerId         String
+  price            Decimal
+  quantity         Decimal
+  settlementStatus String   @default("PENDING")
+  txHash           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  asset            Asset    @relation(fields: [assetId], references: [id])
+  buyer            User     @relation("BuyerTrades", fields: [buyerId], references: [id])
+  seller           User     @relation("SellerTrades", fields: [sellerId], references: [id])
+
+  @@index([assetId], map: "Trade_assetId_fkey")
+  @@index([buyerId], map: "Trade_buyerId_fkey")
+  @@index([sellerId], map: "Trade_sellerId_fkey")
+}
+
+model NewsArticle {
+  id           String      @id @default(uuid())
+  source       String
+  externalId   String?
+  dedupeKey    String      @unique
+  title        String      @db.LongText
+  summary      String?     @db.LongText
+  content      String?     @db.Text
+  url          String
+  imageUrl     String?
+  publishedAt  DateTime
+  language     String?
+  country      String?
+  category     String?
+  keywords     String?     @db.Text
+  rawPayload   String?     @db.LongText
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  impactScore  Int?
+  sentiment    String?
+  taggedAssets AssetNews[]
+
+  @@index([source, publishedAt(sort: Desc)])
+  @@index([publishedAt(sort: Desc)])
+}
+
+model AssetNews {
+  newsId  String
+  assetId String
+  asset   Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  news    NewsArticle @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@id([newsId, assetId])
+  @@index([assetId])
+}
+
+model AccountType {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  name        String
+  description String?   @db.Text
+  currency    String    @default("USDT")
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  accounts    Account[]
+}
+
+model Account {
+  id            String      @id @default(uuid())
+  userId        String
+  accountTypeId String
+  name          String
+  avatar        String?
+  status        String      @default("ACTIVE")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  accountType   AccountType @relation(fields: [accountTypeId], references: [id])
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, accountTypeId])
+  @@index([userId, status])
+  @@index([accountTypeId], map: "Account_accountTypeId_fkey")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  content   String?  @db.Text
+  isRead    Boolean  @default(false)
+  metadata  String?  @db.LongText
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+}
+
+model Post {
+  id        String         @id @default(uuid())
+  userId    String
+  content   String?        @db.Text
+  mediaUrls String?        @db.LongText
+  status    PostStatus     @default(PUBLISHED)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  comments  Comment[]
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookmarks PostBookmark[]
+  cashtags  PostCashtag[]
+  likes     PostLike[]
+  reports   PostReport[]
+
+  @@index([userId], map: "Post_userId_fkey")
+}
+
+model PostCashtag {
+  postId  String
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  post    Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([postId, assetId])
+  @@index([assetId])
+}
+
+model PostReport {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  reason    String   @db.Text
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId], map: "PostLike_userId_fkey")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "Comment_postId_fkey")
+  @@index([userId], map: "Comment_userId_fkey")
+}
+
+model PostBookmark {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId], map: "PostBookmark_userId_fkey")
+}
+
+model AssetValuationSnapshot {
+  id         String   @id @default(uuid())
+  assetId    String?
+  areaCode   String?
+  source     String
+  title      String?
+  listingUrl String?
+  price      Decimal
+  currency   String   @default("VND")
+  landArea   Decimal?
+  pricePerM2 Decimal?
+  capturedAt DateTime
+  rawPayload String?  @db.LongText
+  createdAt  DateTime @default(now())
+  asset      Asset?   @relation(fields: [assetId], references: [id])
+
+  @@index([assetId, capturedAt(sort: Desc)])
+  @@index([areaCode, capturedAt(sort: Desc)])
+  @@index([source, capturedAt(sort: Desc)])
+}
+
+model UserDevice {
+  id        String   @id @default(uuid())
+  userId    String
+  fcmToken  String   @unique
+  deviceOs  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model GlobalNotification {
+  id        String                       @id @default(uuid())
+  title     String
+  content   String?                      @db.Text
+  type      String                       @default("SYSTEM")
+  createdAt DateTime                     @default(now())
+  readBy    UserReadGlobalNotification[]
+}
+
+model UserReadGlobalNotification {
+  userId               String
+  globalNotificationId String
+  readAt               DateTime           @default(now())
+  globalNotification   GlobalNotification @relation(fields: [globalNotificationId], references: [id], onDelete: Cascade)
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, globalNotificationId])
+  @@index([globalNotificationId], map: "UserReadGlobalNotification_globalNotificationId_fkey")
+}
+
+model CommissionConfig {
+  id             String          @id @default(uuid())
+  eventType      CommissionEvent @unique
+  commissionRate Decimal
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model CommissionReward {
+  id           String                 @id @default(uuid())
+  userId       String
+  sourceUserId String
+  eventType    CommissionEvent
+  amount       Decimal
+  currency     String                 @default("USDT")
+  sourceTxId   String?
+  status       CommissionRewardStatus @default(PENDING)
+  unlockAt     DateTime?
+  claimedAt    DateTime?
+  txHash       String?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  sourceUser   User                   @relation("SourceCommissionRewards", fields: [sourceUserId], references: [id])
+  user         User                   @relation("UserCommissionRewards", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([sourceUserId])
+}
+
+model InterestPaymentRequest {
+  id             String                @id @default(uuid())
+  assetId        String
+  amountDue      Decimal
+  dueDate        DateTime
+  status         InterestPaymentStatus @default(PENDING)
+  txHash         String?
+  paidAt         DateTime?
+  penaltyApplied Boolean               @default(false)
+  penaltyAmount  Decimal?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  asset          Asset                 @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, status])
+  @@index([dueDate, status])
 }
 
 enum UserRole {
@@ -70,8 +810,8 @@ enum TransactionType {
   TRADE_SELL
   DIVIDEND
   FEE
-  MINT // When issuing new RWA tokens
-  BURN // When burning tokens for redemption
+  MINT
+  BURN
   DIVIDEND_CLAIM
   COMMISSION
 }
@@ -92,17 +832,17 @@ enum AssetTradingStatus {
 
 enum OnboardingStatus {
   PENDING
-  APPRAISING // Actual appraising in progress
-  APPROVED // Approved, waiting for tokenization
+  APPRAISING
+  APPROVED
   REJECTED
-  PROCESSING // Calling Blockchain (Queue)
-  TOKENIZED // Successfully minted token
+  PROCESSING
+  TOKENIZED
 }
 
 enum RedemptionStatus {
   PENDING
-  PROCESSING_LEGAL // Processing legal name transfer
-  COMPLETED // Name transferred, Token burned
+  PROCESSING_LEGAL
+  COMPLETED
   REJECTED
 }
 
@@ -119,394 +859,6 @@ enum PostStatus {
   BANNED
 }
 
-model AssetCategory {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?  @db.Text
-  icon        String?
-  isActive    Boolean  @default(true)
-  assets      Asset[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model User {
-  id                      String                       @id @default(uuid())
-  email                   String                       @unique
-  walletAddress           String?                      @unique
-  username                String?                      @unique
-  avatar                  String?
-  role                    UserRole                     @default(INVESTOR)
-  kycStatus               KycStatus                    @default(NONE)
-  refreshTokenHash        String?                      @db.Text
-  refreshTokenExpiresAt   DateTime?
-  supportTickets          SupportTicket[]              @relation("SupportTicketOwner")
-  sentTicketMessages      TicketMessage[]              @relation("TicketMessageSender")
-  buyerTrades             Trade[]                      @relation("BuyerTrades")
-  sellerTrades            Trade[]                      @relation("SellerTrades")
-  dividendClaims          DividendClaim[]
-  balances                Balance[]
-  orders                  Order[]
-  transactions            Transaction[]
-  kycRecord               KycRecord?
-  approvedKycRecords      KycRecord[]                  @relation("KycApprover")
-  auditLogs               AuditLog[]                   @relation("AuditLogPerformer")
-  accounts                Account[]
-  notifications           Notification[]
-  posts                   Post[]
-  devices                 UserDevice[]
-  readGlobalNotifications UserReadGlobalNotification[]
-  postLikes               PostLike[]
-  comments                Comment[]
-  postBookmarks           PostBookmark[]
-  commissionRewards       CommissionReward[]           @relation("UserCommissionRewards")
-  sourceCommissionRewards CommissionReward[]           @relation("SourceCommissionRewards")
-
-  // New fields for profile
-  gender                  String?
-  bio                     String?                  @db.Text
-  coverAvatar             String?
-  displayName             String?
-  referenceCode           String?                  @unique
-  referredBy              String?
-  referrer                User?                    @relation("UserReferrals", fields: [referredBy], references: [id])
-  referrals               User[]                   @relation("UserReferrals")
-  passwordHash            String?                  @db.Text
-  enabledMfa              Boolean                  @default(false)
-  mfaSecret               String?                  @db.Text
-  status                  UserStatus               @default(ACTIVE)
-  notificationPreferences Json?
-  deviceSessions          DeviceSession[]
-  favoriteAssets          FavoriteAsset[]
-  outgoingRelations       UserRelation[]           @relation("OutgoingRelations")
-  incomingRelations       UserRelation[]           @relation("IncomingRelations")
-  assetOnboardingRequests AssetOnboardingRequest[]
-  assetRedemptionRequests AssetRedemptionRequest[]
-  daoProposalsProposed    DaoProposal[]            @relation("DaoProposalProposer")
-  proposalVotes           ProposalVote[]
-
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  daoVotingSnapshots DaoVotingSnapshot[]
-  postReports        PostReport[]
-}
-
-model FavoriteAsset {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assetId   String
-  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId, assetId])
-}
-
-model UserRelation {
-  id          String   @id @default(uuid())
-  fromUserId  String
-  fromUser    User     @relation("OutgoingRelations", fields: [fromUserId], references: [id], onDelete: Cascade)
-  toUserId    String
-  toUser      User     @relation("IncomingRelations", fields: [toUserId], references: [id], onDelete: Cascade)
-  isFollowing Boolean  @default(false)
-  isBlocking  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([fromUserId, toUserId])
-}
-
-model SupportTicket {
-  id              String              @id @default(uuid())
-  userId          String
-  user            User                @relation("SupportTicketOwner", fields: [userId], references: [id])
-  subject         String
-  title           String?
-  status          SupportTicketStatus @default(OPEN)
-  category        String?
-  priority        String?
-  assignedAdminId String?
-  messages        TicketMessage[]
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-
-  @@index([userId, status, createdAt])
-}
-
-model TicketMessage {
-  id          String        @id @default(uuid())
-  ticketId    String
-  ticket      SupportTicket @relation(fields: [ticketId], references: [id])
-  senderId    String
-  sender      User          @relation("TicketMessageSender", fields: [senderId], references: [id])
-  content     String        @db.Text
-  attachments Json?
-  createdAt   DateTime      @default(now())
-
-  @@index([ticketId, createdAt])
-}
-
-model Otp {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  code      String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-
-model DeviceSession {
-  id                    String   @id @default(uuid())
-  userId                String
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deviceId              String
-  refreshTokenHash      String   @db.Text
-  refreshTokenExpiresAt DateTime
-  userAgent             String?
-  ipAddress             String?
-  lastSeenAt            DateTime @default(now())
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@unique([userId, deviceId])
-  @@index([userId, refreshTokenExpiresAt])
-}
-
-model KycRecord {
-  id                 String    @id @default(uuid())
-  userId             String    @unique
-  user               User      @relation(fields: [userId], references: [id])
-  fullName           String
-  dob                DateTime
-  idNumber           String    @unique
-  idFrontImg         String
-  idBackImg          String
-  selfieImg          String
-  status             KycStatus @default(PENDING)
-  onChainWhitelisted Boolean   @default(false)
-  whitelistTxHash    String?
-  rejectReason       String?
-  approvedBy         String?
-  approver           User?     @relation("KycApprover", fields: [approvedBy], references: [id])
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-}
-
-model Asset {
-  id                    String                   @id @default(uuid())
-  contractAddress       String?                  @unique
-  txHash                String?                  @unique
-  symbol                String                   @unique
-  name                  String
-  description           String?                  @db.Text
-  logo                  String?
-  categoryId            String
-  category              AssetCategory            @relation(fields: [categoryId], references: [id])
-  totalSupply           Decimal
-  tokenPrice            Decimal
-  referencePrice        Decimal?
-  priceBandPercentage   Decimal                  @default(0.07)
-  tradingStatus         AssetTradingStatus       @default(OPEN)
-  expectedApy           Decimal?
-  tokenStandard         String? // VD: "ERC20", "ERC3643"
-  spvName               String? // Special Purpose Vehicle - Legal entity holding the real-world asset
-  legalDocsIpfs         String? // CID of encrypted, immutable legal docs on IPFS
-  auditReportUrl        String? // Link to periodic asset audit report
-  isHot                 Boolean                  @default(false)
-  isActive              Boolean                  @default(false)
-  candlesticks          Candlestick[]
-  dividendDistributions DividendDistribution[]
-  corporateActions      CorporateAction[]
-  valuationSnapshots    AssetValuationSnapshot[]
-  trades                Trade[]
-  favoriteAssets        FavoriteAsset[]
-  balances              Balance[]
-  orders                Order[]
-  redemptionRequests    AssetRedemptionRequest[]
-  daoProposals          DaoProposal[]
-  taggedNews            AssetNews[]
-  postCashtags          PostCashtag[]
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
-
-  assetType               AssetType                @default(ACCUMULATION)
-  monthlyInterestRate     Decimal?
-  penaltyRate             Decimal?
-  retainedTokenPercentage Decimal                  @default(100)
-  releasedTokenPercentage Decimal                  @default(0)
-  interestPayments        InterestPaymentRequest[]
-}
-
-model Balance {
-  id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assetId      String?
-  asset        Asset?   @relation(fields: [assetId], references: [id])
-  available    Decimal  @default(0)
-  locked       Decimal  @default(0)
-  avgCostPrice Decimal?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@unique([userId, assetId])
-}
-
-model AssetOnboardingRequest {
-  id             String           @id @default(uuid())
-  userId         String
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title          String // Ex: "Vinhomes Smart City Apartment"
-  description    String           @db.Text
-  location       String? // Asset location
-  estimatedValue Decimal // Desired valuation
-  legalDocuments Json // Array of URLs to Title deeds, legal documents
-  status         OnboardingStatus @default(PENDING)
-  adminNotes     String?          @db.Text // Appraisal team notes
-  appraisedValue Decimal? // Appraised value after appraisal
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-
-  assetType               AssetType @default(ACCUMULATION)
-  monthlyInterestRate     Decimal?
-  penaltyRate             Decimal?
-  retainedTokenPercentage Decimal   @default(100)
-  releasedTokenPercentage Decimal   @default(0)
-
-  @@index([userId, status, createdAt(sort: Desc)])
-}
-
-model AssetRedemptionRequest {
-  id                String           @id @default(uuid())
-  userId            String
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assetId           String
-  asset             Asset            @relation(fields: [assetId], references: [id])
-  tokenQuantity     Decimal // Quantity of tokens for exchange
-  status            RedemptionStatus @default(PENDING)
-  legalTransferDocs Json? // Signed transfer contract/minutes
-  burnTxHash        String? // On-chain Burn token transaction hash
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  @@index([userId, status, createdAt(sort: Desc)])
-  @@index([assetId, status, createdAt(sort: Desc)])
-}
-
-model DaoProposal {
-  id           String              @id @default(uuid())
-  assetId      String
-  asset        Asset               @relation(fields: [assetId], references: [id])
-  proposerId   String // Proposal creator (UserId)
-  proposer     User                @relation("DaoProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
-  title        String
-  description  String              @db.Text
-  snapshotDate DateTime // Voting power snapshot time
-  endDate      DateTime // Voting deadline
-  status       ProposalStatus      @default(ACTIVE)
-  type         ProposalType        @default(GENERAL)
-  votes        ProposalVote[]
-  snapshots    DaoVotingSnapshot[]
-  createdAt    DateTime            @default(now())
-
-  @@index([assetId, status, endDate])
-  @@index([proposerId, createdAt(sort: Desc)])
-}
-
-model DaoVotingSnapshot {
-  id          String      @id @default(uuid())
-  proposalId  String
-  proposal    DaoProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  votingPower Decimal
-  createdAt   DateTime    @default(now())
-
-  @@unique([proposalId, userId])
-  @@index([proposalId, votingPower(sort: Desc)])
-}
-
-model ProposalVote {
-  id          String      @id @default(uuid())
-  proposalId  String
-  proposal    DaoProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isFor       Boolean // True: For, False: Against
-  votingPower Decimal // Voting weight at snapshotDate
-  createdAt   DateTime    @default(now())
-
-  @@unique([proposalId, userId])
-  @@index([proposalId, createdAt(sort: Desc)])
-  @@index([userId, createdAt(sort: Desc)])
-}
-
-model Order {
-  id             String      @id @default(uuid())
-  userId         String
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assetId        String
-  asset          Asset       @relation(fields: [assetId], references: [id])
-  side           OrderSide
-  type           OrderType
-  price          Decimal?
-  quantity       Decimal
-  filledQuantity Decimal     @default(0)
-  status         OrderStatus
-  idempotencyKey String?     @unique
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-}
-
-model Transaction {
-  id             String            @id @default(uuid())
-  userId         String
-  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type           TransactionType
-  amount         Decimal
-  fee            Decimal           @default(0)
-  status         TransactionStatus
-  txHash         String?           @unique
-  confirmations  Int               @default(0)
-  idempotencyKey String?           @unique
-
-  // Gas spike handling fields
-  gasPrice         Decimal? // Initial gas price in wei
-  lastGasPrice     Decimal? // Latest gas price from speed-up
-  speedUpAttempts  Int                 @default(0)
-  stuckSince       DateTime? // When transaction got stuck (no confirmations after 1 hour)
-  refundStatus     String              @default("NONE") // NONE, PENDING, COMPLETED
-  refundTxHash     String? // Hash of refund transaction if processed
-  speedUpAttempts_ GasSpeedUpAttempt[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model GasSpeedUpAttempt {
-  id             String      @id @default(uuid())
-  transactionId  String
-  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  previousTxHash String
-  newTxHash      String
-  oldGasPrice    Decimal // Previous gas price
-  newGasPrice    Decimal // New gas price
-  gasFeePaid     Decimal // Extra gas fee paid for speed-up
-  status         String      @default("PENDING") // PENDING, COMPLETED, FAILED
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-}
-
-model AuditLog {
-  id          String   @id @default(uuid())
-  entity      String
-  entityId    String
-  action      String
-  performedBy String
-  performer   User     @relation("AuditLogPerformer", fields: [performedBy], references: [id])
-  details     String?  @db.Text
-  createdAt   DateTime @default(now())
-}
-
 enum CorporateActionType {
   DIVIDEND
   DEPRECIATION
@@ -520,282 +872,6 @@ enum SupportTicketStatus {
   CLOSED
 }
 
-model CorporateAction {
-  id            String              @id @default(uuid())
-  assetId       String
-  asset         Asset               @relation(fields: [assetId], references: [id])
-  type          CorporateActionType
-  amount        Decimal
-  recordDate    DateTime
-  executionDate DateTime
-  status        String
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-}
-
-model DividendDistribution {
-  id           String          @id @default(uuid())
-  assetId      String
-  asset        Asset           @relation(fields: [assetId], references: [id])
-  totalAmount  Decimal
-  snapshotDate DateTime
-  status       String          @default("PENDING") // PENDING, READY_FOR_CLAIM, COMPLETED
-  claims       DividendClaim[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-}
-
-model DividendClaim {
-  id             String               @id @default(uuid())
-  distributionId String
-  distribution   DividendDistribution @relation(fields: [distributionId], references: [id])
-  userId         String
-  user           User                 @relation(fields: [userId], references: [id])
-  amount         Decimal
-  status         String               @default("PENDING") // PENDING, CLAIMED
-  claimedAt      DateTime?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-
-  @@unique([distributionId, userId])
-}
-
-model Candlestick {
-  id         String   @id @default(uuid())
-  assetId    String
-  asset      Asset    @relation(fields: [assetId], references: [id])
-  resolution String // VD: "1m", "5m", "15m", "30m", "1h", "1d"
-  openTime   DateTime
-  open       Decimal
-  high       Decimal
-  low        Decimal
-  close      Decimal
-  volume     Decimal
-  createdAt  DateTime @default(now())
-
-  @@unique([assetId, resolution, openTime])
-  @@index([assetId, resolution, openTime(sort: Desc)])
-}
-
-model Trade {
-  id               String   @id @default(uuid())
-  assetId          String
-  asset            Asset    @relation(fields: [assetId], references: [id])
-  buyerId          String
-  buyer            User     @relation("BuyerTrades", fields: [buyerId], references: [id])
-  sellerId         String
-  seller           User     @relation("SellerTrades", fields: [sellerId], references: [id])
-  price            Decimal
-  quantity         Decimal
-  settlementStatus String   @default("PENDING") // PENDING, PROCESSING, SETTLED, FAILED
-  txHash           String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
-
-model NewsArticle {
-  id           String      @id @default(uuid())
-  source       String
-  externalId   String?
-  dedupeKey    String      @unique
-  title        Json
-  summary      Json?
-  content      String?     @db.Text
-  url          String
-  imageUrl     String?
-  publishedAt  DateTime
-  language     String?
-  country      String?
-  category     String?
-  keywords     String?     @db.Text
-  sentiment    String? // BULLISH, BEARISH, NEUTRAL
-  impactScore  Int?
-  taggedAssets AssetNews[]
-  rawPayload   Json?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  @@index([source, publishedAt(sort: Desc)])
-  @@index([publishedAt(sort: Desc)])
-}
-
-model AssetNews {
-  newsId  String
-  assetId String
-  news    NewsArticle @relation(fields: [newsId], references: [id], onDelete: Cascade)
-  asset   Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@id([newsId, assetId])
-  @@index([assetId])
-}
-
-model AccountType {
-  id          String    @id @default(uuid())
-  code        String    @unique
-  name        String
-  description String?   @db.Text
-  currency    String    @default("USDT")
-  isActive    Boolean   @default(true)
-  accounts    Account[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Account {
-  id            String      @id @default(uuid())
-  userId        String
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountTypeId String
-  accountType   AccountType @relation(fields: [accountTypeId], references: [id])
-  name          String
-  avatar        String?
-  status        String      @default("ACTIVE") // ACTIVE, INACTIVE, BANNED
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  @@unique([userId, accountTypeId])
-  @@index([userId, status])
-}
-
-model Notification {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String // "KYC_APPROVED", "KYC_REJECTED", "ORDER_FILLED", etc.
-  title     String
-  content   String?  @db.Text
-  isRead    Boolean  @default(false)
-  metadata  Json?
-  createdAt DateTime @default(now())
-
-  @@index([userId, isRead, createdAt(sort: Desc)])
-}
-
-model Post {
-  id        String         @id @default(uuid())
-  userId    String
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String?        @db.Text
-  mediaUrls Json?
-  status    PostStatus     @default(PUBLISHED)
-  likes     PostLike[]
-  comments  Comment[]
-  bookmarks PostBookmark[]
-  cashtags  PostCashtag[]
-  reports   PostReport[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-}
-
-model PostCashtag {
-  postId  String
-  post    Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
-  assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@id([postId, assetId])
-  @@index([assetId])
-}
-
-model PostReport {
-  id        String   @id @default(uuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reason    String   @db.Text
-  createdAt DateTime @default(now())
-
-  @@index([postId])
-  @@index([userId])
-}
-
-model PostLike {
-  id        String   @id @default(uuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([postId, userId])
-}
-
-model Comment {
-  id        String   @id @default(uuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model PostBookmark {
-  id        String   @id @default(uuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([postId, userId])
-}
-
-model AssetValuationSnapshot {
-  id         String   @id @default(uuid())
-  assetId    String?
-  asset      Asset?   @relation(fields: [assetId], references: [id])
-  areaCode   String?
-  source     String
-  title      String?
-  listingUrl String?
-  price      Decimal
-  currency   String   @default("VND")
-  landArea   Decimal?
-  pricePerM2 Decimal?
-  capturedAt DateTime
-  rawPayload Json?
-  createdAt  DateTime @default(now())
-
-  @@index([assetId, capturedAt(sort: Desc)])
-  @@index([areaCode, capturedAt(sort: Desc)])
-  @@index([source, capturedAt(sort: Desc)])
-}
-
-model UserDevice {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fcmToken  String   @unique
-  deviceOs  String? // iOS, Android, Web
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-}
-
-model GlobalNotification {
-  id        String   @id @default(uuid())
-  title     String
-  content   String?  @db.Text
-  type      String   @default("SYSTEM") // SYSTEM, MAINTENANCE, PROMO
-  createdAt DateTime @default(now())
-
-  readBy UserReadGlobalNotification[]
-}
-
-model UserReadGlobalNotification {
-  userId               String
-  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  globalNotificationId String
-  globalNotification   GlobalNotification @relation(fields: [globalNotificationId], references: [id], onDelete: Cascade)
-  readAt               DateTime           @default(now())
-
-  @@id([userId, globalNotificationId])
-}
-
 enum CommissionEvent {
   TRADE
   PROFIT_SHARE
@@ -807,52 +883,4 @@ enum CommissionRewardStatus {
   AVAILABLE
   CLAIMED
   REJECTED
-}
-
-model CommissionConfig {
-  id             String          @id @default(uuid())
-  eventType      CommissionEvent @unique
-  commissionRate Decimal // e.g., 0.20 for 20%
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-}
-
-model CommissionReward {
-  id           String                 @id @default(uuid())
-  userId       String // Reward recipient (A)
-  user         User                   @relation("UserCommissionRewards", fields: [userId], references: [id], onDelete: Cascade)
-  sourceUserId String // Event trigger user (B)
-  sourceUser   User                   @relation("SourceCommissionRewards", fields: [sourceUserId], references: [id])
-  eventType    CommissionEvent
-  amount       Decimal // Reward amount received
-  currency     String                 @default("USDT")
-  sourceTxId   String? // Source transaction ID
-  status       CommissionRewardStatus @default(PENDING) // Reward status
-  unlockAt     DateTime? // Allowed claim time (Vesting)
-  claimedAt    DateTime? // Successful claim time
-  txHash       String? // On-chain transaction hash (Claim On-chain)
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
-
-  @@index([userId, status])
-  @@index([sourceUserId])
-}
-
-model InterestPaymentRequest {
-  id             String                @id @default(uuid())
-  assetId        String
-  asset          Asset                 @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  amountDue      Decimal
-  dueDate        DateTime
-  status         InterestPaymentStatus @default(PENDING)
-  txHash         String?
-  paidAt         DateTime?
-  penaltyApplied Boolean               @default(false)
-  penaltyAmount  Decimal?
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-
-  @@index([assetId, status])
-  @@index([dueDate, status])
 }
