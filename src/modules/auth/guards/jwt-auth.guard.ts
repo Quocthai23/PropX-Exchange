@@ -9,12 +9,14 @@ import { Reflector } from '@nestjs/core';
 import type { JwtPayload } from '../types/jwt-payload.type';
 import { RequestWithUser } from '../types/request-with-user.type';
 import { IS_OPTIONAL_AUTH_KEY } from '../decorators/optional-auth.decorator';
+import { AuthRedisService } from '../services/auth-redis.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private reflector: Reflector,
+    private authRedisService: AuthRedisService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -32,6 +34,12 @@ export class JwtAuthGuard implements CanActivate {
       }
       throw new UnauthorizedException('Authentication token not found');
     }
+
+    const isBlacklisted = await this.authRedisService.isTokenBlacklisted(token);
+    if (isBlacklisted) {
+      throw new UnauthorizedException('Token is blacklisted');
+    }
+
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
       request.user = payload;

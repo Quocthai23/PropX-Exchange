@@ -67,6 +67,10 @@ export class AppConfigService {
     return this.configService.get('JWT_SECRET');
   }
 
+  get jwtExpiresIn(): string | undefined {
+    return this.configService.get('JWT_EXPIRATION');
+  }
+
   get jwtRefreshSecret(): string | undefined {
     return this.configService.get('JWT_REFRESH_SECRET');
   }

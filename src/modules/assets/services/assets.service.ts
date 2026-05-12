@@ -24,7 +24,7 @@ export class AssetsService {
     private readonly blockchainService: BlockchainService,
     private readonly multiSigService: MultiSigService,
     @InjectQueue('asset-blockchain') private readonly assetQueue: Queue,
-  ) {}
+  ) { }
 
   async getAssetCategories() {
     const categories = await this.prisma.assetCategory.findMany({
@@ -135,6 +135,42 @@ export class AssetsService {
     return {
       success: true,
       status: dto.approved ? 'PENDING_TOKEN_MINT' : 'REJECTED',
+    };
+  }
+
+  async getMarketData(assetId: string) {
+    // Attempt to derive market data from latest candlestick (best-effort)
+    const cs = await this.prisma.candlestick.findFirst({
+      where: { assetId },
+      orderBy: { openTime: 'desc' },
+    });
+
+    if (!cs) return null;
+
+    const open = new Decimal(cs.open.toString());
+    const close = new Decimal(cs.close.toString());
+    const low = new Decimal(cs.low.toString());
+    const volume = new Decimal(cs.volume.toString());
+
+    const chgPercent = open.eq(0)
+      ? null
+      : close.minus(open).div(open).toNumber() * 100;
+
+    const sellPrice = close.toNumber();
+    const buyPrice = close.toNumber();
+    const spread = Math.max(0, sellPrice - buyPrice);
+
+    return {
+      sellPrice,
+      buyPrice,
+      spread,
+      volume: volume.toNumber(),
+      sellPercent: null,
+      buyPercent: null,
+      chgPercent,
+      low: low.toNumber(),
+      lastUpdated: cs.openTime,
+      source: 'derived-candlestick',
     };
   }
 

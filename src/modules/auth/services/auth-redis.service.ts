@@ -35,6 +35,19 @@ export class AuthRedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async addToBlacklist(token: string, expiresInMs: number): Promise<void> {
+    const key = `blacklist:${token}`;
+    await this.redisClient.set(key, '1', {
+      PX: Math.max(0, expiresInMs),
+    });
+  }
+
+  async isTokenBlacklisted(token: string): Promise<boolean> {
+    const key = `blacklist:${token}`;
+    const result = await this.redisClient.get(key);
+    return result !== null;
+  }
+
   getClient(): RedisClientType {
     return this.redisClient;
   }

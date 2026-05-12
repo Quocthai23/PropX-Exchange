@@ -24,6 +24,7 @@ import {
   ApiOkResponse,
 } from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
+import { AuthRedisService } from '../services/auth-redis.service';
 import {
   SendOtpDto,
   VerifyOtpDto,
@@ -53,6 +54,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly config: AppConfigService,
+    private readonly authRedisService: AuthRedisService,
   ) {}
 
   private getRefreshCookieConfig() {
@@ -500,6 +502,7 @@ export class AuthController {
   @ApiOkResponse({ description: 'Password changed successfully.' })
   @ApiUnauthorizedResponse({ description: 'Old password is incorrect.' })
   async changePassword(
+    @Req() req: Request,
     @Body() dto: ChangePasswordDto,
     @CurrentUser() user: JwtPayload,
   ) {
@@ -508,6 +511,15 @@ export class AuthController {
       dto.oldPassword,
       dto.newPassword,
     );
+
+    const [type, token] = req.headers.authorization?.split(' ') ?? [];
+    if (type === 'Bearer' && token && user.exp) {
+      const expiresInMs = user.exp * 1000 - Date.now();
+      if (expiresInMs > 0) {
+        await this.authRedisService.addToBlacklist(token, expiresInMs);
+      }
+    }
+
     return { success: true };
   }
 
@@ -516,11 +528,23 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout' })
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: Request,
+    @CurrentUser() user: JwtPayload,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const refreshToken = req.cookies?.['refresh_token'] as string | undefined;
 
     if (refreshToken) {
       await this.authService.revokeRefreshTokenByToken(refreshToken);
+    }
+
+    const [type, token] = req.headers.authorization?.split(' ') ?? [];
+    if (type === 'Bearer' && token && user.exp) {
+      const expiresInMs = user.exp * 1000 - Date.now();
+      if (expiresInMs > 0) {
+        await this.authRedisService.addToBlacklist(token, expiresInMs);
+      }
     }
 
     res.clearCookie('refresh_token');

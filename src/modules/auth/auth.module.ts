@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './services/auth.service';
 import { TokenService } from './services/token.service';
@@ -11,6 +11,7 @@ import { AuthCleanupCron } from './jobs/auth-cleanup.cron';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AppConfigService } from '@/config/app-config.service';
 
+@Global()
 @Module({
   imports: [
     JwtModule.registerAsync({
@@ -18,7 +19,7 @@ import { AppConfigService } from '@/config/app-config.service';
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => ({
         secret: config.jwtSecret,
-        signOptions: { expiresIn: '1d' },
+        signOptions: { expiresIn: (config.jwtExpiresIn ?? '15m') as any },
       }),
     }),
   ],
@@ -33,5 +34,6 @@ import { AppConfigService } from '@/config/app-config.service';
     PrismaService,
     AuthCleanupCron,
   ],
+  exports: [AuthService, AuthRedisService],
 })
 export class AuthModule {}

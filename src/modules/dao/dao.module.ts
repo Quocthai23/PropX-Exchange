@@ -10,4 +10,4 @@ import { AssetsModule } from '@/modules/assets/assets.module';
   controllers: [DaoController],
   providers: [DaoService, DaoGovernanceCron, PrismaService],
 })
-export class DaoModule { }
+export class DaoModule {}

@@ -50,4 +50,3 @@ export class KlineGateway {
     this.logger.debug(`Emitted ticker for symbol=${payload.symbol}`);
   }
 }
-

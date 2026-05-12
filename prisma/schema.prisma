@@ -251,7 +251,7 @@ model AssetOnboardingRequest {
   description             String           @db.Text
   location                String?
   estimatedValue          Decimal
-  legalDocuments          String           @db.LongText
+  legalDocuments          Json
   status                  OnboardingStatus @default(PENDING)
   adminNotes              String?          @db.Text
   appraisedValue          Decimal?
@@ -493,9 +493,9 @@ model NewsArticle {
   source       String
   externalId   String?
   dedupeKey    String      @unique
-  title        String      @db.LongText
-  summary      String?     @db.LongText
-  content      String?     @db.Text
+  title        Json
+  summary      Json?
+  content      Json?
   url          String
   imageUrl     String?
   publishedAt  DateTime
@@ -503,7 +503,7 @@ model NewsArticle {
   country      String?
   category     String?
   keywords     String?     @db.Text
-  rawPayload   String?     @db.LongText
+  rawPayload   Json?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   impactScore  Int?
@@ -658,7 +658,7 @@ model AssetValuationSnapshot {
   landArea   Decimal?
   pricePerM2 Decimal?
   capturedAt DateTime
-  rawPayload String?  @db.LongText
+  rawPayload Json?
   createdAt  DateTime @default(now())
   asset      Asset?   @relation(fields: [assetId], references: [id])
 

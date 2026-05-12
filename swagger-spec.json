@@ -1224,6 +1224,56 @@
         ]
       }
     },
+    "/assets/{id}/market-data": {
+      "get": {
+        "operationId": "AssetsController_getAssetMarketData",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMarketDataDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "summary": "Get latest market data for an asset",
+        "tags": [
+          "Assets",
+          "Assets"
+        ]
+      }
+    },
     "/assets": {
       "get": {
         "operationId": "AssetsController_getAssets",
@@ -6309,6 +6359,60 @@
           "reason"
         ]
       },
+      "AssetMarketDataDto": {
+        "type": "object",
+        "properties": {
+          "sellPrice": {
+            "type": "number",
+            "description": "Best sell price (ask) in USDT",
+            "example": 50.5
+          },
+          "buyPrice": {
+            "type": "number",
+            "description": "Best buy price (bid) in USDT",
+            "example": 50
+          },
+          "spread": {
+            "type": "number",
+            "description": "Spread between ask and bid",
+            "example": 0.5
+          },
+          "volume": {
+            "type": "number",
+            "description": "Traded volume in the last period",
+            "example": 1200
+          },
+          "sellPercent": {
+            "type": "number",
+            "description": "Sell percentage (market sell pressure)",
+            "example": 62.5
+          },
+          "buyPercent": {
+            "type": "number",
+            "description": "Buy percentage (market buy pressure)",
+            "example": 37.5
+          },
+          "chgPercent": {
+            "type": "number",
+            "description": "Change percent versus previous period",
+            "example": -1.25
+          },
+          "low": {
+            "type": "number",
+            "description": "Lowest price in the period",
+            "example": 49
+          },
+          "lastUpdated": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of the last update"
+          },
+          "source": {
+            "type": "string",
+            "description": "Optional source identifier for the market data (exchange, aggregator, etc.)"
+          }
+        }
+      },
       "SubmitAssetOnboardingDto": {
         "type": "object",
         "properties": {
@@ -6371,6 +6475,14 @@
           "isHot": {
             "type": "boolean",
             "description": "Whether this asset is highlighted as hot"
+          },
+          "marketData": {
+            "description": "Optional latest market data snapshot",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssetMarketDataDto"
+              }
+            ]
           }
         },
         "required": [

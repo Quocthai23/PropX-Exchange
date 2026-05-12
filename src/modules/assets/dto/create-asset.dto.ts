@@ -7,6 +7,8 @@ import {
   IsNumber,
   Min,
 } from 'class-validator';
+import { AssetMarketDataDto } from './asset-market-data.dto';
+import { ApiPropertyOptional as ApiOptional } from '@nestjs/swagger';
 
 export class CreateAssetDto {
   @ApiProperty({ description: 'On-chain token symbol (e.g., RWA-EST-01)' })
@@ -63,4 +65,8 @@ export class CreateAssetDto {
   @IsOptional()
   @IsBoolean()
   isHot?: boolean;
+
+  @ApiOptional({ description: 'Optional latest market data snapshot', type: AssetMarketDataDto })
+  @IsOptional()
+  marketData?: AssetMarketDataDto;
 }

@@ -10,6 +10,7 @@ export interface ValidatedEnv {
   ENABLE_SETTLEMENT?: string;
   ENABLE_DEMO_MARKET_DATA?: string;
   JWT_SECRET?: string;
+  JWT_EXPIRATION?: string;
   JWT_REFRESH_SECRET?: string;
   JWT_REFRESH_EXPIRES_IN?: string;
   WALLET_ENCRYPTION_KEY?: string;
@@ -91,6 +92,7 @@ export function validateEnv(config: Record<string, unknown>): ValidatedEnv {
       | string
       | undefined,
     JWT_SECRET: config.JWT_SECRET as string | undefined,
+    JWT_EXPIRATION: config.JWT_EXPIRATION as string | undefined,
     JWT_REFRESH_SECRET: config.JWT_REFRESH_SECRET as string | undefined,
     JWT_REFRESH_EXPIRES_IN: config.JWT_REFRESH_EXPIRES_IN as string | undefined,
     WALLET_ENCRYPTION_KEY: config.WALLET_ENCRYPTION_KEY as string | undefined,

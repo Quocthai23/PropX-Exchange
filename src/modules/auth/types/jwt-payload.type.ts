@@ -2,4 +2,6 @@
   sub: string; // user id
   walletAddress?: string | null;
   role: 'ADMIN' | 'INVESTOR' | 'SUPPORT_STAFF';
+  iat?: number;
+  exp?: number;
 }

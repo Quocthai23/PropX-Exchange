@@ -143,7 +143,9 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       url: this.config.redisUrl,
       socket: {
         reconnectStrategy: (retries) => {
-          this.logger.warn(`Redis reconnecting (MarketData), attempt ${retries}`);
+          this.logger.warn(
+            `Redis reconnecting (MarketData), attempt ${retries}`,
+          );
           return Math.min(retries * 50, 2000);
         },
       },
@@ -307,7 +309,6 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
   }
 
   private getOpenTimeForResolution(timestamp: Date, resolution: string): Date {
-
     const openTime = new Date(timestamp);
     openTime.setSeconds(0, 0);
     const minutes = openTime.getMinutes();
