@@ -115,7 +115,7 @@ describe('PaymentService', () => {
         accountId: 'account-id',
         destinationAddress: '0x123',
         chainId: 1,
-      } as WithdrawV2Dto);
+      } as unknown as WithdrawV2Dto);
 
       expect(result.transactionId).toEqual('existing-tx-id');
     });

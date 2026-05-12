@@ -30,30 +30,42 @@ export class BulkCancelOrdersDto {
 
 export class UpdateOrderDto {
   @ApiPropertyOptional({
-    description:
-      'Set to true to cancel the order. If true, other fields are ignored',
+    description: 'Set to true to cancel the order. If true, other fields are ignored',
   })
   @IsOptional()
   @IsBoolean()
   cancel?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Trading account identifier',
+  })
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @ApiPropertyOptional({
     description: 'New limit/stop price. Only applicable for non-MARKET orders',
   })
   @IsOptional()
-  price?: number | string;
+  @IsString()
+  @Matches(/^\d+(\.\d+)?$/)
+  price?: string;
 
   @ApiPropertyOptional({
     description: 'New stop loss price. Optional, set to null to remove',
   })
   @IsOptional()
-  stopLossPrice?: number | string | null;
+  @IsString()
+  @Matches(/^\d+(\.\d+)?$/)
+  stopLossPrice?: string | null;
 
   @ApiPropertyOptional({
     description: 'New take profit price. Optional, set to null to remove',
   })
   @IsOptional()
-  takeProfitPrice?: number | string | null;
+  @IsString()
+  @Matches(/^\d+(\.\d+)?$/)
+  takeProfitPrice?: string | null;
 }
 
 export class GetOrdersQueryDto {
@@ -90,6 +102,39 @@ export class GetOrdersQueryDto {
   @IsOptional()
   @IsString()
   assetId?: string;
+
+  @ApiPropertyOptional({ description: 'Trading account ID' })
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Order type',
+    enum: $Enums.OrderType,
+  })
+  @IsOptional()
+  @IsEnum($Enums.OrderType)
+  orderType?: $Enums.OrderType;
+
+  @ApiPropertyOptional({ description: 'Sort field (e.g. createdAt, price)' })
+  @IsOptional()
+  @IsString()
+  sortBy?: string = 'createdAt';
+
+  @ApiPropertyOptional({ description: 'Sort direction', enum: ['asc', 'desc'] })
+  @IsOptional()
+  @IsEnum(['asc', 'desc'])
+  sortDir?: 'asc' | 'desc' = 'desc';
+
+  @ApiPropertyOptional({ description: 'Start date (ISO 8601)' })
+  @IsOptional()
+  @Type(() => Date)
+  fromDate?: Date;
+
+  @ApiPropertyOptional({ description: 'End date (ISO 8601)' })
+  @IsOptional()
+  @Type(() => Date)
+  toDate?: Date;
 }
 
 export class CreateOrderDto {
@@ -134,4 +179,26 @@ export class CreateOrderDto {
   @IsString()
   @Matches(/^\d+(\.\d+)?$/)
   maxTotalCost?: string;
+  @ApiPropertyOptional({
+    description: 'Trading account identifier',
+  })
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Stop loss price',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+(\.\d+)?$/)
+  stopLoss?: string;
+
+  @ApiPropertyOptional({
+    description: 'Take profit price',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+(\.\d+)?$/)
+  takeProfit?: string;
 }

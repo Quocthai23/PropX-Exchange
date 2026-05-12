@@ -165,6 +165,7 @@ export class AssetsService {
       buyPrice,
       spread,
       volume: volume.toNumber(),
+      high: cs.high ? new Decimal(cs.high.toString()).toNumber() : close.toNumber(),
       sellPercent: null,
       buyPercent: null,
       chgPercent,

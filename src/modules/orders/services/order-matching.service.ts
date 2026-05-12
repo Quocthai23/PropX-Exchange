@@ -171,6 +171,7 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
         assetId: string;
         price: string;
         quantity: string;
+        side: 'BUY' | 'SELL';
         executedAt: Date;
       }[] = [];
 
@@ -252,6 +253,7 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
             assetId,
             price: matchPrice.toString(),
             quantity: matchableQuantity.toString(),
+            side: side as 'BUY' | 'SELL',
             executedAt: new Date(),
           });
 
@@ -330,6 +332,7 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
           trade.price,
           trade.quantity,
           trade.executedAt,
+          trade.side,
         );
       }
 

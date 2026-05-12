@@ -29,6 +29,7 @@ import { AppConfigModule } from '@/config/app-config.module';
 import { OnboardingModule } from '@/modules/onboarding/onboarding.module';
 import { DaoModule } from '@/modules/dao/dao.module';
 import { CommissionsModule } from '@/modules/commissions/commissions.module';
+import { AccountsModule } from '@/modules/accounts/accounts.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { CommissionsModule } from '@/modules/commissions/commissions.module';
     OnboardingModule,
     DaoModule,
     CommissionsModule,
+    AccountsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

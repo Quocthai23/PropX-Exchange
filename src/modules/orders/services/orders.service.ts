@@ -118,6 +118,9 @@ export class OrdersService {
         filledQuantity: new Decimal(0),
         status: 'OPEN',
         idempotencyKey,
+        accountId: dto.accountId,
+        stopLoss: dto.stopLoss ? new Decimal(dto.stopLoss) : null,
+        takeProfit: dto.takeProfit ? new Decimal(dto.takeProfit) : null,
       },
     });
 
@@ -137,12 +140,26 @@ export class OrdersService {
     if (query.side) {
       where.side = query.side;
     }
+    if (query.accountId) {
+      where.accountId = query.accountId;
+    }
+    if (query.orderType) {
+      where.type = query.orderType;
+    }
+    if (query.fromDate || query.toDate) {
+      where.createdAt = {};
+      if (query.fromDate) where.createdAt.gte = query.fromDate;
+      if (query.toDate) where.createdAt.lte = query.toDate;
+    }
 
     const take = query.take || 20;
+    const sortBy = query.sortBy || 'createdAt';
+    const sortDir = query.sortDir || 'desc';
+
     const [data, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { [sortBy]: sortDir },
         take: take + 1,
         ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
         include: { asset: true },
@@ -212,7 +229,12 @@ export class OrdersService {
 
     const updated = await this.prisma.order.update({
       where: { id: orderId },
-      data: { price: nextPrice },
+      data: {
+        price: nextPrice,
+        accountId: dto.accountId,
+        stopLoss: dto.stopLossPrice ? new Decimal(dto.stopLossPrice) : undefined,
+        takeProfit: dto.takeProfitPrice ? new Decimal(dto.takeProfitPrice) : undefined,
+      },
       select: { id: true, status: true, price: true },
     });
 

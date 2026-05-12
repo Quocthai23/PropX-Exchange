@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
 import { RealtimeGateway } from './realtime.gateway';
 import { TradingEventsListener } from './trading-events.listener';
-import { MarketDataGateway } from './market-data.gateway';
 import { PrismaService } from '@/prisma/prisma.service';
+import { MarketDataModule } from '../market-data/market-data.module';
 
 @Module({
+  imports: [MarketDataModule],
   providers: [
     RealtimeGateway,
     TradingEventsListener,
-    MarketDataGateway,
     PrismaService,
   ],
-  exports: [RealtimeGateway, MarketDataGateway],
+  exports: [RealtimeGateway],
 })
 export class RealtimeModule {}

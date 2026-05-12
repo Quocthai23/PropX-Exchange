@@ -82,7 +82,7 @@ describe('DividendsService', () => {
         service.createDistribution('admin-id', {
           assetId: 'asset-id',
           totalAmount: '1000',
-        } as CreateDistributionDto),
+        } as unknown as CreateDistributionDto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -99,7 +99,7 @@ describe('DividendsService', () => {
       const result = await service.createDistribution('admin-id', {
         assetId: 'asset-id',
         totalAmount: '1000',
-      } as CreateDistributionDto);
+      } as unknown as CreateDistributionDto);
 
       expect(result.id).toEqual('dist-id');
     });

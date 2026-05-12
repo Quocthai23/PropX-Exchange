@@ -3185,6 +3185,72 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "accountId",
+            "required": false,
+            "in": "query",
+            "description": "Trading account ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderType",
+            "required": false,
+            "in": "query",
+            "description": "Order type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MARKET",
+                "LIMIT"
+              ]
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Sort field (e.g. createdAt, price)",
+            "schema": {
+              "default": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "description": "Sort direction",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "fromDate",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toDate",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -6402,6 +6468,11 @@
             "description": "Lowest price in the period",
             "example": 49
           },
+          "high": {
+            "type": "number",
+            "description": "Highest price in the period",
+            "example": 52
+          },
           "lastUpdated": {
             "format": "date-time",
             "type": "string",
@@ -6999,16 +7070,25 @@
             "type": "boolean",
             "description": "Set to true to cancel the order. If true, other fields are ignored"
           },
+          "accountId": {
+            "type": "string",
+            "description": "Trading account identifier"
+          },
           "price": {
-            "type": "object",
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
             "description": "New limit/stop price. Only applicable for non-MARKET orders"
           },
           "stopLossPrice": {
-            "type": "object",
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d+(\\.\\d+)?$",
             "description": "New stop loss price. Optional, set to null to remove"
           },
           "takeProfitPrice": {
-            "type": "object",
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d+(\\.\\d+)?$",
             "description": "New take profit price. Optional, set to null to remove"
           }
         }
@@ -7055,6 +7135,20 @@
             "type": "string",
             "pattern": "^\\d+(\\.\\d+)?$",
             "description": "Max total cost for MARKET BUY orders to lock funds safely."
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Trading account identifier"
+          },
+          "stopLoss": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Stop loss price"
+          },
+          "takeProfit": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Take profit price"
           }
         },
         "required": [

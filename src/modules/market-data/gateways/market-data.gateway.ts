@@ -16,6 +16,7 @@ export interface KlineUpdatePayload {
 
 export interface TickerUpdatePayload {
   symbol: string;
+  assetId?: string;
   ask: number | null;
   bid: number | null;
   lastPrice: number | null;
@@ -25,6 +26,10 @@ export interface TickerUpdatePayload {
   low: number | null;
   volume: number;
   quoteVolume: number;
+  buyPercent?: number;
+  sellPercent?: number;
+  spread?: number;
+  timestamp?: string;
 }
 
 @WebSocketGateway({
@@ -32,11 +37,11 @@ export interface TickerUpdatePayload {
     origin: '*',
   },
 })
-export class KlineGateway {
+export class MarketDataGateway {
   @WebSocketServer()
   server!: Server;
 
-  private readonly logger = new Logger(KlineGateway.name);
+  private readonly logger = new Logger(MarketDataGateway.name);
 
   emitKline(payload: KlineUpdatePayload): void {
     this.server.emit('kline', payload);

@@ -345,6 +345,9 @@ model Order {
   createdAt      DateTime    @default(now())
   idempotencyKey String?     @unique
   type           OrderType
+  accountId      String?
+  stopLoss       Decimal?
+  takeProfit     Decimal?
   updatedAt      DateTime    @updatedAt
   asset          Asset       @relation(fields: [assetId], references: [id])
   user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)

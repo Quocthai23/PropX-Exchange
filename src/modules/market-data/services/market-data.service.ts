@@ -10,9 +10,9 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { createClient } from 'redis';
 import { AppConfigService } from '@/config/app-config.service';
 import {
-  KlineGateway,
+  MarketDataGateway,
   type KlineUpdatePayload,
-} from '../gateways/kline.gateway';
+} from '../gateways/market-data.gateway';
 
 type DecimalValue = string | number | { toString(): string };
 
@@ -137,7 +137,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
-    private readonly klineGateway: KlineGateway,
+    private readonly marketDataGateway: MarketDataGateway,
   ) {
     this.redisClient = createClient({
       url: this.config.redisUrl,
@@ -168,11 +168,13 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
     price: string,
     quantity: string,
     timestamp: Date,
+    side: 'BUY' | 'SELL' = 'BUY',
   ): Promise<void> {
     const tradeData = JSON.stringify({
       assetId,
       price,
       quantity,
+      side,
       timestamp: timestamp.toISOString(),
     });
 
@@ -190,6 +192,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
       let newHigh = price;
       let newLow = price;
       let newVolume = quantity;
+      let newBuyVolume = side === 'BUY' ? quantity : '0';
 
       if (existingStr) {
         const existing = JSON.parse(existingStr) as {
@@ -197,14 +200,16 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
           high: string;
           low: string;
           volume: string;
+          buyVolume?: string;
         };
         newOpen = existing.open;
         newHigh = Decimal.max(existing.high, price).toString();
         newLow = Decimal.min(existing.low, price).toString();
         newVolume = new Decimal(existing.volume).add(quantity).toString();
+        newBuyVolume = new Decimal(existing.buyVolume || '0')
+          .add(side === 'BUY' ? quantity : '0')
+          .toString();
       }
-
-      // Continue with updated values to cache and emit
 
       await this.redisClient.set(
         cacheKey,
@@ -217,8 +222,9 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
           low: newLow,
           close: price,
           volume: newVolume,
+          buyVolume: newBuyVolume,
         }),
-        { EX: 86400 },
+        { EX: 86400 * 7 }, // Keep in cache for 7 days
       );
 
       const emittedKline: KlineUpdatePayload = {
@@ -233,7 +239,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
         isClosed: false,
       };
 
-      this.klineGateway.emitKline(emittedKline);
+      this.marketDataGateway.emitKline(emittedKline);
     }
 
     // Emit ticker update whenever a trade occurs
@@ -265,46 +271,74 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
 
     const anchor = await this.getReferencePriceAnchor(assetId);
 
-    // Get 24h stats
-    const yesterday = new Date();
-    yesterday.setHours(yesterday.getHours() - 24);
+    // Get 24h stats using rolling window of 1m candles from Redis
+    const now = new Date();
+    
+    let high24h = new Decimal(anchor.marketPrice || 0);
+    let low24h = new Decimal(anchor.marketPrice || 0);
+    let volume24h = new Decimal(0);
+    let buyVolume24h = new Decimal(0);
+    let open24h = new Decimal(anchor.marketPrice || 0);
 
-    const candles24h = await this.prisma.candlestick.findMany({
-      where: {
-        assetId,
-        resolution: '1h',
-        openTime: { gte: yesterday },
-      },
-      orderBy: { openTime: 'asc' },
-    });
-
-    let high24h = anchor.marketPrice || 0;
-    let low24h = anchor.marketPrice || 0;
-    let volume24h = 0;
-    let open24h = anchor.marketPrice || 0;
-
-    if (candles24h.length > 0) {
-      open24h = Number(candles24h[0].open);
-      high24h = Math.max(...candles24h.map((c) => Number(c.high)), high24h);
-      low24h = Math.min(...candles24h.map((c) => Number(c.low)), low24h);
-      volume24h = candles24h.reduce((sum, c) => sum + Number(c.volume), 0);
+    // Strategy: MGET the last 1440 minutes of 1m candles
+    const keys: string[] = [];
+    for (let i = 0; i < 1440; i++) {
+      const time = new Date(now.getTime() - i * 60000);
+      const openTime = this.getOpenTimeForResolution(time, '1m');
+      keys.push(
+        `${this.REDIS_OHLC_CACHE_PREFIX}${assetId}:1m:${openTime.getTime()}`,
+      );
     }
 
-    const lastPrice = anchor.marketPrice || 0;
-    const change = lastPrice - open24h;
-    const changePercent = open24h !== 0 ? (change / open24h) * 100 : 0;
+    const cachedCandles = await this.redisClient.mGet(keys);
+    let firstFound = false;
 
-    this.klineGateway.emitTicker({
+    // From oldest to newest to find the first 'open' price correctly
+    for (const candleStr of cachedCandles.reverse()) {
+      if (!candleStr) continue;
+      const candle = JSON.parse(candleStr);
+
+      if (!firstFound) {
+        open24h = new Decimal(candle.open);
+        high24h = new Decimal(candle.high);
+        low24h = new Decimal(candle.low);
+        firstFound = true;
+      } else {
+        high24h = Decimal.max(high24h, candle.high);
+        low24h = Decimal.min(low24h, candle.low);
+      }
+      volume24h = volume24h.add(candle.volume);
+      buyVolume24h = buyVolume24h.add(candle.buyVolume || 0);
+    }
+
+    const lastPrice = new Decimal(anchor.marketPrice || 0);
+    const change = lastPrice.minus(open24h);
+    const changePercent = open24h.isZero()
+      ? 0
+      : change.div(open24h).mul(100).toNumber();
+
+    const buyPercent = volume24h.isZero()
+      ? 50
+      : buyVolume24h.div(volume24h).mul(100).toNumber();
+    const sellPercent = 100 - buyPercent;
+
+    this.marketDataGateway.emitTicker({
       symbol: asset.symbol,
+      assetId: assetId,
       ask: anchor.bestAsk,
       bid: anchor.bestBid,
-      lastPrice: anchor.marketPrice,
-      change,
+      lastPrice: lastPrice.toNumber(),
+      change: change.toNumber(),
       changePercent,
-      high: high24h,
-      low: low24h,
-      volume: volume24h,
-      quoteVolume: volume24h * lastPrice,
+      high: high24h.toNumber(),
+      low: low24h.toNumber(),
+      volume: volume24h.toNumber(),
+      quoteVolume: volume24h.mul(lastPrice).toNumber(),
+      buyPercent,
+      sellPercent,
+      spread:
+        anchor.bestAsk && anchor.bestBid ? anchor.bestAsk - anchor.bestBid : 0,
+      timestamp: now.toISOString(),
     });
   }
 
@@ -378,6 +412,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
           assetId: string;
           price: string;
           quantity: string;
+          side: 'BUY' | 'SELL';
           timestamp: string;
         };
         const timestamp = new Date(trade.timestamp);
@@ -396,21 +431,25 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
               low: trade.price,
               close: trade.price,
               volume: trade.quantity,
-            };
+              buyVolume: trade.side === 'BUY' ? trade.quantity : '0',
+            } as any;
           } else {
-            const current = groupedTrades[groupKey];
+            const current = groupedTrades[groupKey] as any;
             current.high = Decimal.max(current.high, trade.price).toString();
             current.low = Decimal.min(current.low, trade.price).toString();
             current.close = trade.price;
             current.volume = new Decimal(current.volume)
               .add(trade.quantity)
               .toString();
+            current.buyVolume = new Decimal(current.buyVolume || '0')
+              .add(trade.side === 'BUY' ? trade.quantity : '0')
+              .toString();
           }
         }
       }
 
       for (const groupKey of Object.keys(groupedTrades)) {
-        const group = groupedTrades[groupKey];
+        const group = groupedTrades[groupKey] as any;
         const currentDb = await prisma.candlestick.findUnique({
           where: {
             assetId_resolution_openTime: {
@@ -432,6 +471,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
               low: group.low,
               close: group.close,
               volume: group.volume,
+              // buyVolume: group.buyVolume, // Pending Prisma migration
             },
           });
         } else {
@@ -456,6 +496,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
               volume: new Decimal(toDecimalValue(currentDb.volume))
                 .add(group.volume)
                 .toString(),
+              // buyVolume: new Decimal(toDecimalValue((currentDb as any).buyVolume || '0')).add(group.buyVolume).toString(), // Pending Prisma migration
             },
           });
         }

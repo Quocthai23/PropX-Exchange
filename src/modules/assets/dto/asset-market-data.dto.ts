@@ -42,6 +42,11 @@ export class AssetMarketDataDto {
     @IsNumber()
     low?: number;
 
+    @ApiPropertyOptional({ description: 'Highest price in the period', example: 52.0 })
+    @IsOptional()
+    @IsNumber()
+    high?: number;
+
     @ApiPropertyOptional({ description: 'Timestamp of the last update' })
     @IsOptional()
     @IsDate()
