@@ -14,7 +14,7 @@ import { AccountsService } from './accounts.service';
 import { CreateAccountDto, UpdateAccountDto } from './dto/accounts.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { JwtPayload } from '../auth/types/jwt-payload.type';
+import type { JwtPayload } from '../auth/types/jwt-payload.type';
 
 @ApiTags('Accounts')
 @ApiBearerAuth('accessToken')

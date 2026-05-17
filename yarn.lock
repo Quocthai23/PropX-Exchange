@@ -3495,7 +3495,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/express@npm:^5.0.0":
+"@types/express@npm:*, @types/express@npm:^5.0.0":
   version: 5.0.6
   resolution: "@types/express@npm:5.0.6"
   dependencies:
@@ -3590,6 +3590,15 @@ __metadata:
   version: 2.1.0
   resolution: "@types/ms@npm:2.1.0"
   checksum: 10c0/5ce692ffe1549e1b827d99ef8ff71187457e0eb44adbae38fdf7b9a74bae8d20642ee963c14516db1d35fa2652e65f47680fdf679dcbde52bbfadd021f497225
+  languageName: node
+  linkType: hard
+
+"@types/multer@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "@types/multer@npm:2.1.0"
+  dependencies:
+    "@types/express": "npm:*"
+  checksum: 10c0/f1f512918f79c5dac007d8d30de74372ad24932b34b43d09f250178dcce6da426297e0ea9c939322545519f133cd525dca0552781967d05f43d782ff0b169333
   languageName: node
   linkType: hard
 
@@ -8028,7 +8037,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"multer@npm:2.1.1":
+"multer@npm:2.1.1, multer@npm:^2.1.1":
   version: 2.1.1
   resolution: "multer@npm:2.1.1"
   dependencies:
@@ -8858,6 +8867,7 @@ __metadata:
     "@types/cookie-parser": "npm:^1.4.10"
     "@types/express": "npm:^5.0.0"
     "@types/jest": "npm:^30.0.0"
+    "@types/multer": "npm:^2.1.0"
     "@types/node": "npm:^24.0.0"
     "@types/nodemailer": "npm:^8"
     "@types/speakeasy": "npm:^2"
@@ -8878,6 +8888,7 @@ __metadata:
     globals: "npm:^17.0.0"
     jest: "npm:^30.0.0"
     mariadb: "npm:^3.5.2"
+    multer: "npm:^2.1.1"
     nest-winston: "npm:^1.10.2"
     nodemailer: "npm:^8.0.5"
     prettier: "npm:^3.4.2"

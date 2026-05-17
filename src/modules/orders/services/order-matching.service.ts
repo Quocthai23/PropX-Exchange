@@ -129,10 +129,8 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
       const assetId = order.assetId;
       const userId = order.userId;
 
-      const priceDec = new Decimal(
-        (order.price as unknown as string)?.toString() ?? 0,
-      );
-      const quantityDec = new Decimal(order.quantity.toString() as string);
+      const priceDec = new Decimal(order.price ? order.price.toString() : 0);
+      const quantityDec = new Decimal(order.quantity.toString());
       // Find matching orders from counterparty
       const oppositeOrderSide = (side as string) === 'BUY' ? 'SELL' : 'BUY';
       const priceFilter =
@@ -157,9 +155,7 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
       });
 
       let remainingQuantity = quantityDec;
-      let currentOrderFilled = new Decimal(
-        order.filledQuantity.toString() as string,
-      );
+      let currentOrderFilled = new Decimal(order.filledQuantity.toString());
       let tradeCount = 0;
       const maxTotalCost =
         order.type === 'MARKET' && side === 'BUY'
@@ -175,63 +171,43 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
         executedAt: Date;
       }[] = [];
 
-      await prisma.$transaction(async (tx: any) => {
-        // Process all matches in a single DB transaction to reduce lock churn/deadlocks.
-        for (const matchingOrder of matchingOrders) {
-          if (remainingQuantity.isZero()) break;
+      const txOperations: ((tx: any) => Promise<void>)[] = [];
 
-          const matchingOrderRemaining = new Decimal(
-            matchingOrder.quantity as unknown as string,
-          ).minus(matchingOrder.filledQuantity as unknown as string);
-          if (matchingOrderRemaining.lte(0)) continue;
+      for (const matchingOrder of matchingOrders) {
+        if (remainingQuantity.isZero()) break;
 
-          let matchableQuantity = Decimal.min(
-            remainingQuantity,
-            matchingOrderRemaining,
-          );
-          const matchPrice = new Decimal(
-            (matchingOrder.price as unknown as string)?.toString() ?? 0,
-          );
+        const matchingOrderRemaining = new Decimal(matchingOrder.quantity.toString()).minus(matchingOrder.filledQuantity.toString());
+        if (matchingOrderRemaining.lte(0)) continue;
 
-          if (order.type === 'MARKET' && side === 'BUY' && maxTotalCost) {
-            const cost = matchableQuantity.times(matchPrice);
-            if (totalSpent.plus(cost).gt(maxTotalCost)) {
-              const availableToSpend = maxTotalCost.minus(totalSpent);
-              matchableQuantity = availableToSpend.div(matchPrice);
-              if (matchableQuantity.lte(0)) break;
-            }
+        let matchableQuantity = Decimal.min(remainingQuantity, matchingOrderRemaining);
+        const matchPrice = new Decimal(matchingOrder.price ? matchingOrder.price.toString() : 0);
+
+        if (order.type === 'MARKET' && side === 'BUY' && maxTotalCost) {
+          const cost = matchableQuantity.times(matchPrice);
+          if (totalSpent.plus(cost).gt(maxTotalCost)) {
+            const availableToSpend = maxTotalCost.minus(totalSpent);
+            matchableQuantity = availableToSpend.div(matchPrice);
+            if (matchableQuantity.lte(0)) break;
           }
+        }
 
-          const newOrderFilled = currentOrderFilled.plus(matchableQuantity);
-          const isOrderFilled = newOrderFilled.equals(quantityDec);
-          const orderNewStatus: OrderStatus = isOrderFilled
-            ? 'FILLED'
-            : 'PARTIALLY_FILLED';
+        const newOrderFilled = currentOrderFilled.plus(matchableQuantity);
+        const isOrderFilled = newOrderFilled.equals(quantityDec);
+        const orderNewStatus: OrderStatus = isOrderFilled ? 'FILLED' : 'PARTIALLY_FILLED';
 
-          const newMatchingOrderFilled = new Decimal(
-            matchingOrder.filledQuantity as unknown as string,
-          ).plus(matchableQuantity);
-          const isMatchingOrderFilled = newMatchingOrderFilled.equals(
-            new Decimal(matchingOrder.quantity as unknown as string),
-          );
-          const matchingOrderNewStatus: OrderStatus = isMatchingOrderFilled
-            ? 'FILLED'
-            : 'PARTIALLY_FILLED';
+        const newMatchingOrderFilled = new Decimal(matchingOrder.filledQuantity.toString()).plus(matchableQuantity);
+        const isMatchingOrderFilled = newMatchingOrderFilled.equals(new Decimal(matchingOrder.quantity.toString()));
+        const matchingOrderNewStatus: OrderStatus = isMatchingOrderFilled ? 'FILLED' : 'PARTIALLY_FILLED';
 
+        txOperations.push(async (tx) => {
           await tx.order.update({
             where: { id: orderId },
-            data: {
-              filledQuantity: newOrderFilled.toString(),
-              status: orderNewStatus,
-            },
+            data: { filledQuantity: newOrderFilled.toString(), status: orderNewStatus },
           });
 
           await tx.order.update({
             where: { id: matchingOrder.id },
-            data: {
-              filledQuantity: newMatchingOrderFilled.toString(),
-              status: matchingOrderNewStatus,
-            },
+            data: { filledQuantity: newMatchingOrderFilled.toString(), status: matchingOrderNewStatus },
           });
 
           await tx.trade.create({
@@ -249,14 +225,6 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
             data: { tokenPrice: matchPrice },
           });
 
-          executedTrades.push({
-            assetId,
-            price: matchPrice.toString(),
-            quantity: matchableQuantity.toString(),
-            side: side as 'BUY' | 'SELL',
-            executedAt: new Date(),
-          });
-
           await this.tradingLedgerService.settleMatch({
             tx,
             buyerId: side === 'BUY' ? userId : matchingOrder.userId,
@@ -266,30 +234,34 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
             price: matchPrice,
           });
 
-          if (
-            order.type === 'LIMIT' &&
-            side === 'BUY' &&
-            matchPrice.lt(priceDec)
-          ) {
-            const refundAmount = matchableQuantity.times(
-              priceDec.minus(matchPrice),
-            );
+          if (order.type === 'LIMIT' && side === 'BUY' && matchPrice.lt(priceDec)) {
+            const refundAmount = matchableQuantity.times(priceDec.minus(matchPrice));
             await this.tradingLedgerService.refundBuyerPriceImprovement({
               tx,
               buyerId: userId,
               amount: refundAmount,
             });
           }
+        });
 
-          remainingQuantity = remainingQuantity.minus(matchableQuantity);
-          currentOrderFilled = newOrderFilled;
-          if (order.type === 'MARKET' && side === 'BUY') {
-            totalSpent = totalSpent.plus(matchableQuantity.times(matchPrice));
-          }
-          tradeCount++;
+        executedTrades.push({
+          assetId,
+          price: matchPrice.toString(),
+          quantity: matchableQuantity.toString(),
+          side: side as 'BUY' | 'SELL',
+          executedAt: new Date(),
+        });
+
+        remainingQuantity = remainingQuantity.minus(matchableQuantity);
+        currentOrderFilled = newOrderFilled;
+        if (order.type === 'MARKET' && side === 'BUY') {
+          totalSpent = totalSpent.plus(matchableQuantity.times(matchPrice));
         }
+        tradeCount++;
+      }
 
-        if (order.type === 'MARKET' && remainingQuantity.gt(0)) {
+      if (order.type === 'MARKET' && remainingQuantity.gt(0)) {
+        txOperations.push(async (tx) => {
           await tx.order.update({
             where: { id: orderId },
             data: { status: 'CANCELLED' },
@@ -314,15 +286,23 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
               orderPrice: new Decimal(0),
             });
           }
-        } else if (order.type === 'MARKET' && side === 'BUY' && maxTotalCost) {
-          const unusedLocked = maxTotalCost.minus(totalSpent);
-          if (unusedLocked.gt(0)) {
+        });
+      } else if (order.type === 'MARKET' && side === 'BUY' && maxTotalCost) {
+        const unusedLocked = maxTotalCost.minus(totalSpent);
+        if (unusedLocked.gt(0)) {
+          txOperations.push(async (tx) => {
             await this.tradingLedgerService.refundBuyerPriceImprovement({
               tx,
               buyerId: userId,
               amount: unusedLocked,
             });
-          }
+          });
+        }
+      }
+
+      await prisma.$transaction(async (tx: any) => {
+        for (const op of txOperations) {
+          await op(tx);
         }
       });
 

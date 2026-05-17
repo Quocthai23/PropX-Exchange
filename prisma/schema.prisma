@@ -285,20 +285,21 @@ model AssetRedemptionRequest {
 }
 
 model DaoProposal {
-  id           String              @id @default(uuid())
-  assetId      String
-  proposerId   String
-  title        String
-  description  String              @db.Text
-  snapshotDate DateTime
-  endDate      DateTime
-  status       ProposalStatus      @default(ACTIVE)
-  type         ProposalType        @default(GENERAL)
-  createdAt    DateTime            @default(now())
-  asset        Asset               @relation(fields: [assetId], references: [id])
-  proposer     User                @relation("DaoProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
-  snapshots    DaoVotingSnapshot[]
-  votes        ProposalVote[]
+  id                String              @id @default(uuid())
+  assetId           String
+  proposerId        String
+  title             String
+  description       String              @db.Text
+  snapshotDate      DateTime
+  endDate           DateTime
+  status            ProposalStatus      @default(ACTIVE)
+  type              ProposalType        @default(GENERAL)
+  onChainProposalId Int?
+  createdAt         DateTime            @default(now())
+  asset             Asset               @relation(fields: [assetId], references: [id])
+  proposer          User                @relation("DaoProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
+  snapshots         DaoVotingSnapshot[]
+  votes             ProposalVote[]
 
   @@index([assetId, status, endDate])
   @@index([proposerId, createdAt(sort: Desc)])
@@ -886,4 +887,21 @@ enum CommissionRewardStatus {
   AVAILABLE
   CLAIMED
   REJECTED
+}
+
+model SystemConfig {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+model MultiSigProposal {
+  id                String   @id @default(uuid())
+  type              String
+  payload           Json
+  status            String   @default("PENDING")
+  requiredApprovals Int
+  approvals         Json     @default("[]")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }

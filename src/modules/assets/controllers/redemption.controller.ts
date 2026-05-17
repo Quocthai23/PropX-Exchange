@@ -34,6 +34,20 @@ export class RedemptionController {
     return this.redeemService.requestRedeem(user?.sub ?? 'SYSTEM', assetId);
   }
 
+  @ApiTags('Asset Redemption')
+  @ApiBearerAuth('accessToken')
+  @UseGuards(JwtAuthGuard)
+  @Get('assets/:id/redemptions/me')
+  @ApiOperation({
+    summary: 'Get current user redemption requests for a specific asset',
+  })
+  async getMyRedemptions(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('id') assetId: string,
+  ) {
+    return this.redeemService.getUserRedemptions(user?.sub ?? 'SYSTEM', assetId);
+  }
+
   @ApiTags('Admin - Asset Redemption')
   @ApiBearerAuth('accessToken')
   @UseGuards(JwtAuthGuard, RolesGuard)

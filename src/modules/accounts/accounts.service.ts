@@ -7,11 +7,25 @@ export class AccountsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(userId: string) {
-    return this.prisma.account.findMany({
+    const accounts = await this.prisma.account.findMany({
       where: { userId },
       include: { accountType: true },
       orderBy: { createdAt: 'desc' },
     });
+
+    const balance = await this.prisma.balance.findFirst({
+      where: {
+        userId,
+        assetId: null,
+      },
+    });
+
+    return accounts.map((account) => ({
+      ...account,
+      availableBalance: balance?.available?.toString() || '0',
+      lockedBalance: balance?.locked?.toString() || '0',
+      balance: (Number(balance?.available || 0) + Number(balance?.locked || 0)).toString(),
+    }));
   }
 
   async getTypes() {

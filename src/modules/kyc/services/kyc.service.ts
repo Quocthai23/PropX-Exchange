@@ -13,45 +13,23 @@ import { BlockchainService } from './blockchain.service';
 import { MultiSigService } from '@/shared/services/multisig.service';
 import * as crypto from 'crypto';
 
-type KycStatus = 'PENDING' | 'APPROVING' | 'APPROVED' | 'REJECTED';
-
-interface KycPrisma {
-  $transaction<T>(queries: Promise<unknown>[]): Promise<T>;
-  kycRecord: {
-    upsert(args: Record<string, unknown>): Promise<unknown>;
-    findUnique(args: Record<string, unknown>): Promise<unknown>;
-    findMany(args: Record<string, unknown>): Promise<unknown>;
-    update(args: Record<string, unknown>): Promise<unknown>;
-  };
-  user: {
-    findUnique(
-      args: Record<string, unknown>,
-    ): Promise<{ walletAddress: string | null } | null>;
-    update(args: Record<string, unknown>): Promise<unknown>;
-  };
-  auditLog: {
-    create(args: Record<string, unknown>): Promise<unknown>;
-  };
-}
+import { KycStatus } from '@prisma/client';
 
 @Injectable()
 export class KycService {
   private readonly logger = new Logger(KycService.name);
-  private readonly prisma: KycPrisma;
   private readonly encryptionKey = Buffer.from(
     process.env.WALLET_ENCRYPTION_KEY || '12345678901234567890123456789012',
     'utf-8',
   );
 
   constructor(
-    prismaService: PrismaService,
+    private readonly prisma: PrismaService,
     @InjectQueue('kyc-approval') private kycQueue: Queue,
     private notificationsService: NotificationsService,
     private readonly blockchainService: BlockchainService,
     private readonly multiSigService: MultiSigService,
-  ) {
-    this.prisma = prismaService as unknown as KycPrisma;
-  }
+  ) {}
 
   private encryptIdNumber(text: string): string {
     const iv = Buffer.alloc(16, 0); // Deterministic IV for @unique
@@ -119,28 +97,28 @@ export class KycService {
   }
 
   async getMyKyc(userId: string) {
-    const record: any = await this.prisma.kycRecord.findUnique({
+    const record = await this.prisma.kycRecord.findUnique({
       where: { userId },
     });
     if (record && record.idNumber) {
-      record.idNumber = this.decryptIdNumber(record.idNumber as string);
+      record.idNumber = this.decryptIdNumber(record.idNumber);
     }
     return record;
   }
 
   async listPendingRequests() {
-    const records: any[] = (await this.prisma.kycRecord.findMany({
+    const records = await this.prisma.kycRecord.findMany({
       where: {
         status: {
           in: ['PENDING', 'APPROVING'],
         },
       },
       orderBy: { createdAt: 'desc' },
-    })) as any[];
+    });
 
     return records.map((record) => {
       if (record.idNumber) {
-        record.idNumber = this.decryptIdNumber(record.idNumber as string);
+        record.idNumber = this.decryptIdNumber(record.idNumber);
       }
       return record;
     });

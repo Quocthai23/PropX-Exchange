@@ -1,4 +1,4 @@
-﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsNotEmpty,
@@ -66,7 +66,45 @@ export class CreateAssetDto {
   @IsBoolean()
   isHot?: boolean;
 
-  @ApiOptional({ description: 'Optional latest market data snapshot', type: AssetMarketDataDto })
+  @ApiPropertyOptional({ description: 'Asset location/address' })
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @ApiPropertyOptional({ description: 'Array of image URLs' })
+  @IsOptional()
+  images?: any;
+
+  @ApiPropertyOptional({ description: 'Total area' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  area?: number;
+
+  @ApiPropertyOptional({ description: 'Zoning / Planning information' })
+  @IsOptional()
+  @IsString()
+  zoning?: string;
+
+  @ApiPropertyOptional({ description: 'Business model / What it does' })
+  @IsOptional()
+  @IsString()
+  businessModel?: string;
+
+  @ApiPropertyOptional({ description: 'Monthly benefits / Cashflow' })
+  @IsOptional()
+  @IsString()
+  monthlyBenefits?: string;
+
+  @ApiPropertyOptional({ description: 'Title deed / Sổ đỏ image URL' })
+  @IsOptional()
+  @IsString()
+  titleDeedImage?: string;
+
+  @ApiOptional({
+    description: 'Optional latest market data snapshot',
+    type: AssetMarketDataDto,
+  })
   @IsOptional()
   marketData?: AssetMarketDataDto;
 }

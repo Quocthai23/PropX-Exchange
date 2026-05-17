@@ -20,7 +20,7 @@ export class AuthService {
     private readonly otpService: OtpService,
     private readonly mfaService: MfaService,
     private readonly web3AuthService: Web3AuthService,
-  ) {}
+  ) { }
 
   async issueTokenPair(
     user: { id: string; walletAddress?: string | null; role: string },
@@ -169,6 +169,7 @@ export class AuthService {
           status: true,
         },
       });
+      await this.ensureDefaultAccountAndBalance(user.id);
     }
     if (user.status !== 'ACTIVE') {
       throw new ForbiddenException('Account is locked');
@@ -186,6 +187,47 @@ export class AuthService {
         avatar: user.avatar,
       },
     };
+  }
+
+  private async ensureDefaultAccountAndBalance(userId: string) {
+    const accountType = await this.prisma.accountType.findFirst({
+      where: { isActive: true },
+    });
+
+    if (accountType) {
+      await this.prisma.account.upsert({
+        where: {
+          userId_accountTypeId: {
+            userId,
+            accountTypeId: accountType.id,
+          },
+        },
+        update: {},
+        create: {
+          userId,
+          accountTypeId: accountType.id,
+          name: 'Tài khoản chính',
+        },
+      });
+    }
+
+    const existingBalance = await this.prisma.balance.findFirst({
+      where: {
+        userId,
+        assetId: null,
+      },
+    });
+
+    if (!existingBalance) {
+      await this.prisma.balance.create({
+        data: {
+          userId,
+          assetId: null,
+          available: 0.0,
+          locked: 0.0,
+        },
+      });
+    }
   }
 
   // Check if email already exists
@@ -235,7 +277,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
     // Save user to DB
-    return this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email: data.email,
         username: data.username,
@@ -245,6 +287,9 @@ export class AuthService {
         walletAddress: null,
       },
     });
+
+    await this.ensureDefaultAccountAndBalance(user.id);
+    return user;
   }
 
   async validateUser(email: string, password: string) {

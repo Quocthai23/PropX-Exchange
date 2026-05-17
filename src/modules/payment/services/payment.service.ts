@@ -32,10 +32,7 @@ export class PaymentService {
     private readonly transactionQueue: Queue,
   ) {}
 
-  // Keep Prisma operations usable when IDE type resolution lags behind generated Prisma types.
-  private get db(): any {
-    return this.prisma as any;
-  }
+
 
   async depositDemo(userId: string, dto: DepositDemoDto) {
     const { amount, idempotencyKey } = dto;
@@ -50,8 +47,7 @@ export class PaymentService {
       return { success: true, transactionId: existingTx.id };
     }
 
-    const transaction = await this.db.$transaction(async (tx: any) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const transaction = await this.prisma.$transaction(async (tx) => {
       await this.paymentLedgerService.creditDeposit(userId, amountDec, tx);
       return tx.transaction.create({
         data: {
@@ -71,7 +67,7 @@ export class PaymentService {
   }
 
   async createWallet(userId: string, dto: CreateWalletDto) {
-    const user = await this.db.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { walletAddress: true },
     });
@@ -81,7 +77,7 @@ export class PaymentService {
     }
 
     if (!user.walletAddress) {
-      await this.db.user.update({
+      await this.prisma.user.update({
         where: { id: userId },
         data: {
           walletAddress: dto.address,
@@ -121,7 +117,7 @@ export class PaymentService {
 
     await this.paymentLedgerService.lockWithdrawalFunds(userId, amountDec);
 
-    const transaction = await this.db.transaction.create({
+    const transaction = await this.prisma.transaction.create({
       data: {
         userId,
         type: 'WITHDRAW',
@@ -157,11 +153,11 @@ export class PaymentService {
     }
 
     const receiver = toUserId
-      ? await this.db.user.findUnique({
+      ? await this.prisma.user.findUnique({
           where: { id: toUserId },
           select: { id: true },
         })
-      : await this.db.user.findUnique({
+      : await this.prisma.user.findUnique({
           where: { email: String(toEmail).toLowerCase().trim() },
           select: { id: true },
         });
@@ -173,7 +169,7 @@ export class PaymentService {
       throw new BadRequestException('Cannot transfer to self');
     }
 
-    const transaction = await this.db.$transaction(async (tx: any) => {
+    const transaction = await this.prisma.$transaction(async (tx) => {
       await this.paymentLedgerService.transferAvailableBalance({
         tx,
         fromUserId: userId,
@@ -219,14 +215,14 @@ export class PaymentService {
     transactionId: string,
     dto: AdminUpdateWithdrawStatusDto,
   ) {
-    const transaction = await this.db.transaction.findUnique({
+    const transaction = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
     });
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
     }
 
-    await this.db.$transaction(async (tx: any) => {
+    await this.prisma.$transaction(async (tx) => {
       await tx.transaction.update({
         where: { id: transactionId },
         data: {
@@ -237,7 +233,7 @@ export class PaymentService {
       await this.paymentLedgerService.applyWithdrawalStatus({
         tx,
         userId: transaction.userId,
-        amount: new Decimal(transaction.amount.toString() as string),
+        amount: new Decimal(transaction.amount.toString()),
         status: dto.status,
       });
     });
@@ -246,7 +242,7 @@ export class PaymentService {
   }
 
   async adminSweepFunds(adminUserId: string, dto: AdminSweepFundsDto) {
-    const adminUser = await this.db.user.findUnique({
+    const adminUser = await this.prisma.user.findUnique({
       where: { id: adminUserId },
       select: { role: true },
     });
@@ -261,7 +257,7 @@ export class PaymentService {
     const transactionIds: string[] = [];
 
     while (true) {
-      const balances = await this.db.balance.findMany({
+      const balances = await this.prisma.balance.findMany({
         where: {
           assetId: null,
           available: { gt: 0 },
@@ -282,7 +278,7 @@ export class PaymentService {
 
       cursorId = balances[balances.length - 1].id;
 
-      const createdIds = await this.db.$transaction(async (tx: any) => {
+      const createdIds = await this.prisma.$transaction(async (tx) => {
         const batchIds: string[] = [];
         for (const balance of balances) {
           await tx.balance.update({
@@ -290,7 +286,7 @@ export class PaymentService {
             data: { available: 0 },
           });
 
-          const createdTx = await (tx.transaction as any).create({
+          const createdTx = await tx.transaction.create({
             data: {
               userId: balance.userId,
               type: 'TRANSFER',
@@ -299,25 +295,24 @@ export class PaymentService {
             },
             select: { id: true },
           });
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           batchIds.push(createdTx.id);
         }
         return batchIds;
       });
 
-      transactionIds.push(...(createdIds as string[]));
+      transactionIds.push(...createdIds);
       affectedWallets += balances.length;
       totalSwept = totalSwept.plus(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         balances.reduce(
           (sum, b) =>
-            sum.plus((b.available as unknown as string).toString() as string),
+            sum.plus(b.available.toString()),
           new Decimal(0),
         ),
       );
     }
 
-    await this.db.auditLog.create({
+    await this.prisma.auditLog.create({
       data: {
         entity: 'PAYMENT_SWEEP',
         entityId: adminUserId,
@@ -345,7 +340,7 @@ export class PaymentService {
 
   private async findByIdempotencyKey(idempotencyKey?: string) {
     if (!idempotencyKey) return null;
-    return this.db.transaction.findUnique({
+    return this.prisma.transaction.findUnique({
       where: { idempotencyKey },
     });
   }

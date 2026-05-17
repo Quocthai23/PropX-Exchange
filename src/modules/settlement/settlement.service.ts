@@ -4,6 +4,7 @@ import Decimal from 'decimal.js';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BlockchainService } from '../assets/services/blockchain.service';
 import { AppConfigService } from '@/config/app-config.service';
+import { BalancesService } from '../balances/services/balances.service';
 
 interface SettlementTrade {
   id: string;
@@ -15,10 +16,15 @@ interface SettlementTrade {
   buyer: {
     walletAddress: string | null;
   };
+  buyerId: string;
   seller: {
     walletAddress: string | null;
   };
+  sellerId: string;
   quantity: {
+    toString(): string;
+  };
+  price: {
     toString(): string;
   };
 }
@@ -26,7 +32,7 @@ interface SettlementTrade {
 interface SettlementPrisma {
   trade: {
     findMany: (args: {
-      where: { settlementStatus: 'PENDING' };
+      where: { settlementStatus: 'PENDING' | 'FAILED' | 'PROCESSING' };
       include: {
         asset: true;
         buyer: true;
@@ -37,7 +43,7 @@ interface SettlementPrisma {
     updateMany: (args: {
       where: { id: { in: string[] } };
       data: {
-        settlementStatus: 'PROCESSING' | 'SETTLED' | 'FAILED';
+        settlementStatus: 'PROCESSING' | 'SETTLED' | 'FAILED' | 'REJECTED';
         txHash?: string;
       };
     }) => Promise<unknown>;
@@ -52,6 +58,7 @@ export class SettlementService {
     private readonly prisma: PrismaService,
     private readonly blockchainService: BlockchainService,
     private readonly config: AppConfigService,
+    private readonly balancesService: BalancesService,
   ) {}
 
   // Run every 5 minutes to batch and submit settlements on-chain.
@@ -68,6 +75,7 @@ export class SettlementService {
       where: {
         OR: [
           { settlementStatus: 'PENDING' },
+          { settlementStatus: 'FAILED' },
           {
             settlementStatus: 'PROCESSING',
             updatedAt: { lt: thirtyMinsAgo },
@@ -106,7 +114,7 @@ export class SettlementService {
         if (missingWalletTrades.length > 0) {
           await settlementPrisma.trade.updateMany({
             where: { id: { in: missingWalletTrades.map((t) => t.id) } },
-            data: { settlementStatus: 'FAILED' },
+            data: { settlementStatus: 'REJECTED' },
           });
         }
 
@@ -132,6 +140,29 @@ export class SettlementService {
           asset.contractAddress,
           settlementData,
         );
+
+        // Unlock funds for all eligible trades
+        for (const t of eligibleTrades) {
+          const quantity = new Decimal(t.quantity.toString());
+          const price = new Decimal(t.price.toString());
+          const quoteAmount = quantity.times(price);
+
+          // Buyer unlocks asset
+          await this.balancesService.transferBetweenAvailableAndLocked(
+            t.buyerId,
+            t.assetId,
+            quantity,
+            'locked_to_available',
+          );
+
+          // Seller unlocks cash
+          await this.balancesService.transferBetweenAvailableAndLocked(
+            t.sellerId,
+            null,
+            quoteAmount,
+            'locked_to_available',
+          );
+        }
 
         // Update successful settlement results
         await settlementPrisma.trade.updateMany({

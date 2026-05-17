@@ -15,6 +15,13 @@ export interface PortfolioPosition {
   annualYieldEstimate: string;
 }
 
+export interface GetPortfolioItemsParams {
+  skip?: number;
+  take?: number;
+  sortBy?: 'symbol' | 'quantity' | 'marketPrice' | 'marketValue';
+  sortDir?: 'asc' | 'desc';
+}
+
 @Injectable()
 export class UserPortfolioService {
   constructor(private readonly prisma: PrismaService) {}
@@ -202,5 +209,37 @@ export class UserPortfolioService {
       totalDividendsReceived: totalDividendsReceived.toFixed(8),
       positions,
     };
+  }
+
+  /**
+   * Returns a paginated list of RWA holdings (Spot portfolio items).
+   * Reuses the positions array computed in getPortfolioOverview.
+   */
+  async getPortfolioItems(
+    userId: string,
+    params: GetPortfolioItemsParams = {},
+  ) {
+    const {
+      skip = 0,
+      take = 20,
+      sortBy = 'marketValue',
+      sortDir = 'desc',
+    } = params;
+
+    const overview = await this.getPortfolioOverview(userId);
+    const items = [...overview.positions];
+
+    // Sort
+    items.sort((a, b) => {
+      const aVal = parseFloat((a as any)[sortBy] ?? '0');
+      const bVal = parseFloat((b as any)[sortBy] ?? '0');
+      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+
+    const total = items.length;
+    const data = items.slice(skip, skip + take);
+    const nextCursor = skip + take < total ? String(skip + take) : undefined;
+
+    return { data, total, nextCursor };
   }
 }

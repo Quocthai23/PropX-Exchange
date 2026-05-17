@@ -16,7 +16,7 @@ export class Web3AuthService {
     private readonly prisma: PrismaService,
     private readonly authRedis: AuthRedisService,
     private readonly tokenService: TokenService,
-  ) {}
+  ) { }
 
   async createWeb3Nonce(address?: string): Promise<{ nonce: string }> {
     const nonce = randomUUID().replace(/-/g, '');
@@ -100,6 +100,7 @@ export class Web3AuthService {
           status: true,
         },
       });
+      await this.ensureDefaultAccountAndBalance(user.id);
     }
 
     if (user.status !== 'ACTIVE') {
@@ -118,5 +119,46 @@ export class Web3AuthService {
         avatar: user.avatar,
       },
     };
+  }
+
+  private async ensureDefaultAccountAndBalance(userId: string) {
+    const accountType = await this.prisma.accountType.findFirst({
+      where: { isActive: true },
+    });
+
+    if (accountType) {
+      await this.prisma.account.upsert({
+        where: {
+          userId_accountTypeId: {
+            userId,
+            accountTypeId: accountType.id,
+          },
+        },
+        update: {},
+        create: {
+          userId,
+          accountTypeId: accountType.id,
+          name: 'Tài khoản chính',
+        },
+      });
+    }
+
+    const existingBalance = await this.prisma.balance.findFirst({
+      where: {
+        userId,
+        assetId: null,
+      },
+    });
+
+    if (!existingBalance) {
+      await this.prisma.balance.create({
+        data: {
+          userId,
+          assetId: null,
+          available: 0.0,
+          locked: 0.0,
+        },
+      });
+    }
   }
 }

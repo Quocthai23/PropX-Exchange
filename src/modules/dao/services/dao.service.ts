@@ -54,6 +54,7 @@ export class DaoService {
         endDate,
         status: $Enums.ProposalStatus.ACTIVE,
         type: dto.type ?? $Enums.ProposalType.GENERAL,
+        onChainProposalId: Math.floor(Math.random() * 1000000), // MOCK: In reality, call blockchainService.createDaoProposal
       },
     });
 
@@ -156,8 +157,10 @@ export class DaoService {
       // For the sake of the fix, we will call blockchainService.executeDaoProposal with a numeric representation or 0 if unknown.
       // A proper fix would be adding onChainProposalId to the DaoProposal model.
       try {
-        // Simple mock of on-chain execution call
-        await this.blockchainService.executeDaoProposal(0);
+        if (proposal.onChainProposalId === null) {
+          throw new BadRequestException('proposal-missing-onchain-id');
+        }
+        await this.blockchainService.executeDaoProposal(proposal.onChainProposalId);
       } catch {
         // Fallback if execution fails
       }

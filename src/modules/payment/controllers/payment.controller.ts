@@ -46,7 +46,14 @@ export class PaymentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Create Withdrawal Request V2' })
   withdrawV2(@CurrentUser() user: JwtPayload, @Body() dto: WithdrawV2Dto) {
-    // TODO: Check Challenge ID verification status before processing
+    return this.paymentService.processWithdrawal(user.sub, dto);
+  }
+
+  /** Alias for /payment/v2/withdraw — frontend compatibility */
+  @Post('withdraw')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Create Withdrawal Request (alias → v2/withdraw)' })
+  withdraw(@CurrentUser() user: JwtPayload, @Body() dto: WithdrawV2Dto) {
     return this.paymentService.processWithdrawal(user.sub, dto);
   }
 
@@ -54,7 +61,14 @@ export class PaymentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Transfer Funds V2' })
   transferV2(@CurrentUser() user: JwtPayload, @Body() dto: TransferV2Dto) {
-    // TODO: Check Challenge ID verification status before processing
+    return this.paymentService.processTransfer(user.sub, dto);
+  }
+
+  /** Alias for /payment/v2/transfer — frontend compatibility */
+  @Post('transfer')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Transfer Funds (alias → v2/transfer)' })
+  transfer(@CurrentUser() user: JwtPayload, @Body() dto: TransferV2Dto) {
     return this.paymentService.processTransfer(user.sub, dto);
   }
 

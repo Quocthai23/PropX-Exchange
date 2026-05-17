@@ -8,7 +8,6 @@ import { PaymentLedgerService } from '../services/payment-ledger.service';
 @Injectable()
 export class DepositScannerCron {
   private readonly logger = new Logger(DepositScannerCron.name);
-  private lastScannedBlock: number | null = null;
   private readonly blockRangeLimit = 1000; // Etherscan/RPC usually limits block range queries
 
   constructor(
@@ -31,17 +30,23 @@ export class DepositScannerCron {
     try {
       const currentBlock = await this.blockchainService.getCurrentBlockNumber();
 
-      if (this.lastScannedBlock === null) {
+      // Get last scanned block from DB
+      const configRecord = await this.prisma.systemConfig.findUnique({
+        where: { key: 'lastScannedBlock' },
+      });
+      let lastScannedBlock = configRecord ? parseInt(configRecord.value, 10) : null;
+
+      if (lastScannedBlock === null) {
         // Initialize to scan last 100 blocks on startup
-        this.lastScannedBlock = Math.max(0, currentBlock - 100);
+        lastScannedBlock = Math.max(0, currentBlock - 100);
       }
 
-      if (this.lastScannedBlock >= currentBlock) {
+      if (lastScannedBlock >= currentBlock) {
         return; // No new blocks
       }
 
       // Ensure we don't exceed the RPC query limit
-      const fromBlock = this.lastScannedBlock + 1;
+      const fromBlock = lastScannedBlock + 1;
       const toBlock = Math.min(currentBlock, fromBlock + this.blockRangeLimit);
 
       this.logger.debug(
@@ -58,7 +63,11 @@ export class DepositScannerCron {
         await this.processTransfer(transfer);
       }
 
-      this.lastScannedBlock = toBlock;
+      await this.prisma.systemConfig.upsert({
+        where: { key: 'lastScannedBlock' },
+        update: { value: toBlock.toString() },
+        create: { key: 'lastScannedBlock', value: toBlock.toString() },
+      });
     } catch (error) {
       this.logger.error('Error occurred while scanning deposits:', error);
     }

@@ -5,7 +5,6 @@ import type { OrderMatchedEvent } from '../orders/events/trading.events';
 import { RealtimeGateway } from './realtime.gateway';
 import { MarketDataGateway } from '../market-data/gateways/market-data.gateway';
 import { PrismaService } from '@/prisma/prisma.service';
-import Decimal from 'decimal.js';
 
 @Injectable()
 export class TradingEventsListener {
@@ -13,7 +12,7 @@ export class TradingEventsListener {
     private readonly realtimeGateway: RealtimeGateway,
     private readonly marketDataGateway: MarketDataGateway,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   @OnEvent(TRADING_EVENTS.ORDER_MATCHED)
   async handleOrderMatched(event: OrderMatchedEvent): Promise<void> {

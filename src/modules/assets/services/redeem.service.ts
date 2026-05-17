@@ -189,7 +189,31 @@ export class RedeemService {
       message:
         'Redeem request submitted. Admin will contact you to complete legal off-chain settlement.',
       redemptionRequestId: redemptionRequest.id,
+      // Fully compatible frontend mapping
+      id: redemptionRequest.id,
+      assetId: redemptionRequest.assetId,
+      userId: redemptionRequest.userId,
+      status: redemptionRequest.status,
+      requestedAt: redemptionRequest.createdAt.toISOString(),
+      tokenQuantity: redemptionRequest.tokenQuantity.toString(),
     };
+  }
+
+  async getUserRedemptions(userId: string, assetId: string) {
+    const list = await this.prisma.assetRedemptionRequest.findMany({
+      where: { userId, assetId },
+      orderBy: { createdAt: 'desc' },
+    });
+    return list.map((item) => ({
+      id: item.id,
+      assetId: item.assetId,
+      userId: item.userId,
+      status: item.status,
+      requestedAt: item.createdAt.toISOString(),
+      tokenQuantity: item.tokenQuantity.toString(),
+      burnTxHash: item.burnTxHash,
+      legalTransferDocs: item.legalTransferDocs,
+    }));
   }
 
   async listRedemptionRequests() {

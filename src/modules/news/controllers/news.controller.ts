@@ -14,7 +14,7 @@ export class NewsController {
 
   @Get()
   findAll(@Query('limit') limit?: string, @Query('source') source?: string) {
-    return this.newsService.findAll(Number(limit || 30), source);
+    return this.newsService.findAll(Number(limit || 30), undefined, source);
   }
 
   @Post('sync')

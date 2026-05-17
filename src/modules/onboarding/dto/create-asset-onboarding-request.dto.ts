@@ -29,6 +29,34 @@ export class CreateAssetOnboardingRequestDto {
   @IsString()
   location?: string;
 
+  @ApiPropertyOptional({ description: 'Array of image URLs' })
+  @IsOptional()
+  images?: any;
+
+  @ApiPropertyOptional({ description: 'Total area' })
+  @IsOptional()
+  area?: number;
+
+  @ApiPropertyOptional({ description: 'Zoning / Planning information' })
+  @IsOptional()
+  @IsString()
+  zoning?: string;
+
+  @ApiPropertyOptional({ description: 'Business model / What it does' })
+  @IsOptional()
+  @IsString()
+  businessModel?: string;
+
+  @ApiPropertyOptional({ description: 'Monthly benefits / Cashflow' })
+  @IsOptional()
+  @IsString()
+  monthlyBenefits?: string;
+
+  @ApiPropertyOptional({ description: 'Title deed / Sổ đỏ image URL' })
+  @IsOptional()
+  @IsString()
+  titleDeedImage?: string;
+
   @ApiProperty({
     description: 'Expected appraisal value',
     example: '3500000000',

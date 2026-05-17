@@ -76,9 +76,10 @@ export class ClaimRewardsDto {
       'Array of commission reward IDs to claim in a single batch operation.',
     type: [String],
     example: ['reward_01J2XABCDEF', 'reward_01J2XGHIJKL'],
+    required: false,
   })
+  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
   @IsString({ each: true })
-  rewardIds: string[];
+  rewardIds?: string[];
 }

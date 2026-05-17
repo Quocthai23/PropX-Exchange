@@ -70,143 +70,7 @@ const buildMerkleProof = (leaves: string[], index: number): string[] => {
   return proof;
 };
 
-export interface DividendDistributionRecord {
-  id: string;
-  assetId: string;
-  totalAmount: DecimalValue;
-}
 
-export interface DividendClaimRecord {
-  id: string;
-  distributionId: string;
-  userId: string;
-  amount: DecimalValue;
-  status: string;
-}
-
-type ClaimableDividend = DividendClaimRecord & {
-  distribution: {
-    asset: {
-      symbol: string;
-      name: string;
-    };
-  };
-};
-
-interface DividendsTransaction {
-  dividendDistribution: {
-    update(args: {
-      where: { id: string };
-      data: { status: string };
-    }): Promise<DividendDistributionRecord>;
-  };
-  dividendClaim: {
-    createMany(args: {
-      data: {
-        distributionId: string;
-        userId: string;
-        amount: string;
-        status: string;
-      }[];
-      skipDuplicates?: boolean;
-    }): Promise<unknown>;
-    findUnique(args: {
-      where: {
-        distributionId_userId: { distributionId: string; userId: string };
-      };
-    }): Promise<DividendClaimRecord | null>;
-    update(args: {
-      where: { id: string };
-      data: { status: string; claimedAt: Date };
-    }): Promise<DividendClaimRecord>;
-    updateMany(args: {
-      where: { id: string; status: string };
-      data: { status: string; claimedAt: Date };
-    }): Promise<{ count: number }>;
-  };
-  balance: {
-    findMany(args: {
-      where: {
-        assetId: string;
-        OR: { available?: { gt: string }; locked?: { gt: string } }[];
-      };
-    }): Promise<
-      {
-        userId: string;
-        available: DecimalValue;
-        locked: DecimalValue;
-      }[]
-    >;
-    upsert(args: {
-      where: { userId_assetId: { userId: string; assetId: string } };
-      update: { available: { increment: DecimalValue } };
-      create: {
-        userId: string;
-        assetId: string;
-        available: DecimalValue;
-        locked: DecimalValue;
-      };
-    }): Promise<unknown>;
-  };
-  transaction: {
-    create(args: {
-      data: {
-        userId: string;
-        type: string;
-        amount: DecimalValue;
-        fee: DecimalValue;
-        status: string;
-      };
-    }): Promise<unknown>;
-  };
-}
-
-interface DividendsPrisma {
-  asset: {
-    findUnique(args: {
-      where: { id: string };
-    }): Promise<{ symbol: string; totalSupply: DecimalValue } | null>;
-  };
-  auditLog: {
-    create(args: {
-      data: {
-        entity: string;
-        entityId: string;
-        action: string;
-        performedBy: string;
-        details: string;
-      };
-    }): Promise<unknown>;
-  };
-  dividendDistribution: {
-    create(args: {
-      data: {
-        assetId: string;
-        totalAmount: DecimalValue;
-        snapshotDate: Date;
-        status: string;
-      };
-    }): Promise<DividendDistributionRecord>;
-    findMany(args: {
-      where: {
-        status: 'PENDING';
-        snapshotDate: { lte: Date };
-      };
-    }): Promise<DividendDistributionRecord[]>;
-  };
-  dividendClaim: {
-    findMany(args: {
-      where: { userId: string; status: 'PENDING' };
-      include: {
-        distribution: {
-          include: { asset: { select: { symbol: true; name: true } } };
-        };
-      };
-      orderBy: { createdAt: 'desc' };
-    }): Promise<ClaimableDividend[]>;
-  };
-  $transaction<T>(fn: (tx: DividendsTransaction) => Promise<T>): Promise<T>;
-}
 
 @Injectable()
 export class DividendsService {
@@ -225,9 +89,7 @@ export class DividendsService {
       ? new Date(dto.snapshotDate)
       : new Date();
 
-    const prisma = this.prisma as unknown as DividendsPrisma;
-
-    const asset = await prisma.asset.findUnique({
+    const asset = await this.prisma.asset.findUnique({
       where: { id: dto.assetId },
     });
 
@@ -235,7 +97,7 @@ export class DividendsService {
       throw new NotFoundException('Asset not found.');
     }
 
-    const distribution = await prisma.dividendDistribution.create({
+    const distribution = await this.prisma.dividendDistribution.create({
       data: {
         assetId: dto.assetId,
         totalAmount: dto.totalAmount,
@@ -244,7 +106,7 @@ export class DividendsService {
       },
     });
 
-    await prisma.auditLog.create({
+    await this.prisma.auditLog.create({
       data: {
         entity: 'DIVIDEND_DISTRIBUTION',
         entityId: distribution.id,
@@ -258,9 +120,7 @@ export class DividendsService {
   }
 
   async processSnapshots() {
-    const prisma = this.prisma as unknown as DividendsPrisma;
-
-    const pendingDistributions = await prisma.dividendDistribution.findMany({
+    const pendingDistributions = await this.prisma.dividendDistribution.findMany({
       where: {
         status: 'PENDING',
         snapshotDate: { lte: new Date() },
@@ -269,7 +129,7 @@ export class DividendsService {
 
     for (const dist of pendingDistributions) {
       try {
-        const asset = await prisma.asset.findUnique({
+        const asset = await this.prisma.asset.findUnique({
           where: { id: dist.assetId },
         });
         if (!asset) {
@@ -371,9 +231,7 @@ export class DividendsService {
   }
 
   getClaimableDividends(userId: string) {
-    const prisma = this.prisma as unknown as DividendsPrisma;
-
-    return prisma.dividendClaim.findMany({
+    return this.prisma.dividendClaim.findMany({
       where: { userId, status: 'PENDING' },
       include: {
         distribution: {
@@ -385,9 +243,7 @@ export class DividendsService {
   }
 
   async claimDividend(userId: string, distributionId: string) {
-    const prisma = this.prisma as unknown as DividendsPrisma;
-
-    return prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const claim = await tx.dividendClaim.findUnique({
         where: { distributionId_userId: { distributionId, userId } },
       });
@@ -418,7 +274,7 @@ export class DividendsService {
         null,
         new Decimal(toDecimalValue(claim.amount)),
         'credit',
-        { tx: tx as any },
+        { tx },
       );
 
       // Create Transaction Record

@@ -160,7 +160,29 @@ export class UsersController {
     if (!user?.sub) {
       throw new BadRequestException('Invalid authenticated user payload.');
     }
-
     return this.usersService.getPortfolioOverview(user.sub);
+  }
+
+  @Get('portfolio/items')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('accessToken')
+  @ApiOperation({ summary: 'Get paginated portfolio holdings (Spot)' })
+  async getPortfolioItems(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+    @Query('sortBy')
+    sortBy?: 'symbol' | 'quantity' | 'marketPrice' | 'marketValue',
+    @Query('sortDir') sortDir?: 'asc' | 'desc',
+  ) {
+    if (!user?.sub) {
+      throw new BadRequestException('Invalid authenticated user payload.');
+    }
+    return this.usersService.getPortfolioItems(user.sub, {
+      skip: skip ? parseInt(skip, 10) : 0,
+      take: take ? parseInt(take, 10) : 20,
+      sortBy: sortBy ?? 'marketValue',
+      sortDir: sortDir ?? 'desc',
+    });
   }
 }

@@ -119,8 +119,6 @@ export class OrdersService {
         status: 'OPEN',
         idempotencyKey,
         accountId: dto.accountId,
-        stopLoss: dto.stopLoss ? new Decimal(dto.stopLoss) : null,
-        takeProfit: dto.takeProfit ? new Decimal(dto.takeProfit) : null,
       },
     });
 
@@ -232,8 +230,6 @@ export class OrdersService {
       data: {
         price: nextPrice,
         accountId: dto.accountId,
-        stopLoss: dto.stopLossPrice ? new Decimal(dto.stopLossPrice) : undefined,
-        takeProfit: dto.takeProfitPrice ? new Decimal(dto.takeProfitPrice) : undefined,
       },
       select: { id: true, status: true, price: true },
     });

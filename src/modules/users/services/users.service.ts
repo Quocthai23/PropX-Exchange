@@ -5,37 +5,19 @@ import {
   ToggleFavoriteAssetDto,
   UpsertRelationDto,
 } from '../dto/create-user.dto';
-import { UserPortfolioService } from './user-portfolio.service';
+import {
+  UserPortfolioService,
+  GetPortfolioItemsParams,
+} from './user-portfolio.service';
 import { UserRelationsService } from './user-relations.service';
-
-interface UsersPrisma {
-  user: {
-    findUnique(args: Record<string, unknown>): Promise<any>;
-    update(args: Record<string, unknown>): Promise<any>;
-    findMany(args: Record<string, unknown>): Promise<any[]>;
-  };
-  userRelation: {
-    count(args: Record<string, unknown>): Promise<number>;
-    findUnique(args: Record<string, unknown>): Promise<any>;
-  };
-  favoriteAsset: {
-    findUnique(args: Record<string, unknown>): Promise<any>;
-    delete(args: Record<string, unknown>): Promise<any>;
-    create(args: Record<string, unknown>): Promise<any>;
-  };
-}
 
 @Injectable()
 export class UsersService {
-  private readonly prisma: UsersPrisma;
-
   constructor(
-    prismaService: PrismaService,
+    private readonly prisma: PrismaService,
     private readonly portfolioService: UserPortfolioService,
     private readonly relationsService: UserRelationsService,
-  ) {
-    this.prisma = prismaService as unknown as UsersPrisma;
-  }
+  ) {}
 
   healthCheck() {
     return { message: 'Users module is running.' };
@@ -177,6 +159,10 @@ export class UsersService {
   // Delegated to UserPortfolioService
   async getPortfolioOverview(userId: string) {
     return this.portfolioService.getPortfolioOverview(userId);
+  }
+
+  async getPortfolioItems(userId: string, params: GetPortfolioItemsParams) {
+    return this.portfolioService.getPortfolioItems(userId, params);
   }
 
   // Delegated to UserRelationsService

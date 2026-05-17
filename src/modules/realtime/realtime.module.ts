@@ -6,11 +6,7 @@ import { MarketDataModule } from '../market-data/market-data.module';
 
 @Module({
   imports: [MarketDataModule],
-  providers: [
-    RealtimeGateway,
-    TradingEventsListener,
-    PrismaService,
-  ],
+  providers: [RealtimeGateway, TradingEventsListener, PrismaService],
   exports: [RealtimeGateway],
 })
 export class RealtimeModule {}

@@ -273,7 +273,7 @@ export class MarketDataService implements OnModuleInit, OnModuleDestroy {
 
     // Get 24h stats using rolling window of 1m candles from Redis
     const now = new Date();
-    
+
     let high24h = new Decimal(anchor.marketPrice || 0);
     let low24h = new Decimal(anchor.marketPrice || 0);
     let volume24h = new Decimal(0);

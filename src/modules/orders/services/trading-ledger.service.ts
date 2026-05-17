@@ -110,7 +110,7 @@ export class TradingLedgerService {
       assetId,
       quantity,
       'credit',
-      { useAvailable: true, useLocked: false, tx },
+      { useAvailable: false, useLocked: true, tx },
     );
 
     // Seller: locked asset -> spent, available cash -> increased
@@ -126,7 +126,7 @@ export class TradingLedgerService {
       null,
       quoteAmount,
       'credit',
-      { useAvailable: true, useLocked: false, tx },
+      { useAvailable: false, useLocked: true, tx },
     );
 
     await tx.transaction.createMany({

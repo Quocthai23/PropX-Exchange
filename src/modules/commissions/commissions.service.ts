@@ -10,6 +10,9 @@ import {
 } from './dto/commission.dto';
 import { ethers } from 'ethers';
 import { KmsService } from '@/shared/services/kms.service';
+import { AppConfigService } from '@/config/app-config.service';
+import { AwsKmsSigner } from '@/shared/services/aws-kms-signer.service';
+
 export interface CommissionJobData {
   eventType: CommissionEvent;
   sourceUserId: string;
@@ -25,6 +28,7 @@ export class CommissionsService {
     private readonly commissionsQueue: Queue,
     private readonly prisma: PrismaService,
     private readonly kmsService: KmsService,
+    private readonly config: AppConfigService,
   ) {}
 
   async triggerCommission(data: CommissionJobData) {
@@ -124,9 +128,20 @@ export class CommissionsService {
   }
 
   async generateClaimSignature(userId: string, dto: ClaimRewardsDto) {
+    let rewardIds = dto.rewardIds;
+    if (!rewardIds || rewardIds.length === 0) {
+      const claimable = await this.prisma.commissionReward.findMany({
+        where: {
+          userId,
+          status: 'AVAILABLE',
+        },
+      });
+      rewardIds = claimable.map((r) => r.id);
+    }
+
     const rewards = await this.prisma.commissionReward.findMany({
       where: {
-        id: { in: dto.rewardIds },
+        id: { in: rewardIds },
         userId,
       },
     });
@@ -170,9 +185,26 @@ export class CommissionsService {
       [userId, currency, amountWei, nonce],
     );
 
-    const privateKey = await this.kmsService.getAdminPrivateKey();
-    const wallet = new ethers.Wallet(privateKey);
-    const signature = await wallet.signMessage(ethers.getBytes(messageHash));
+    const useKms = this.config.useAwsKms;
+    let signer: ethers.Signer;
+    
+    if (useKms) {
+      const kmsClient = this.kmsService.getClient();
+      const kmsKeyId = this.config.chainKmsKeyId;
+      const signerAddress = this.config.chainKmsSignerAddress;
+      
+      if (!kmsClient || !kmsKeyId || !signerAddress) {
+        throw new Error('KMS configuration is incomplete');
+      }
+      
+      signer = new AwsKmsSigner(kmsClient, kmsKeyId, signerAddress);
+    } else {
+      const privateKey = await this.kmsService.getAdminPrivateKey();
+      signer = new ethers.Wallet(privateKey);
+    }
+    
+    const signature = await signer.signMessage(ethers.getBytes(messageHash));
+    const signerAddress = await signer.getAddress();
 
     return {
       userId,
@@ -181,7 +213,7 @@ export class CommissionsService {
       totalAmountWei: amountWei.toString(),
       nonce,
       signature,
-      signerAddress: wallet.address,
+      signerAddress: signerAddress,
       rewardIds: dto.rewardIds,
     };
   }

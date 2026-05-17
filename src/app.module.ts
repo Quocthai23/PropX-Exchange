@@ -30,6 +30,7 @@ import { OnboardingModule } from '@/modules/onboarding/onboarding.module';
 import { DaoModule } from '@/modules/dao/dao.module';
 import { CommissionsModule } from '@/modules/commissions/commissions.module';
 import { AccountsModule } from '@/modules/accounts/accounts.module';
+import { ImagesModule } from '@/modules/images/images.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { AccountsModule } from '@/modules/accounts/accounts.module';
     DaoModule,
     CommissionsModule,
     AccountsModule,
+    ImagesModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

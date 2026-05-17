@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
-import { JwtPayload } from '../types/jwt-payload.type';
+import type { JwtPayload } from '../types/jwt-payload.type';
 
 @Injectable()
 export class WsJwtGuard implements CanActivate {

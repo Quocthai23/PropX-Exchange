@@ -2,13 +2,20 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { createHash } from 'crypto';
+import { ethers } from 'ethers';
 
-const hashLeaf = (userId: string, amount: string): string =>
-  createHash('sha256').update(`${userId}:${amount}`).digest('hex');
+const hashLeaf = (walletAddress: string, amount: string): string => {
+  const amountWei = ethers.parseUnits(Number(amount).toFixed(6), 6).toString();
+  return ethers.solidityPackedKeccak256(
+    ['address', 'uint256'],
+    [walletAddress, amountWei],
+  );
+};
 
-const hashPair = (left: string, right: string): string =>
-  createHash('sha256').update([left, right].sort().join('')).digest('hex');
+const hashPair = (left: string, right: string): string => {
+  const [a, b] = [left, right].sort();
+  return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [a, b]);
+};
 
 const buildMerkleTree = (leaves: string[]): string[][] => {
   if (leaves.length === 0) return [['']];
@@ -44,12 +51,13 @@ export class MerkleTreeProcessor extends WorkerHost {
       const merkleClaims = await this.prisma.dividendClaim.findMany({
         where: { distributionId },
         orderBy: { userId: 'asc' },
-        select: { userId: true, amount: true },
+        select: { userId: true, amount: true, user: { select: { walletAddress: true } } },
       });
 
-      const merkleLeaves = merkleClaims.map((c) =>
-        hashLeaf(c.userId, c.amount.toString()),
-      );
+      const merkleLeaves = merkleClaims.map((c) => {
+        const wallet = c.user?.walletAddress || '0x0000000000000000000000000000000000000000';
+        return hashLeaf(wallet, c.amount.toString());
+      });
 
       const tree = buildMerkleTree(merkleLeaves);
       const merkleRoot = tree[tree.length - 1][0] ?? '';

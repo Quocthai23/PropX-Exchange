@@ -30,7 +30,8 @@ export class BulkCancelOrdersDto {
 
 export class UpdateOrderDto {
   @ApiPropertyOptional({
-    description: 'Set to true to cancel the order. If true, other fields are ignored',
+    description:
+      'Set to true to cancel the order. If true, other fields are ignored',
   })
   @IsOptional()
   @IsBoolean()
@@ -50,22 +51,6 @@ export class UpdateOrderDto {
   @IsString()
   @Matches(/^\d+(\.\d+)?$/)
   price?: string;
-
-  @ApiPropertyOptional({
-    description: 'New stop loss price. Optional, set to null to remove',
-  })
-  @IsOptional()
-  @IsString()
-  @Matches(/^\d+(\.\d+)?$/)
-  stopLossPrice?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'New take profit price. Optional, set to null to remove',
-  })
-  @IsOptional()
-  @IsString()
-  @Matches(/^\d+(\.\d+)?$/)
-  takeProfitPrice?: string | null;
 }
 
 export class GetOrdersQueryDto {
@@ -185,20 +170,4 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   accountId?: string;
-
-  @ApiPropertyOptional({
-    description: 'Stop loss price',
-  })
-  @IsOptional()
-  @IsString()
-  @Matches(/^\d+(\.\d+)?$/)
-  stopLoss?: string;
-
-  @ApiPropertyOptional({
-    description: 'Take profit price',
-  })
-  @IsOptional()
-  @IsString()
-  @Matches(/^\d+(\.\d+)?$/)
-  takeProfit?: string;
 }
