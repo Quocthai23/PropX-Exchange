@@ -334,12 +334,9 @@ async function bootstrap() {
     }),
   );
 
-  const redisHost = configService.redisHost;
-  const redisPort = configService.redisPort;
-  const redisPassword = configService.redisPassword;
-  const redisUrl = `redis://${redisHost}:${redisPort}`;
+  const redisUrl = configService.redisUrl;
   const redisIoAdapter = new RedisIoAdapter(app);
-  await redisIoAdapter.connectToRedis(redisUrl, redisPassword);
+  await redisIoAdapter.connectToRedis(redisUrl);
   app.useWebSocketAdapter(redisIoAdapter);
 
   const config = new DocumentBuilder()

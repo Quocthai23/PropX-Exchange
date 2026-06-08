@@ -50,6 +50,17 @@ export class OrderMatchingService implements OnModuleInit, OnModuleDestroy {
   }
 
   private getRedisConnection() {
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+    if (redisUrl) {
+      const parsed = new URL(redisUrl);
+      return {
+        host: parsed.hostname,
+        port: parseInt(parsed.port || '6379', 10),
+        username: parsed.username || undefined,
+        password: parsed.password || undefined,
+        tls: parsed.protocol === 'rediss:' ? {} : undefined,
+      };
+    }
     return {
       host: this.configService.get<string>('REDIS_HOST'),
       port: this.configService.get<number>('REDIS_PORT'),

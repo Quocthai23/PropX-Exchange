@@ -1,7 +1,8 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 // If this import fails, run: npx prisma generate
 import { PrismaClient } from '@prisma/client';
-import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { AppConfigService } from '../config/app-config.service';
 
 /**
@@ -20,20 +21,16 @@ export class PrismaService
       throw new Error('DATABASE_URL is required');
     }
 
-    // allow overriding pool max via env DATABASE_POOL_MAX
-    const poolMax = Number(process.env.DATABASE_POOL_MAX ?? '10');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    const adapter = new PrismaMariaDb(datasourceUrl, {
-      connectionLimit: poolMax,
-    } as any);
-
     // Ensure a single PrismaClient instance per process (helps during dev hot-reload)
     const g = global as any;
     if (g.__prisma) {
       return g.__prisma;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const pool = new Pool({ connectionString: datasourceUrl });
+    const adapter = new PrismaPg(pool);
+
+    // Initialize with PostgreSQL adapter
     super({ adapter } as any);
     g.__prisma = this;
   }

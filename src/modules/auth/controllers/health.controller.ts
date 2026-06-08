@@ -25,15 +25,33 @@ export class HealthController {
   @HealthCheck()
   @ApiOperation({ summary: 'Check liveness status of Database and Redis' })
   check() {
+    let redisOpts: any = {
+      host: this.config.redisHost,
+      port: this.config.redisPort,
+    };
+    
+    const urlStr = this.config.redisUrl;
+    if (urlStr) {
+      try {
+        const parsed = new URL(urlStr);
+        redisOpts = {
+          host: parsed.hostname,
+          port: parseInt(parsed.port || '6379', 10),
+          username: parsed.username || undefined,
+          password: parsed.password || undefined,
+          tls: parsed.protocol === 'rediss:' ? {} : undefined,
+        };
+      } catch (e) {
+        // fallback to default
+      }
+    }
+
     return this.health.check([
       () => this.prismaHealth.pingCheck('database', this.prisma),
       () =>
         this.microservice.pingCheck<RedisOptions>('redis', {
           transport: Transport.REDIS,
-          options: {
-            host: this.config.redisHost,
-            port: this.config.redisPort,
-          },
+          options: redisOpts,
         }),
     ]);
   }

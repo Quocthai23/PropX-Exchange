@@ -14,11 +14,7 @@ export class AuthRedisService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly config: AppConfigService) {
     this.redisClient = createClient({
-      socket: {
-        host: this.config.redisHost,
-        port: this.config.redisPort,
-      },
-      password: this.config.redisPassword,
+      url: this.config.redisUrl,
     });
     this.redisClient.on('error', (error) => {
       this.logger.error('Redis connection error', error);

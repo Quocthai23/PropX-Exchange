@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 
 model AssetCategory {
@@ -35,7 +35,7 @@ model User {
   enabledMfa              Boolean                      @default(false)
   gender                  String?
   mfaSecret               String?                      @db.Text
-  notificationPreferences String?                      @db.LongText
+  notificationPreferences String?                      @db.Text
   passwordHash            String?                      @db.Text
   referenceCode           String?                      @unique
   referredBy              String?
@@ -74,7 +74,7 @@ model User {
   outgoingRelations       UserRelation[]               @relation("OutgoingRelations")
   incomingRelations       UserRelation[]               @relation("IncomingRelations")
 
-  @@index([referredBy], map: "User_referredBy_fkey")
+  @@index([referredBy])
 }
 
 model FavoriteAsset {
@@ -86,7 +86,7 @@ model FavoriteAsset {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, assetId])
-  @@index([assetId], map: "FavoriteAsset_assetId_fkey")
+  @@index([assetId])
 }
 
 model UserRelation {
@@ -101,7 +101,7 @@ model UserRelation {
   toUser      User     @relation("IncomingRelations", fields: [toUserId], references: [id], onDelete: Cascade)
 
   @@unique([fromUserId, toUserId])
-  @@index([toUserId], map: "UserRelation_toUserId_fkey")
+  @@index([toUserId])
 }
 
 model SupportTicket {
@@ -127,12 +127,12 @@ model TicketMessage {
   senderId    String
   content     String        @db.Text
   createdAt   DateTime      @default(now())
-  attachments String?       @db.LongText
+  attachments String?       @db.Text
   sender      User          @relation("TicketMessageSender", fields: [senderId], references: [id])
   ticket      SupportTicket @relation(fields: [ticketId], references: [id])
 
   @@index([ticketId, createdAt])
-  @@index([senderId], map: "TicketMessage_senderId_fkey")
+  @@index([senderId])
 }
 
 model Otp {
@@ -179,7 +179,7 @@ model KycRecord {
   approver           User?     @relation("KycApprover", fields: [approvedBy], references: [id])
   user               User      @relation(fields: [userId], references: [id])
 
-  @@index([approvedBy], map: "KycRecord_approvedBy_fkey")
+  @@index([approvedBy])
 }
 
 model Asset {
@@ -225,7 +225,7 @@ model Asset {
   postCashtags            PostCashtag[]
   trades                  Trade[]
 
-  @@index([categoryId], map: "Asset_categoryId_fkey")
+  @@index([categoryId])
 }
 
 model Balance {
@@ -241,7 +241,7 @@ model Balance {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, assetId])
-  @@index([assetId], map: "Balance_assetId_fkey")
+  @@index([assetId])
 }
 
 model AssetOnboardingRequest {
@@ -273,7 +273,7 @@ model AssetRedemptionRequest {
   assetId           String
   tokenQuantity     Decimal
   status            RedemptionStatus @default(PENDING)
-  legalTransferDocs String?          @db.LongText
+  legalTransferDocs String?          @db.Text
   burnTxHash        String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -316,7 +316,7 @@ model DaoVotingSnapshot {
 
   @@unique([proposalId, userId])
   @@index([proposalId, votingPower(sort: Desc)])
-  @@index([userId], map: "DaoVotingSnapshot_userId_fkey")
+  @@index([userId])
 }
 
 model ProposalVote {
@@ -353,8 +353,8 @@ model Order {
   asset          Asset       @relation(fields: [assetId], references: [id])
   user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([assetId], map: "Order_assetId_fkey")
-  @@index([userId], map: "Order_userId_fkey")
+  @@index([assetId])
+  @@index([userId])
 }
 
 model Transaction {
@@ -378,7 +378,7 @@ model Transaction {
   speedUpAttempts_ GasSpeedUpAttempt[]
   user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId], map: "Transaction_userId_fkey")
+  @@index([userId])
 }
 
 model GasSpeedUpAttempt {
@@ -394,7 +394,7 @@ model GasSpeedUpAttempt {
   updatedAt      DateTime    @updatedAt
   transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 
-  @@index([transactionId], map: "GasSpeedUpAttempt_transactionId_fkey")
+  @@index([transactionId])
 }
 
 model AuditLog {
@@ -407,7 +407,7 @@ model AuditLog {
   createdAt   DateTime @default(now())
   performer   User     @relation("AuditLogPerformer", fields: [performedBy], references: [id])
 
-  @@index([performedBy], map: "AuditLog_performedBy_fkey")
+  @@index([performedBy])
 }
 
 model CorporateAction {
@@ -422,7 +422,7 @@ model CorporateAction {
   updatedAt     DateTime            @updatedAt
   asset         Asset               @relation(fields: [assetId], references: [id])
 
-  @@index([assetId], map: "CorporateAction_assetId_fkey")
+  @@index([assetId])
 }
 
 model DividendDistribution {
@@ -436,7 +436,7 @@ model DividendDistribution {
   claims       DividendClaim[]
   asset        Asset           @relation(fields: [assetId], references: [id])
 
-  @@index([assetId], map: "DividendDistribution_assetId_fkey")
+  @@index([assetId])
 }
 
 model DividendClaim {
@@ -452,7 +452,7 @@ model DividendClaim {
   user           User                 @relation(fields: [userId], references: [id])
 
   @@unique([distributionId, userId])
-  @@index([userId], map: "DividendClaim_userId_fkey")
+  @@index([userId])
 }
 
 model Candlestick {
@@ -487,9 +487,9 @@ model Trade {
   buyer            User     @relation("BuyerTrades", fields: [buyerId], references: [id])
   seller           User     @relation("SellerTrades", fields: [sellerId], references: [id])
 
-  @@index([assetId], map: "Trade_assetId_fkey")
-  @@index([buyerId], map: "Trade_buyerId_fkey")
-  @@index([sellerId], map: "Trade_sellerId_fkey")
+  @@index([assetId])
+  @@index([buyerId])
+  @@index([sellerId])
 }
 
 model NewsArticle {
@@ -554,7 +554,7 @@ model Account {
 
   @@unique([userId, accountTypeId])
   @@index([userId, status])
-  @@index([accountTypeId], map: "Account_accountTypeId_fkey")
+  @@index([accountTypeId])
 }
 
 model Notification {
@@ -564,7 +564,7 @@ model Notification {
   title     String
   content   String?  @db.Text
   isRead    Boolean  @default(false)
-  metadata  String?  @db.LongText
+  metadata  String?  @db.Text
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -575,7 +575,7 @@ model Post {
   id        String         @id @default(uuid())
   userId    String
   content   String?        @db.Text
-  mediaUrls String?        @db.LongText
+  mediaUrls String?        @db.Text
   status    PostStatus     @default(PUBLISHED)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
@@ -586,7 +586,7 @@ model Post {
   likes     PostLike[]
   reports   PostReport[]
 
-  @@index([userId], map: "Post_userId_fkey")
+  @@index([userId])
 }
 
 model PostCashtag {
@@ -621,7 +621,7 @@ model PostLike {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
-  @@index([userId], map: "PostLike_userId_fkey")
+  @@index([userId])
 }
 
 model Comment {
@@ -634,8 +634,8 @@ model Comment {
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([postId], map: "Comment_postId_fkey")
-  @@index([userId], map: "Comment_userId_fkey")
+  @@index([postId])
+  @@index([userId])
 }
 
 model PostBookmark {
@@ -647,7 +647,7 @@ model PostBookmark {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
-  @@index([userId], map: "PostBookmark_userId_fkey")
+  @@index([userId])
 }
 
 model AssetValuationSnapshot {
@@ -700,7 +700,7 @@ model UserReadGlobalNotification {
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, globalNotificationId])
-  @@index([globalNotificationId], map: "UserReadGlobalNotification_globalNotificationId_fkey")
+  @@index([globalNotificationId])
 }
 
 model CommissionConfig {
