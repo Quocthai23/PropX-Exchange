@@ -56,13 +56,28 @@ import { ImagesModule } from '@/modules/images/images.module';
     EventEmitterModule.forRoot(),
     BullMQModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService<ValidatedEnv, true>) => ({
-        connection: {
-          host: config.get('REDIS_HOST'),
-          port: config.get('REDIS_PORT'),
-          password: config.get('REDIS_PASSWORD'),
-        },
-      }),
+      useFactory: (config: ConfigService<ValidatedEnv, true>) => {
+        const redisUrl = config.get('REDIS_URL');
+        if (redisUrl) {
+          const parsed = new URL(redisUrl);
+          return {
+            connection: {
+              host: parsed.hostname,
+              port: parseInt(parsed.port || '6379', 10),
+              username: parsed.username || undefined,
+              password: parsed.password || undefined,
+              tls: parsed.protocol === 'rediss:' ? {} : undefined,
+            },
+          };
+        }
+        return {
+          connection: {
+            host: config.get('REDIS_HOST'),
+            port: config.get('REDIS_PORT'),
+            password: config.get('REDIS_PASSWORD'),
+          },
+        };
+      },
     }),
     NewsModule,
     UsersModule,
