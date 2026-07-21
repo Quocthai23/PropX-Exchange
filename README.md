@@ -1,125 +1,251 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🚀 PropX-Exchange Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Hệ thống Backend cho nền tảng Giao dịch và Chứng khoán hóa Tài sản Thực (**RWA - Real World Asset Tokenization & Exchange**). Dự án được phát triển trên nền tảng **NestJS**, tích hợp **Blockchain (Smart Contracts)**, cơ chế khớp lệnh tự động (FIFO) và cập nhật dữ liệu thị trường thời gian thực qua **WebSocket**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📋 Mục lục
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+1. [Giới thiệu & Tính năng](#-giới-thiệu--tính-năng)
+2. [Công nghệ sử dụng](#-công-nghệ-sử-dụng)
+3. [Cấu trúc thư mục](#-cấu-trúc-thư-mục)
+4. [Yêu cầu hệ thống](#-yêu-cầu-hệ-thống)
+5. [Hướng dẫn cài đặt nhanh (Quick Start)](#-hướng-dẫn-cài-đặt-nhanh-quick-start)
+6. [Tích hợp Smart Contracts](#-tích-hợp-smart-contracts)
+7. [WebSocket & Real-time Events](#-websocket--real-time-events)
+8. [Các API Endpoints chính](#-các-api-endpoints-chính)
+9. [Cấu hình & Tối ưu hóa Database](#-cấu-hình--tối-ưu-hóa-database)
 
-## Project setup
+---
 
-```bash
-$ yarn install
+## 🌟 Giới thiệu & Tính năng
+
+**PropX-Exchange** cung cấp giải pháp đầu tư tài sản thực (như bất động sản) dưới dạng token hóa kỹ thuật số.
+
+### Các tính năng cốt lõi:
+- **Khớp lệnh tự động (Spot Trading Engine)**: Cơ chế khớp lệnh FIFO (First In, First Out) hoạt động thông qua Event-driven architecture.
+- **RWA Tokenization & Management**:
+  - Hỗ trợ Onboarding tài sản thực và phát hành Token tương ứng.
+  - Phân phối lợi nhuận (Dividends) và quản lý yêu cầu rút tài sản (Redemption).
+- **Cơ chế biểu quyết phi tập trung (DAO & Governance)**: Tích hợp voting snapshot cho các đề xuất cộng đồng.
+- **Dữ liệu thị trường thời gian thực**: Cập nhật giá (Ask/Bid, Kline/Candlesticks, Volume) liên tục thông qua WebSockets.
+- **Bảo mật & Quản lý ví**:
+  - Hỗ trợ đăng nhập truyền thống (Email/Mật khẩu + 2FA Speakeasy) và Web3 (SIWE - Sign-In with Ethereum).
+  - Quản lý mã khóa bảo mật thông qua AWS KMS (hoặc chạy Plaintext ở môi trường dev).
+- **Hệ thống hàng đợi (Queue Processing)**: Sử dụng Redis và BullMQ để xử lý các tác vụ bất đồng bộ nặng (xử lý giao dịch, gửi mail, tính toán kline).
+
+---
+
+## 🛠 Công nghệ sử dụng
+
+- **Framework**: [NestJS](https://nestjs.com/) (TypeScript)
+- **Database ORM**: [Prisma ORM](https://www.prisma.io/)
+- **Cơ sở dữ liệu**: PostgreSQL / MariaDB (Mặc định trong môi trường phát triển sử dụng Neon PostgreSQL hoặc MariaDB qua Docker)
+- **Caching & Message Queue**: Redis (Upstash Redis / Redis local) & BullMQ
+- **Blockchain**: Hardhat, Ethers.js, SIWE
+- **Real-time Gateway**: Socket.io (tích hợp adapter Redis)
+- **Logger**: Winston Logger & Winston Daily Rotate File
+- **Bảo mật**: AWS KMS, bcryptjs, JWT, Speakeasy (2FA)
+
+---
+
+## 📂 Cấu trúc thư mục
+
+Thư mục chính chứa mã nguồn nghiệp vụ nằm trong `src/modules`:
+
+```
+src/modules/
+├── accounts/        # Quản lý tài khoản giao dịch, danh mục đầu tư (Portfolio)
+├── assets/          # Quản lý RWA token, thông tin chi tiết tài sản thực
+├── auth/            # Xác thực người dùng (JWT, SIWE, 2FA, Session)
+├── balances/        # Theo dõi số dư tài khoản của nhà đầu tư
+├── commissions/     # Quản lý hoa hồng, phần thưởng giới thiệu (Referral Rewards)
+├── dao/             # Biểu quyết và quản trị đề xuất (DAO Proposals & Voting)
+├── dividends/       # Tính toán và phân phối lợi nhuận cho chủ sở hữu Token
+├── images/          # Upload hình ảnh tài sản
+├── kyc/             # Xác thực danh tính khách hàng (Know Your Customer)
+├── market-data/     # Xử lý Candlestick (Kline) và các chỉ số thị trường
+├── market-maker/    # Tạo lệnh ảo (Bot) phục vụ việc mô phỏng thanh khoản dev
+├── news/            # Quản lý tin tức thị trường tài sản
+├── notifications/   # Quản lý thông báo trong ứng dụng & email
+├── onboarding/      # Quy trình duyệt tài sản mới lên sàn
+├── orders/          # Quản lý sổ lệnh (Orderbook) - Đặt lệnh BUY/SELL
+├── payment/         # Cổng nạp/rút tiền pháp định hoặc crypto
+├── posts/           # Quản lý bài đăng, bình luận cộng đồng (Social Trading)
+├── realtime/        # WebSocket Gateway kết nối với Frontend
+├── settlement/      # Giải quyết giao dịch trên blockchain
+├── support/         # Hệ thống Ticket chăm sóc khách hàng
+└── users/           # Quản lý thông tin profile người dùng
 ```
 
-## Compile and run the project
+---
 
+## 💻 Yêu cầu hệ thống
+
+- **Node.js**: `>= 18.x`
+- **Yarn**: `>= 4.x` (hoặc npm)
+- **Docker & Docker Compose**: Để chạy MariaDB và Redis cục bộ (nếu không sử dụng dịch vụ đám mây như Neon và Upstash)
+
+---
+
+## ⚡ Hướng dẫn cài đặt nhanh (Quick Start)
+
+### Bước 1: Clone dự án và Cài đặt thư viện
 ```bash
-# development
-$ yarn run start
+# Clone repository
+git clone <repo-url>
+cd PropX-Exchange
 
-# watch mode
-$ yarn run start:dev
+# Cài đặt dependencies cho Backend
+yarn install
 
-# production mode
-$ yarn run start:prod
+# Cài đặt dependencies cho Smart Contracts
+cd smart-contracts && yarn install && cd ..
 ```
 
-## Run tests
+### Bước 2: Thiết lập Biến môi trường (`.env`)
+Tạo file `.env` ở thư mục gốc của backend dựa trên mẫu dưới đây (hoặc sao chép từ `.env.example`):
+```env
+# Database (Ví dụ cấu hình Neon PostgreSQL hoặc MySQL)
+DATABASE_URL="postgresql://neondb_owner:...@ep-divine-resonance...aws.neon.tech/neondb?sslmode=require"
 
-```bash
-# unit tests
-$ yarn run test
+# Redis Config (Upstash Redis hoặc Redis Local)
+REDIS_URL="rediss://default:...@talented-mammal-105368.upstash.io:6379"
 
-# e2e tests
-$ yarn run test:e2e
+# Cấu hình bảo mật AWS KMS (Đặt false để dev bằng local private key)
+USE_AWS_KMS=false
+CHAIN_ADMIN_PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
 
-# test coverage
-$ yarn run test:cov
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_key_here_change_in_production
+JWT_EXPIRATION=1h
+
+# Blockchain Network
+CHAIN_RPC_URL=http://127.0.0.1:8545
+CHAIN_ID=31337
+
+# Application Settings
+NODE_ENV=development
+PORT=3001
+CDN_BASE_URL=http://localhost:3001
+ENABLE_MARKET_MAKER=true
+ENABLE_DEMO_MARKET_DATA=true
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### Bước 3: Chạy Docker Compose (Nếu chạy Database & Redis Local)
+Nếu bạn không sử dụng cơ sở dữ liệu trên cloud (Neon, Upstash), bạn có thể dựng nhanh các service thông qua Docker:
 ```bash
-$ yarn install -g @nestjs/mau
-$ mau deploy
+docker compose up -d
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Bước 4: Đồng bộ Database (Prisma Migrations)
+```bash
+# Đồng bộ schema lên database
+yarn prisma migrate deploy
 
-## Resources
+# Khởi tạo dữ liệu mẫu (Seed Data)
+yarn prisma db seed
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### Bước 5: Khởi động Backend
+```bash
+# Chạy ở chế độ Development (Watch mode)
+yarn start:dev
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# Server chạy tại: http://localhost:3001
+# Tài liệu Swagger API Docs: http://localhost:3001/api/docs
+```
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 🔗 Tích hợp Smart Contracts
 
-## Stay in touch
+Mã nguồn Smart Contracts nằm tại thư mục `/smart-contracts`.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Biên dịch Contracts
+```bash
+cd smart-contracts
+yarn build
+```
 
-## License
+### Chạy Local Hardhat Node (Phục vụ Testnet nội bộ)
+```bash
+# Khởi chạy blockchain giả lập tại local
+yarn node
+# Sau khi khởi chạy, hệ thống sẽ hiển thị danh sách các tài khoản có sẵn 10,000 ETH kèm private key.
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-"# PropX-Exchange" 
+### Deploy Smart Contracts lên Node Local
+```bash
+# Deploy lên local network đang chạy
+npx hardhat deploy --network localhost
+```
 
-## Database connection tuning
+---
 
-If you see errors like "Too many connections" or Prisma pool timeouts, you can either reduce the app's connection pool or increase the database server limit.
+## 📱 WebSocket & Real-time Events
 
-- Configure application pool size via environment variable `DATABASE_POOL_MAX` (default 10). The app's `PrismaService` reads this value and sets the adapter connection limit.
-- Configure Prisma connect retry attempts via `PRISMA_CONNECT_RETRIES` (default 5).
+Hệ thống cung cấp kết nối Real-time qua Socket.io để cập nhật liên tục thông tin bảng giá và khớp lệnh.
 
-Example for development (Windows/Linux):
+### Kết nối đến Gateway:
+- **Root Namespace**: `/` (Dùng để nhận `ticker` data chung cho toàn sàn)
+- **Trading Namespace**: `/trading` (Dùng để theo dõi lệnh khớp và biểu đồ kline chi tiết)
 
+### Các sự kiện phía Server phát ra (Emitted Events):
+- `ticker` (Namespace `/`): Cập nhật giá bid/ask, % change, volume 24h của tất cả các tài sản mỗi khi có biến động.
+- `trade_matched` (Namespace `/trading`): Thông báo giao dịch khớp lệnh thành công.
+- `order_updated` (Namespace `/trading`): Cập nhật trạng thái lệnh (Active, Filled, Cancelled).
+- `kline` (Namespace `/trading`): Cập nhật nến biểu đồ thời gian thực.
+- `balance_updated` (Namespace `/trading`): Cập nhật số dư ví tức thời cho khách hàng.
+
+Ví dụ lắng nghe sự kiện `ticker` ở Client:
+```typescript
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3001', { transports: ['websocket'] });
+
+socket.on('ticker', (data) => {
+  console.log('Dữ liệu Ticker thời gian thực:', data);
+  // data: { assetId, ask, bid, changePercent, low, high, volume, lastPrice, timestamp }
+});
+```
+
+---
+
+## 📌 Các API Endpoints chính
+
+| Phương thức | Endpoint | Mô tả |
+| :--- | :--- | :--- |
+| **GET** | `/api/health` | Kiểm tra trạng thái hoạt động của hệ thống |
+| **GET** | `/api/docs` | Swagger API Documentation |
+| **POST** | `/api/auth/login` | Đăng nhập tài khoản truyền thống |
+| **POST** | `/api/auth/wallet-login` | Đăng nhập thông qua Web3 Wallet (SIWE) |
+| **GET** | `/api/assets` | Lấy danh sách các tài sản RWA niêm yết |
+| **POST** | `/api/orders` | Đặt lệnh giao dịch (MARKET / LIMIT) |
+| **GET** | `/api/orders` | Lấy danh sách lệnh cá nhân |
+| **GET** | `/api/market-data/candles` | Lấy dữ liệu nến lịch sử (Kline) |
+
+---
+
+## ⚙️ Cấu hình & Tối ưu hóa Database
+
+Trong trường hợp hệ thống gặp lỗi `"Too many connections"` hoặc quá hạn kết nối của Prisma (Prisma pool timeouts), bạn có thể tối ưu hóa thông qua các biến môi trường sau:
+
+- **`DATABASE_POOL_MAX`** (Mặc định: `10`): Điều chỉnh số lượng kết nối tối đa trong Pool của mỗi instance backend.
+- **`PRISMA_CONNECT_RETRIES`** (Mặc định: `5`): Số lần thử kết nối lại tối đa khi Prisma gặp sự cố mạng tạm thời.
+
+### Ví dụ chạy tối ưu hóa trên Local:
 ```bash
 DATABASE_POOL_MAX=5 PRISMA_CONNECT_RETRIES=5 yarn start:dev
 ```
 
-If the workload truly requires many connections, increase MariaDB/MySQL `max_connections` on the server:
-
+### Điều chỉnh trên MariaDB/MySQL Server (Nếu cần tăng giới hạn kết nối):
 ```sql
 SET GLOBAL max_connections = 200;
 ```
-
-Persist this setting in your `my.cnf`/`my.ini` under `[mysqld]`:
-
+Để lưu cài đặt này vĩnh viễn, hãy cập nhật tệp `my.cnf` hoặc `my.ini` trong phần `[mysqld]`:
+```ini
 [mysqld]
 max_connections=200
-
-After changing server settings or envs, restart the DB or your app as appropriate.
+```
+Sau đó tiến hành khởi động lại cơ sở dữ liệu.
